@@ -62,7 +62,6 @@ default_buffer_values_dict = Table(
         nullable=True,
     ),
     Column("buffer_value", Float(precision=53), nullable=False),
-    UniqueConstraint("buffer_type_id", "physical_object_type_id", "service_type_id"),
 )
 
 """

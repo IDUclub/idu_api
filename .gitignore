@@ -34,3 +34,4 @@ htmlcov/
 
 logs/
 urban_api/logs/
+/poetry.toml

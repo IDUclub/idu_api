@@ -14,8 +14,8 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.dto import ServiceDTO, UrbanObjectDTO
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.logic.impl.helpers.urban_objects import get_urban_objects_by_ids_from_db
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import ServicePatch, ServicePost, ServicePut
@@ -83,15 +83,6 @@ async def add_service_to_db(conn: AsyncConnection, service: ServicePost) -> Serv
     if not urban_objects:
         raise EntityNotFoundByParams("urban object", service.physical_object_id, service.object_geometry_id)
 
-    if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service.service_type_id}):
-        raise EntityNotFoundById(service.service_type_id, "service type")
-
-    if service.territory_type_id is not None:
-        if not await check_existence(
-            conn, territory_types_dict, conditions={"territory_type_id": service.territory_type_id}
-        ):
-            raise EntityNotFoundById(service.territory_type_id, "territory type")
-
     statement = (
         insert(services_data)
         .values(**service.model_dump(exclude={"physical_object_id", "object_geometry_id"}))
@@ -129,15 +120,6 @@ async def put_service_to_db(conn: AsyncConnection, service: ServicePut, service_
     if not await check_existence(conn, services_data, conditions={"service_id": service_id}):
         raise EntityNotFoundById(service_id, "service")
 
-    if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service.service_type_id}):
-        raise EntityNotFoundById(service.service_type_id, "service type")
-
-    if service.territory_type_id is not None:
-        if not await check_existence(
-            conn, territory_types_dict, conditions={"territory_type_id": service.territory_type_id}
-        ):
-            raise EntityNotFoundById(service.territory_type_id, "territory type")
-
     values = extract_values_from_model(service, to_update=True)
     statement = update(services_data).where(services_data.c.service_id == service_id).values(**values)
 
@@ -156,16 +138,6 @@ async def patch_service_to_db(
 
     if not await check_existence(conn, services_data, conditions={"service_id": service_id}):
         raise EntityNotFoundById(service_id, "service")
-
-    if service.service_type_id is not None:
-        if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service.service_type_id}):
-            raise EntityNotFoundById(service.service_type_id, "service type")
-
-    if service.territory_type_id is not None:
-        if not await check_existence(
-            conn, territory_types_dict, conditions={"territory_type_id": service.territory_type_id}
-        ):
-            raise EntityNotFoundById(service.territory_type_id, "territory type")
 
     values = extract_values_from_model(service, exclude_unset=True, to_update=True)
     statement = update(services_data).where(services_data.c.service_id == service_id).values(**values)

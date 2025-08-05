@@ -43,7 +43,10 @@ async def get_object_geometries_by_ids(
     try:
         object_geometries_ids = {int(geometry.strip()) for geometry in object_geometries_ids.split(",")}
     except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пожалуйста, укажите идентификаторы в правильном формате, разделив их запятой.",
+        ) from exc
 
     object_geometries = await object_geometries_service.get_object_geometry_by_ids(object_geometries_ids)
 

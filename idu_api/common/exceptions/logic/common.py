@@ -4,7 +4,28 @@ Exceptions connected with entities in urban_db are defined here.
 
 from fastapi import status
 
-from idu_api.urban_api.exceptions import IduApiError
+from idu_api.common.exceptions import IduApiError
+
+
+class TooManyObjectsError(IduApiError):
+    """Exception to raise when number of objects to be returned is too big."""
+
+    def __init__(self, number_of_objects: int, limit: int | None = None):
+        """Construct from actual number of objects and set limit."""
+        self.objects = number_of_objects
+        self.limit = limit
+        super().__init__()
+
+    def __str__(self) -> str:
+        return (
+            f"Вернулось слишком много объектов. Их количество – {self.objects}" + f", хотя лимит – {self.limit}"
+            if self.limit is not None
+            else ""
+        )
+
+    def get_status_code(self) -> int:
+        """Return '400 Bad Request' status code."""
+        return status.HTTP_400_BAD_REQUEST
 
 
 class EntityNotFoundById(IduApiError):
@@ -21,7 +42,7 @@ class EntityNotFoundById(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"Entity '{self.entity}' with id={self.requested_id} is not found"
+        return f"Сущность '{self.entity}' с (id)=({self.requested_id}) не найдена."
 
     def get_status_code(self) -> int:
         """
@@ -43,7 +64,7 @@ class EntitiesNotFoundByIds(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"At least one '{self.entity}' of given ids is not found"
+        return f"По крайней мере, один '{self.entity}' из переданных id не найден."
 
     def get_status_code(self) -> int:
         """
@@ -66,7 +87,7 @@ class EntityNotFoundByParams(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"Entity '{self.entity}' with such parameters={self.params} is not found"
+        return f"Сущность '{self.entity}' с такими параметрами: {self.params} не найдена."
 
     def get_status_code(self) -> int:
         """
@@ -89,7 +110,7 @@ class EntityAlreadyExists(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"Invalid input! '{self.entity}' with the same parameters={self.params} already exists"
+        return f"Сущность '{self.entity}' с такими параметрами: {self.params} – уже существует."
 
     def get_status_code(self) -> int:
         """
@@ -112,31 +133,10 @@ class EntityAlreadyEdited(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"Invalid input! The '{self.entity}' has already been edited or deleted for the scenario ({self.scenario_id})"
+        return f"Сущность '{self.entity}' уже изменен или удален для этого сценария (id)=({self.scenario_id})."
 
     def get_status_code(self) -> int:
         """
         Return '409 Conflict' status code.
         """
         return status.HTTP_409_CONFLICT
-
-
-class TooManyObjectsError(IduApiError):
-    """Exception to raise when number of objects to be returned is too big."""
-
-    def __init__(self, number_of_objects: int, limit: int | None = None):
-        """Construct from actual number of objects and set limit."""
-        self.objects = number_of_objects
-        self.limit = limit
-        super().__init__()
-
-    def __str__(self) -> str:
-        return (
-            f"Too many objects to be returned. Value is {self.objects}" + f" , but configured limit is {self.limit}"
-            if self.limit is not None
-            else ""
-        )
-
-    def get_status_code(self) -> int:
-        """Return '400 Bad Request' status code."""
-        return status.HTTP_400_BAD_REQUEST

@@ -58,13 +58,13 @@ async def get_buffers_geojson_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if physical_object_type_id is not None and service_type_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or service_type_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо service_type_id.",
         )
 
     buffers = await territories_service.get_buffers_by_territory_id(

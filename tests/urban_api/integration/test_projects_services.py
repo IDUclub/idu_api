@@ -28,9 +28,9 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (400, "please, choose either service_type_id or urban_function_id", None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (400, "пожалуйста, выберите либо service_type_id, либо urban_function_id", None),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
@@ -74,9 +74,9 @@ async def test_get_services_by_scenario_id(
     [
         (200, None, None, False),
         (200, None, None, True),
-        (400, "please, choose either service_type_id or urban_function_id", None, False),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "пожалуйста, выберите либо service_type_id, либо urban_function_id", None, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "bad_request", "forbidden", "not_found"],
 )
@@ -123,10 +123,10 @@ async def test_get_services_with_geometry_by_scenario_id(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "please, choose either service_type_id or urban_function_id", None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "пожалуйста, выберите либо service_type_id, либо urban_function_id", None, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "bad_request", "regional_scenario", "forbidden", "not_found"],
 )
@@ -173,10 +173,10 @@ async def test_get_context_services(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "please, choose either service_type_id or urban_function_id", None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "пожалуйста, выберите либо service_type_id, либо urban_function_id", None, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "bad_request", "regional_scenario", "forbidden", "not_found"],
 )
@@ -226,8 +226,8 @@ async def test_get_context_services_with_geometry(
     [
         (201, None, None, True),
         (201, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
@@ -295,18 +295,20 @@ async def test_add_service(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
-        (409, "has already been edited or deleted for the scenario", None, False),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
+        (409, "уже изменен или удален для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_put_scenario_service(
     urban_api_host: str,
     service_put_req: ServicePut,
+    project: dict[str, Any],
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
     service: dict[str, Any],
+    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -318,6 +320,17 @@ async def test_put_scenario_service(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
+    if expected_status != 409 and not is_scenario_param:
+        base_scenario_id = project["base_scenario"]["id"]
+        headers = {"Authorization": f"Bearer {superuser_token}"}
+        new_scenario = {
+            "project_id": project["project_id"],
+            "name": "Test Scenario Name",
+            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
+        }
+        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
+            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+            scenario_id = response.json()["scenario_id"]
     service_id = scenario_service["service_id"] if is_scenario_param else service["service_id"]
     new_service = service_put_req.model_dump()
     new_service["service_type_id"] = scenario_service["service_type"]["service_type_id"]
@@ -344,9 +357,9 @@ async def test_put_scenario_service(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
-        (409, "has already been edited or deleted for the scenario", None, False),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
+        (409, "уже изменен или удален для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
@@ -406,8 +419,8 @@ async def test_patch_scenario_service(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )

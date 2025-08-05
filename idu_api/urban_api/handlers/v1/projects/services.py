@@ -60,7 +60,7 @@ async def get_services_by_scenario_id(
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     services = await user_project_service.get_services_by_scenario_id(
@@ -112,7 +112,7 @@ async def get_services_with_geometry_by_scenario_id(
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     services = await user_project_service.get_services_with_geometry_by_scenario_id(
@@ -163,7 +163,7 @@ async def get_context_services(
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     services = await user_project_service.get_context_services(scenario_id, user, service_type_id, urban_function_id)
@@ -210,7 +210,7 @@ async def get_context_services_with_geometry(
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     services = await user_project_service.get_context_services_with_geometry(

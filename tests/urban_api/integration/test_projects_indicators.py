@@ -31,8 +31,8 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -76,9 +76,9 @@ async def test_get_indicators_values_by_scenario_id(
     [
         (201, None, None, False),
         (201, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
-        (409, "already exists", None, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
+        (409, "уже существует", None, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found", "conflict"],
 )
@@ -133,8 +133,8 @@ async def test_add_scenario_indicator_value(
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -189,8 +189,8 @@ async def test_put_scenario_indicator_value(
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -245,8 +245,8 @@ async def test_patch_scenario_indicator_value(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -291,8 +291,8 @@ async def test_delete_indicators_values_by_scenario_id(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -340,8 +340,8 @@ async def test_delete_scenario_indicator_value_by_id(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )

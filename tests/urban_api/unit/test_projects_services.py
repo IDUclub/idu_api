@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_Intersection, ST_Intersects, ST_IsEmpty, ST_Within
+from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_Intersection, ST_Intersects, ST_IsEmpty
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -12,7 +12,6 @@ from idu_api.common.db.entities import (
     object_geometries_data,
     projects_object_geometries_data,
     projects_services_data,
-    projects_territory_data,
     projects_urban_objects_data,
     service_types_dict,
     services_data,
@@ -21,15 +20,13 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
     ScenarioServiceWithGeometryDTO,
     ScenarioUrbanObjectDTO,
-    ServiceDTO,
-    ServiceWithGeometryDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_services import (
     add_service_to_db,
     delete_service_from_db,
@@ -41,13 +38,12 @@ from idu_api.urban_api.logic.impl.helpers.projects_services import (
     patch_service_to_db,
     put_service_to_db,
 )
-from idu_api.urban_api.logic.impl.helpers.utils import get_context_territories_geometry, include_child_territories_cte
+from idu_api.urban_api.logic.impl.helpers.utils import include_child_territories_cte
 from idu_api.urban_api.schemas import (
     ScenarioService,
     ScenarioServicePost,
     ScenarioServiceWithGeometryAttributes,
     ScenarioUrbanObject,
-    Service,
     ServicePatch,
     ServicePut,
 )
@@ -877,16 +873,6 @@ async def test_add_service_to_db(
     """Test the add_physical_object_with_geometry_to_db function."""
 
     # Arrange
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions):
-        if table == territory_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     service_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
@@ -923,18 +909,6 @@ async def test_add_service_to_db(
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_services.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_to_db(mock_conn, scenario_service_post_req, scenario_id, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_services.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_to_db(mock_conn, scenario_service_post_req, scenario_id, user)
     result = await add_service_to_db(mock_conn, scenario_service_post_req, scenario_id, user)
 
     # Assert
@@ -959,16 +933,6 @@ async def test_put_scenario_service_to_db(mock_conn: MockConnection, service_put
             return False
         return True
 
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions):
-        if table == territory_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     service_id = 1
     is_scenario_object = True
@@ -987,18 +951,6 @@ async def test_put_scenario_service_to_db(mock_conn: MockConnection, service_put
     ):
         with pytest.raises(EntityNotFoundById):
             await put_service_to_db(mock_conn, service_put_req, scenario_id, service_id, is_scenario_object, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_services.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_service_to_db(mock_conn, service_put_req, scenario_id, service_id, is_scenario_object, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_services.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_service_to_db(mock_conn, service_put_req, scenario_id, service_id, is_scenario_object, user)
     result = await put_service_to_db(mock_conn, service_put_req, scenario_id, service_id, is_scenario_object, user)
 
     # Assert
@@ -1013,16 +965,6 @@ async def test_patch_scenario_service_to_db(mock_conn: MockConnection, service_p
     """Test the patch_service_to_db function."""
 
     # Arrange
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions):
-        if table == territory_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     service_id = 1
     is_scenario_object = True
@@ -1035,18 +977,6 @@ async def test_patch_scenario_service_to_db(mock_conn: MockConnection, service_p
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_services.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_service_to_db(mock_conn, service_patch_req, scenario_id, service_id, is_scenario_object, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_services.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_service_to_db(mock_conn, service_patch_req, scenario_id, service_id, is_scenario_object, user)
     result = await patch_service_to_db(mock_conn, service_patch_req, scenario_id, service_id, is_scenario_object, user)
 
     # Assert

@@ -20,7 +20,7 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -59,8 +59,8 @@ async def test_get_hexagons_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -95,7 +95,7 @@ async def test_add_hexagons_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

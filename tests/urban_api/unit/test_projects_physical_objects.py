@@ -30,13 +30,13 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import (
     ScenarioPhysicalObjectDTO,
     ScenarioPhysicalObjectWithGeometryDTO,
     ScenarioUrbanObjectDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     add_building_to_db,
     add_physical_object_with_geometry_to_db,
@@ -55,7 +55,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
 )
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_territories_cte
 from idu_api.urban_api.schemas import (
-    PhysicalObject,
     PhysicalObjectPatch,
     PhysicalObjectPut,
     PhysicalObjectWithGeometryPost,
@@ -1104,16 +1103,6 @@ async def test_add_physical_object_with_geometry_to_db(
     """Test the add_physical_object_with_geometry_to_db function."""
 
     # Arrange
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_physical_object_type(conn, table, conditions):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     physical_object_id, object_geometry_id = 1, 1
     user = UserDTO(id="mock_string", is_superuser=False)
@@ -1150,22 +1139,6 @@ async def test_add_physical_object_with_geometry_to_db(
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_physical_object_with_geometry_to_db(
-                mock_conn, physical_object_with_geometry_post_req, scenario_id, user
-            )
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_physical_object_with_geometry_to_db(
-                mock_conn, physical_object_with_geometry_post_req, scenario_id, user
-            )
     result = await add_physical_object_with_geometry_to_db(
         mock_conn, physical_object_with_geometry_post_req, scenario_id, user
     )
@@ -1194,11 +1167,6 @@ async def test_put_scenario_physical_object_to_db(
             return False
         return True
 
-    async def check_physical_object_type(conn, table, conditions):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     physical_object_id = 1
     is_scenario_object = True
@@ -1214,14 +1182,6 @@ async def test_put_scenario_physical_object_to_db(
     with patch(
         "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
         new=AsyncMock(side_effect=check_physical_object),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_physical_object_to_db(
-                mock_conn, physical_object_put_req, scenario_id, physical_object_id, is_scenario_object, user
-            )
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
     ):
         with pytest.raises(EntityNotFoundById):
             await put_physical_object_to_db(
@@ -1247,11 +1207,6 @@ async def test_patch_scenario_physical_object_to_db(
     """Test the patch_physical_object_to_db function."""
 
     # Arrange
-    async def check_physical_object_type(conn, table, conditions):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     physical_object_id = 1
     is_scenario_object = True
@@ -1264,14 +1219,6 @@ async def test_patch_scenario_physical_object_to_db(
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_physical_object_to_db(
-                mock_conn, physical_object_patch_req, scenario_id, physical_object_id, is_scenario_object, user
-            )
     result = await patch_physical_object_to_db(
         mock_conn, physical_object_patch_req, scenario_id, physical_object_id, is_scenario_object, user
     )
@@ -1519,16 +1466,6 @@ async def test_add_building_to_scenario_physical_object(
     """Test the add_building_to_db function."""
 
     # Arrange
-    async def check_physical_object(conn, table, conditions, not_conditions=None):
-        if table == projects_physical_objects_data:
-            return False
-        return True
-
-    async def check_building(conn, table, conditions, not_conditions=None):
-        if table == projects_buildings_data:
-            return False
-        return True
-
     scenario_id = 1
     user = UserDTO(id="mock_string", is_superuser=True)
     scenario_statement_insert = (
@@ -1538,19 +1475,7 @@ async def test_add_building_to_scenario_physical_object(
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_building_to_db(mock_conn, scenario_building_post_req, scenario_id, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_physical_object),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_building_to_db(mock_conn, scenario_building_post_req, scenario_id, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_building),
-    ):
-        result = await add_building_to_db(mock_conn, scenario_building_post_req, scenario_id, user)
+    result = await add_building_to_db(mock_conn, scenario_building_post_req, scenario_id, user)
 
     # Assert
     assert isinstance(result, ScenarioPhysicalObjectDTO), "Result should be a ScenarioPhysicalObjectDTO."
@@ -1566,11 +1491,6 @@ async def test_put_building_to_db(mock_conn: MockConnection, scenario_building_p
     """Test the put_building_to_db function."""
 
     # Arrange
-    async def check_physical_object(conn, table, conditions, not_conditions=None):
-        if table == projects_physical_objects_data:
-            return False
-        return True
-
     async def check_building(conn, table, conditions, not_conditions=None):
         if table == projects_buildings_data:
             return False
@@ -1588,12 +1508,6 @@ async def test_put_building_to_db(mock_conn: MockConnection, scenario_building_p
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_physical_object),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_building_to_db(mock_conn, scenario_building_put_req, scenario_id, user)
     with patch(
         "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
         new=AsyncMock(side_effect=check_building),
@@ -1621,11 +1535,6 @@ async def test_patch_building_to_db(mock_conn: MockConnection, scenario_building
     scenario_id = 1
     user = UserDTO(id="mock_string", is_superuser=True)
 
-    async def check_building_id(conn, table, conditions, not_conditions=None):
-        if table == projects_buildings_data:
-            return False
-        return True
-
     statement_update = (
         update(projects_buildings_data)
         .where(projects_buildings_data.c.building_id == building_id)
@@ -1634,14 +1543,6 @@ async def test_patch_building_to_db(mock_conn: MockConnection, scenario_building
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence",
-        new=AsyncMock(side_effect=check_building_id),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_building_to_db(
-                mock_conn, scenario_building_patch_req, building_id, is_scenario_object, scenario_id, user
-            )
     result = await patch_building_to_db(
         mock_conn, scenario_building_patch_req, scenario_id, building_id, is_scenario_object, user
     )
@@ -1667,13 +1568,7 @@ async def test_delete_scenario_building_from_db(mock_conn: MockConnection):
     statement_delete = delete(projects_buildings_data).where(projects_buildings_data.c.building_id == building_id)
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.check_existence"
-    ) as mock_check_existence:
-        result = await delete_building_from_db(mock_conn, scenario_id, building_id, is_scenario_object, user)
-        mock_check_existence.return_value = False
-        with pytest.raises(EntityNotFoundById):
-            await delete_building_from_db(mock_conn, scenario_id, building_id, is_scenario_object, user)
+    result = await delete_building_from_db(mock_conn, scenario_id, building_id, is_scenario_object, user)
 
     # Assert
     assert result == {"status": "ok"}, "Result should be {'status': 'ok'}."

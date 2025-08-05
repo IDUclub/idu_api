@@ -27,7 +27,7 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -61,7 +61,7 @@ async def test_get_territory_by_id(
     "expected_status, error_message, territory_type_id_param, target_city_type_id_param, admin_center_id_param",
     [
         (201, None, None, None, None),
-        (404, "not found", 1e9, 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -100,7 +100,7 @@ async def test_add_territory(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -139,7 +139,7 @@ async def test_put_territory(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -179,8 +179,8 @@ async def test_patch_territory(
     [
         (200, None, None, "v1"),
         (200, None, None, "v2"),
-        (400, "You can use cities_only parameter only with including all levels", None, "v1"),
-        (404, "not found", 1e9, "v1"),
+        (400, "Вы можете использовать параметр cities_only только при включении всех уровней", None, "v1"),
+        (404, "не найден", 1e9, "v1"),
     ],
     ids=["success_v1", "success_v2", "bad_request", "not_found"],
 )
@@ -229,8 +229,8 @@ async def test_get_territories_by_parent_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including all levels", None),
-        (404, "not found", 1e9),
+        (400, "Вы можете использовать параметр cities_only только при включении всех уровней", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -275,8 +275,8 @@ async def test_get_all_territories_by_parent_id(
     [
         (200, None, None, "v1"),
         (200, None, None, "v2"),
-        (400, "You can use cities_only parameter only with including all levels", None, "v1"),
-        (404, "not found", 1e9, "v1"),
+        (400, "Вы можете использовать параметр cities_only только при включении всех уровней", None, "v1"),
+        (404, "не найден", 1e9, "v1"),
     ],
     ids=["success_v1", "success_v2", "bad_request", "not_found"],
 )
@@ -325,8 +325,8 @@ async def test_get_territories_without_geometry_by_parent_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including all levels", None),
-        (404, "not found", 1e9),
+        (400, "Вы можете использовать параметр cities_only только при включении всех уровней", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -366,7 +366,7 @@ async def test_get_all_territories_without_geometry_by_parent_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -427,7 +427,7 @@ async def test_get_common_territory(
     # Assert
     assert_response(response, expected_status, Territory, error_message)
     if response.status_code == 200:
-        assert result["territory_id"] == territory_id, "Expected territory was not found in result."
+        assert result["territory_id"] == territory_id, "Expected territory was не найден in result."
 
 
 @pytest.mark.asyncio
@@ -466,7 +466,7 @@ async def test_intersecting_territories(
         assert_response(response, expected_status, Territory, error_message, result_type="list")
         assert any(
             item["territory_id"] == city["territory_id"] for item in result
-        ), "Expected territory was not found in result."
+        ), "Expected territory was не найден in result."
     else:
         assert_response(response, expected_status, Territory, error_message)
 
@@ -477,7 +477,7 @@ async def test_intersecting_territories(
     [
         (200, None, None),
         (400, None, "1.2.3"),
-        (404, "not found", str(10**9)),
+        (404, "не найден", str(10**9)),
     ],
     ids=["success", "bad_request", "not_found"],
 )

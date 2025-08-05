@@ -25,12 +25,12 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
-from idu_api.urban_api.dto import ScenarioBufferDTO, UserDTO
-from idu_api.urban_api.exceptions.logic.common import (
+from idu_api.common.exceptions.logic.common import (
     EntityAlreadyEdited,
     EntityNotFoundById,
     EntityNotFoundByParams,
 )
+from idu_api.urban_api.dto import ScenarioBufferDTO, UserDTO
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
@@ -654,9 +654,6 @@ async def put_buffer_to_db(
         conditions={"public_urban_object_id": urban_object_id, "scenario_id": scenario_id},
     ):
         raise EntityAlreadyEdited("buffer", scenario_id)
-
-    if not await check_existence(conn, buffer_types_dict, conditions={"buffer_type_id": buffer.buffer_type_id}):
-        raise EntityNotFoundById(buffer.buffer_type_id, "buffer type")
 
     values = extract_values_from_model(buffer, exclude_unset=True, allow_null_geometry=True)
 

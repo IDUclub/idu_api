@@ -15,11 +15,11 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import BufferDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.territories_buffers import get_buffers_by_territory_id_from_db
 from idu_api.urban_api.logic.impl.helpers.utils import include_child_territories_cte
-from idu_api.urban_api.schemas import Buffer, BufferAttributes
+from idu_api.urban_api.schemas import BufferAttributes
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from tests.urban_api.helpers import MockConnection
 

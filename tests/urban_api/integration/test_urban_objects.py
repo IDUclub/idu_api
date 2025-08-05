@@ -18,7 +18,7 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -50,7 +50,7 @@ async def test_get_urban_object_by_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -85,7 +85,7 @@ async def test_get_urban_objects_by_physical_object_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -120,7 +120,7 @@ async def test_get_urban_objects_by_object_geometry_id(
     "expected_status, error_message, service_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -153,7 +153,7 @@ async def test_get_urban_objects_by_service_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -191,7 +191,7 @@ async def test_delete_urban_object(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -230,8 +230,8 @@ async def test_get_urban_objects_by_territory_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )

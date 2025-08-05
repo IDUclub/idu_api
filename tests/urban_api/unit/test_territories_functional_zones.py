@@ -8,8 +8,8 @@ from geoalchemy2.functions import ST_AsEWKB
 from sqlalchemy import delete, select
 
 from idu_api.common.db.entities import functional_zone_types_dict, functional_zones_data, territories_data
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import FunctionalZoneDTO, FunctionalZoneSourceDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.territories_functional_zones import (
     delete_all_functional_zones_for_territory_from_db,
     get_functional_zones_by_territory_id_from_db,

@@ -65,13 +65,13 @@ async def get_physical_objects_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -149,13 +149,13 @@ async def get_physical_objects_with_geometry_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id.",
         )
 
     order_by_value = order_by.value if order_by is not None else None

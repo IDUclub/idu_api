@@ -109,12 +109,13 @@ async def get_geometries_with_all_objects_by_scenario_id(
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id.",
         )
 
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Please, choose either service_type_id or urban_function_id"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     geometries = await user_project_service.get_geometries_with_all_objects_by_scenario_id(
@@ -217,12 +218,13 @@ async def get_context_geometries_with_all_objects(
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id.",
         )
 
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST, detail="Please, choose either service_type_id or urban_function_id"
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     geometries = await user_project_service.get_context_geometries_with_all_objects(

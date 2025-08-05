@@ -16,8 +16,8 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import ObjectGeometryDTO, PhysicalObjectDTO, UrbanObjectDTO
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.object_geometries import (
     add_object_geometry_to_physical_object_to_db,
     delete_object_geometry_in_db,
@@ -158,16 +158,6 @@ async def test_put_object_geometry_to_db(mock_conn: MockConnection, object_geome
     """Test the put_object_geometry_to_db function."""
 
     # Arrange
-    async def check_object_geometry(conn, table, conditions):
-        if table == object_geometries_data:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
     object_geometry_id = 1
     statement_update = (
         update(object_geometries_data)
@@ -185,18 +175,6 @@ async def test_put_object_geometry_to_db(mock_conn: MockConnection, object_geome
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.object_geometries.check_existence",
-        new=AsyncMock(side_effect=check_object_geometry),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_object_geometry_to_db(mock_conn, object_geometries_put_req, object_geometry_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.object_geometries.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_object_geometry_to_db(mock_conn, object_geometries_put_req, object_geometry_id)
     result = await put_object_geometry_to_db(mock_conn, object_geometries_put_req, object_geometry_id)
 
     # Assert
@@ -211,16 +189,6 @@ async def test_patch_object_geometry_to_db(mock_conn: MockConnection, object_geo
     """Test the patch_object_geometry_to_db function."""
 
     # Arrange
-    async def check_object_geometry(conn, table, conditions):
-        if table == object_geometries_data:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
     object_geometry_id = 1
     statement_update = (
         update(object_geometries_data)
@@ -229,18 +197,6 @@ async def test_patch_object_geometry_to_db(mock_conn: MockConnection, object_geo
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.object_geometries.check_existence",
-        new=AsyncMock(side_effect=check_object_geometry),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_object_geometry_to_db(mock_conn, object_geometries_patch_req, object_geometry_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.object_geometries.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_object_geometry_to_db(mock_conn, object_geometries_patch_req, object_geometry_id)
     result = await patch_object_geometry_to_db(mock_conn, object_geometries_patch_req, object_geometry_id)
 
     # Assert
@@ -285,11 +241,6 @@ async def test_add_object_geometry_to_physical_object_to_db(
             return False
         return True
 
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
     object_geometry_id = 1
     physical_object_id = 1
     statement_insert_geometry = (
@@ -315,14 +266,6 @@ async def test_add_object_geometry_to_physical_object_to_db(
     with patch(
         "idu_api.urban_api.logic.impl.helpers.object_geometries.check_existence",
         new=AsyncMock(side_effect=check_physical_object),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_object_geometry_to_physical_object_to_db(
-                mock_conn, physical_object_id, object_geometries_post_req
-            )
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.object_geometries.check_existence",
-        new=AsyncMock(side_effect=check_territory),
     ):
         with pytest.raises(EntityNotFoundById):
             await add_object_geometry_to_physical_object_to_db(

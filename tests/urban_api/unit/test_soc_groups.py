@@ -5,7 +5,8 @@ from datetime import date
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy.sql import delete, func, insert, select, update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import delete, func, select
 
 from idu_api.common.db.entities import (
     service_types_dict,
@@ -17,6 +18,7 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_functions_dict,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.dto import (
     ServiceTypeDTO,
     SocGroupDTO,
@@ -25,7 +27,6 @@ from idu_api.urban_api.dto import (
     SocValueIndicatorValueDTO,
     SocValueWithServiceTypesDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.logic.impl.helpers.soc_groups import (
     add_service_type_to_social_group_to_db,
     add_service_type_to_social_value_to_db,
@@ -135,11 +136,7 @@ async def test_add_social_group_to_db(mock_conn: MockConnection, soc_group_post_
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence") as mock_check_existence:
-        with pytest.raises(EntityAlreadyExists):
-            await add_social_group_to_db(mock_conn, soc_group_post_req)
-        mock_check_existence.return_value = False
-        result = await add_social_group_to_db(mock_conn, soc_group_post_req)
+    result = await add_social_group_to_db(mock_conn, soc_group_post_req)
 
     # Assert
     assert isinstance(result, SocGroupWithServiceTypesDTO), "Result should be a SocGroupWithServiceTypesDTO."
@@ -159,22 +156,6 @@ async def add_service_type_to_social_group_to_db(
 
     # Arrange
     soc_group_id = 1
-
-    async def check_soc_group(conn, table, conditions):
-        if table == soc_groups_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_soc_group_value(conn, table, conditions):
-        if table == soc_group_values_data:
-            return False
-        return True
-
     statement = (
         insert(soc_group_values_data)
         .values(soc_group_id=soc_group_id, **extract_values_from_model(soc_group_service_type_post_req))
@@ -182,25 +163,7 @@ async def add_service_type_to_social_group_to_db(
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_service_type_to_social_group_to_db(mock_conn, soc_group_id, soc_group_service_type_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_group),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_type_to_social_group_to_db(mock_conn, soc_group_id, soc_group_service_type_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_type_to_social_group_to_db(mock_conn, soc_group_id, soc_group_service_type_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_group_value),
-    ):
-        result = await add_service_type_to_social_group_to_db(mock_conn, soc_group_id, soc_group_service_type_post_req)
+    result = await add_service_type_to_social_group_to_db(mock_conn, soc_group_id, soc_group_service_type_post_req)
 
     # Assert
     assert isinstance(result, SocGroupWithServiceTypesDTO), "Result should be a SocGroupWithServiceTypesDTO."
@@ -219,21 +182,6 @@ async def test_add_service_type_to_social_value_to_db(mock_conn: MockConnection)
     soc_value_id = 1
     service_type_id = 1
 
-    async def check_soc_value(conn, table, conditions):
-        if table == soc_values_dict:
-            return False
-        return True
-
-    async def check_service(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_conn(conn, table, conditions):
-        if table == soc_values_service_types_dict:
-            return False
-        return True
-
     statement = (
         insert(soc_values_service_types_dict)
         .values(soc_value_id=soc_value_id, service_type_id=service_type_id)
@@ -241,27 +189,7 @@ async def test_add_service_type_to_social_value_to_db(mock_conn: MockConnection)
     )
 
     # Act
-
-    with pytest.raises(EntityAlreadyExists):
-        await add_service_type_to_social_value_to_db(mock_conn, soc_value_id, service_type_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_value),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_type_to_social_value_to_db(mock_conn, soc_value_id, service_type_id)
-
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_service),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_type_to_social_value_to_db(mock_conn, soc_value_id, service_type_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_conn),
-    ):
-        result = await add_service_type_to_social_value_to_db(mock_conn, soc_value_id, service_type_id)
+    result = await add_service_type_to_social_value_to_db(mock_conn, soc_value_id, service_type_id)
 
     # Assert
     assert isinstance(result, SocValueWithServiceTypesDTO), "Result should be a SocValueWithServiceTypesDTO."
@@ -407,12 +335,7 @@ async def test_add_social_value_to_db(mock_conn: MockConnection, soc_value_post_
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence") as mock_check_existence:
-        mock_check_existence.side_effect = [True, False, True]
-        with pytest.raises(EntityAlreadyExists):
-            await add_social_value_to_db(mock_conn, soc_value_post_req)
-        mock_check_existence.return_value = False
-        result = await add_social_value_to_db(mock_conn, soc_value_post_req)
+    result = await add_social_value_to_db(mock_conn, soc_value_post_req)
 
     # Assert
     assert isinstance(result, SocValueDTO), "Result should be a SocValueDTO."
@@ -430,21 +353,6 @@ async def test_add_value_to_social_group_from_db(mock_conn: MockConnection):
     service_type_id = 1
     soc_value_id = 2
 
-    async def check_soc_group(conn, table, conditions):
-        if table == soc_groups_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_indicator_value(conn, table, conditions):
-        if table == soc_group_values_data:
-            return False
-        return True
-
     statement = insert(soc_group_values_data).values(
         soc_group_id=soc_group_id,
         service_type_id=service_type_id,
@@ -453,25 +361,7 @@ async def test_add_value_to_social_group_from_db(mock_conn: MockConnection):
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_value_to_social_group_from_db(mock_conn, soc_group_id, service_type_id, 1)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_group),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_value_to_social_group_from_db(mock_conn, soc_group_id, service_type_id, soc_value_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_value_to_social_group_from_db(mock_conn, soc_group_id, service_type_id, soc_value_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_indicator_value),
-    ):
-        result = await add_value_to_social_group_from_db(mock_conn, soc_group_id, service_type_id, soc_value_id)
+    result = await add_value_to_social_group_from_db(mock_conn, soc_group_id, service_type_id, soc_value_id)
 
     # Assert
     assert isinstance(result, SocValueDTO), "Result should be a SocValueDTO."
@@ -510,11 +400,6 @@ async def test_get_social_value_indicator_values_from_db(mock_conn: MockConnecti
 
     async def check_soc_value(conn, table, conditions):
         if table == soc_values_dict:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
             return False
         return True
 
@@ -585,13 +470,6 @@ async def test_get_social_value_indicator_values_from_db(mock_conn: MockConnecti
     ):
         with pytest.raises(EntityNotFoundById):
             await get_social_value_indicator_values_from_db(mock_conn, soc_value_id, **params, last_only=False)
-
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await get_social_value_indicator_values_from_db(mock_conn, soc_value_id, **params, last_only=False)
     mock_conn.execute_mock.reset_mock()
 
     await get_social_value_indicator_values_from_db(mock_conn, soc_value_id, None, None, last_only=False)
@@ -618,22 +496,6 @@ async def test_add_social_value_indicator_value_to_db(
     """Test the add_social_value_indicator_value_to_db function."""
 
     # Arrange
-
-    async def check_soc_value(conn, table, conditions):
-        if table == soc_values_dict:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_soc_value_indicator(conn, table, conditions):
-        if table == soc_value_indicators_data:
-            return False
-        return True
-
     statement = (
         insert(soc_value_indicators_data)
         .values(**soc_value_indicator_post_req.model_dump())
@@ -641,25 +503,7 @@ async def test_add_social_value_indicator_value_to_db(
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_value),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_value_indicator),
-    ):
-        result = await add_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_post_req)
+    result = await add_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_post_req)
 
     # Assert
     assert isinstance(result, SocValueIndicatorValueDTO), "Result should be an SocValueIndicatorValueDTO."
@@ -677,66 +521,26 @@ async def test_put_social_value_indicator_value_to_db(
     """Test the put_social_value_indicator_value_to_db function."""
 
     # Arrange
-
-    async def check_soc_value(conn, table, conditions):
-        if table == soc_values_dict:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_soc_value_indicator(conn, table, conditions):
-        if table == soc_value_indicators_data:
-            return False
-        return True
-
-    statement_insert = (
+    statement = (
         insert(soc_value_indicators_data)
         .values(**soc_value_indicator_put_req.model_dump())
-        .returning(soc_value_indicators_data)
-    )
-    statement_update = (
-        update(soc_value_indicators_data)
-        .values(**extract_values_from_model(soc_value_indicator_put_req, to_update=True))
-        .where(
-            soc_value_indicators_data.c.soc_value_id == soc_value_indicator_put_req.soc_value_id,
-            soc_value_indicators_data.c.territory_id == soc_value_indicator_put_req.territory_id,
-            soc_value_indicators_data.c.year == soc_value_indicator_put_req.year,
+        .on_conflict_do_update(
+            index_elements=["soc_value_id", "territory_id", "year"],
+            set_=soc_value_indicator_put_req.model_dump(),
         )
         .returning(soc_value_indicators_data)
     )
 
     # Act
-    await put_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_value),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_value_indicator),
-    ):
-        result = await put_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_put_req)
+    result = await put_social_value_indicator_value_to_db(mock_conn, soc_value_indicator_put_req)
 
     # Assert
     assert isinstance(result, SocValueIndicatorValueDTO), "Result should be an SocValueIndicatorValueDTO."
     assert isinstance(
         SocValueIndicatorValue.from_dto(result), SocValueIndicatorValue
     ), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_insert))
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.commit_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -753,11 +557,6 @@ async def test_delete_social_value_indicator_value_from_db(mock_conn: MockConnec
             return False
         return True
 
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
     statement = delete(soc_value_indicators_data).where(
         soc_value_indicators_data.c.soc_value_id == soc_value_id,
         soc_value_indicators_data.c.territory_id == territory_id,
@@ -767,25 +566,9 @@ async def test_delete_social_value_indicator_value_from_db(mock_conn: MockConnec
     # Act
     with patch(
         "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_soc_value),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            result = await delete_social_value_indicator_value_from_db(mock_conn, soc_value_id, territory_id, year)
-
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            result = await delete_social_value_indicator_value_from_db(mock_conn, soc_value_id, territory_id, year)
-
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.soc_groups.check_existence",
     ) as mock_check_existence:
         result = await delete_social_value_indicator_value_from_db(mock_conn, soc_value_id, territory_id, year)
-
         mock_check_existence.return_value = False
-        mock_check_existence.side_effect = [True, True, False]
         with pytest.raises(EntityNotFoundByParams):
             await delete_social_value_indicator_value_from_db(mock_conn, soc_value_id, territory_id, year)
 

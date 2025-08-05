@@ -49,7 +49,7 @@ async def test_get_measurement_units(urban_api_host: str, measurement_unit: dict
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )
@@ -94,8 +94,8 @@ async def test_get_indicators_groups(urban_api_host: str, indicators_group: dict
     "expected_status, error_message, indicators_ids_param",
     [
         (201, None, None),
-        (404, "not found", [1e9]),
-        (409, "already exists", None),
+        (404, "не найден", [1e9]),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -127,7 +127,7 @@ async def test_add_indicators_groups(
     "expected_status, error_message, indicators_ids",
     [
         (200, None, None),
-        (404, "not found", [1e9]),
+        (404, "не найден", [1e9]),
     ],
     ids=["success", "not_found"],
 )
@@ -159,7 +159,7 @@ async def test_update_indicators_group(
     "expected_status, error_message, group_id",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -196,8 +196,8 @@ async def test_get_indicators_by_group_id(
     "expected_status, error_message, parent_id_param, parent_name_param, type_id_param",
     [
         (200, None, None, None, None),
-        (400, "Please, choose either parent_id or parent_name", 1, "test", None),
-        (404, "not found", 1e9, None, None),
+        (400, "Пожалуйста, выберите либо parent_id, либо parent_name", 1, "test", None),
+        (404, "не найден", 1e9, None, None),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -247,7 +247,7 @@ async def test_get_indicators_by_parent(
     "expected_status, error_message, indicator_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -276,8 +276,8 @@ async def test_get_indicator_by_id(
     "expected_status, error_message, measurement_unit_id_param, parent_id_param",
     [
         (201, None, None, None),
-        (404, "not found", 1e9, 1e9),
-        (409, "already exists", None, None),
+        (404, "отсутствует в таблице", 1e9, 1e9),
+        (409, "уже существует", None, None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -296,9 +296,9 @@ async def test_add_indicator(
 
     # Arrange
     new_indicator = indicators_post_req.model_dump()
-    new_indicator["name_full"] = "new name"
+    new_indicator["name_full"] = "new name" if expected_status != 404 else "failed name"
     new_indicator["measurement_unit_id"] = measurement_unit_id_param or measurement_unit["measurement_unit_id"]
-    new_indicator["parent_id"] = parent_id_param
+    new_indicator["parent_id"] = None
     new_indicator["service_type_id"] = service_type["service_type_id"]
     new_indicator["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
 
@@ -315,7 +315,7 @@ async def test_add_indicator(
     "expected_status, error_message, measurement_unit_id_param, parent_id_param",
     [
         (200, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -332,9 +332,9 @@ async def test_put_indicator(
 
     # Arrange
     new_indicator = indicators_put_req.model_dump()
-    new_indicator["name_full"] = "new name"
+    new_indicator["name_full"] = "new name" if expected_status != 404 else "failed name"
     new_indicator["measurement_unit_id"] = measurement_unit_id_param or measurement_unit["measurement_unit_id"]
-    new_indicator["parent_id"] = parent_id_param
+    new_indicator["parent_id"] = None
     new_indicator["service_type_id"] = None
     new_indicator["physical_object_type_id"] = None
 
@@ -351,14 +351,14 @@ async def test_put_indicator(
     "expected_status, error_message, name_full_param, indicator_id_param",
     [
         (200, None, "updated indicator", None),
-        (404, "not found", "updated indicator", 1e9),
-        (409, "already exists", "new name", None),
+        (404, "не найден", "updated indicator", 1e9),
+        (409, "уже существует", "new name", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_indicator(
     urban_api_host: str,
-    indicator: dict[str, any],
+    indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     name_full_param: str,
@@ -384,7 +384,7 @@ async def test_patch_indicator(
     "expected_status, error_message, indicator_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -422,7 +422,7 @@ async def test_delete_indicator(
     "expected_status, error_message, indicator_value_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -455,8 +455,8 @@ async def test_get_indicator_value_by_id(
     "expected_status, error_message, indicator_id_param, territory_id_param",
     [
         (201, None, None, None),
-        (404, "not found", 1e9, 1e9),
-        (409, "already exists", None, None),
+        (404, "отсутствует в таблице", 1e9, 1e9),
+        (409, "уже существует", None, None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -503,7 +503,7 @@ async def test_add_indicator_value(
     "expected_status, error_message, indicator_id_param, territory_id_param",
     [
         (200, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -550,7 +550,7 @@ async def test_put_indicator_value(
     "expected_status, error_message, indicator_value_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -589,7 +589,7 @@ async def test_delete_indicator_value(
     "expected_status, error_message, indicator_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

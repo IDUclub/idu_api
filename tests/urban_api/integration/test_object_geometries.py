@@ -26,7 +26,7 @@ from tests.urban_api.helpers.utils import assert_response
     [
         (200, None, None),
         (400, None, "1.2.3"),
-        (404, "not found", str(10**9)),
+        (404, "не найден", str(10**9)),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -62,7 +62,7 @@ async def test_get_object_geometries_by_ids(
     "expected_status, error_message, physical_object_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -95,7 +95,7 @@ async def test_add_object_geometry_to_physical_object(
     "expected_status, error_message, object_geometry_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -127,7 +127,7 @@ async def test_put_object_geometry(
     "expected_status, error_message, object_geometry_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -159,7 +159,7 @@ async def test_patch_object_geometry(
     "expected_status, error_message, object_geometry_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -198,7 +198,7 @@ async def test_delete_object_geometry(
     "expected_status, error_message, object_geometry_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

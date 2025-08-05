@@ -2,7 +2,8 @@
 
 from typing import Callable
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -16,6 +17,7 @@ from idu_api.common.db.entities import (
     soc_values_service_types_dict,
     urban_functions_dict,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById
 from idu_api.urban_api.dto import (
     PhysicalObjectTypeDTO,
     ServiceTypeDTO,
@@ -24,7 +26,6 @@ from idu_api.urban_api.dto import (
     SocValueDTO,
     UrbanFunctionDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.utils import build_recursive_query, check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
     ServiceTypePatch,
@@ -93,14 +94,6 @@ async def add_service_type_to_db(
 ) -> ServiceTypeDTO:
     """Create service type object."""
 
-    if not await check_existence(
-        conn, urban_functions_dict, conditions={"urban_function_id": service_type.urban_function_id}
-    ):
-        raise EntityNotFoundById(service_type.urban_function_id, "urban function")
-
-    if await check_existence(conn, service_types_dict, conditions={"name": service_type.name}):
-        raise EntityAlreadyExists("service type", service_type.name)
-
     statement = (
         insert(service_types_dict).values(**service_type.model_dump()).returning(service_types_dict.c.service_type_id)
     )
@@ -114,24 +107,15 @@ async def add_service_type_to_db(
 async def put_service_type_to_db(conn: AsyncConnection, service_type: ServiceTypePut) -> ServiceTypeDTO:
     """Update service type object by all its attributes."""
 
-    if not await check_existence(
-        conn, urban_functions_dict, conditions={"urban_function_id": service_type.urban_function_id}
-    ):
-        raise EntityNotFoundById(service_type.urban_function_id, "urban function")
-
-    if await check_existence(conn, service_types_dict, conditions={"name": service_type.name}):
-        statement = (
-            update(service_types_dict)
-            .where(service_types_dict.c.name == service_type.name)
-            .values(**service_type.model_dump())
-            .returning(service_types_dict.c.service_type_id)
+    statement = (
+        insert(service_types_dict)
+        .values(**service_type.model_dump())
+        .on_conflict_do_update(
+            index_elements=["name"],
+            set_=service_type.model_dump(),
         )
-    else:
-        statement = (
-            insert(service_types_dict)
-            .values(**service_type.model_dump())
-            .returning(service_types_dict.c.service_type_id)
-        )
+        .returning(service_types_dict.c.service_type_id)
+    )
 
     service_type_id = (await conn.execute(statement)).scalar_one()
     await conn.commit()
@@ -148,21 +132,6 @@ async def patch_service_type_to_db(
 
     if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service_type_id}):
         raise EntityNotFoundById(service_type_id, "service type")
-
-    if service_type.urban_function_id is not None:
-        if not await check_existence(
-            conn, urban_functions_dict, conditions={"urban_function_id": service_type.urban_function_id}
-        ):
-            raise EntityNotFoundById(service_type.urban_function_id, "urban function")
-
-    if service_type.name is not None:
-        if await check_existence(
-            conn,
-            service_types_dict,
-            conditions={"name": service_type.name},
-            not_conditions={"service_type_id": service_type_id},
-        ):
-            raise EntityAlreadyExists("service type", service_type.name)
 
     statement = (
         update(service_types_dict)
@@ -271,9 +240,6 @@ async def add_urban_function_to_db(
         ):
             raise EntityNotFoundById(urban_function.parent_id, "urban function")
 
-    if await check_existence(conn, urban_functions_dict, conditions={"name": urban_function.name}):
-        raise EntityAlreadyExists("urban function", urban_function.name)
-
     statement = (
         insert(urban_functions_dict)
         .values(**urban_function.model_dump(exclude={"parent_id"}), parent_id=urban_function.parent_id)
@@ -298,23 +264,15 @@ async def put_urban_function_to_db(
         ):
             raise EntityNotFoundById(urban_function.parent_id, "urban function")
 
-    if await check_existence(
-        conn,
-        urban_functions_dict,
-        conditions={"name": urban_function.name},
-    ):
-        statement = (
-            update(urban_functions_dict)
-            .where(urban_functions_dict.c.name == urban_function.name)
-            .values(**urban_function.model_dump())
-            .returning(urban_functions_dict.c.urban_function_id)
+    statement = (
+        insert(urban_functions_dict)
+        .values(**urban_function.model_dump())
+        .on_conflict_do_update(
+            index_elements=["name"],
+            set_=urban_function.model_dump(),
         )
-    else:
-        statement = (
-            insert(urban_functions_dict)
-            .values(**urban_function.model_dump())
-            .returning(urban_functions_dict.c.urban_function_id)
-        )
+        .returning(urban_functions_dict.c.urban_function_id)
+    )
 
     urban_function_id = (await conn.execute(statement)).scalar_one()
     await conn.commit()
@@ -337,15 +295,6 @@ async def patch_urban_function_to_db(
             conn, urban_functions_dict, conditions={"urban_function_id": urban_function.parent_id}
         ):
             raise EntityNotFoundById(urban_function.parent_id, "urban function")
-
-    if urban_function.name is not None:
-        if await check_existence(
-            conn,
-            urban_functions_dict,
-            conditions={"name": urban_function.name},
-            not_conditions={"urban_function_id": urban_function_id},
-        ):
-            raise EntityAlreadyExists("urban function", urban_function.name)
 
     values = extract_values_from_model(urban_function, exclude_unset=True)
     statement = (

@@ -3,7 +3,8 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from sqlalchemy.sql import delete, insert, select, update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import delete, select, update
 
 from idu_api.common.db.entities import (
     object_service_types_dict,
@@ -16,6 +17,7 @@ from idu_api.common.db.entities import (
     soc_values_service_types_dict,
     urban_functions_dict,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import (
     PhysicalObjectTypeDTO,
     ServiceTypeDTO,
@@ -24,7 +26,6 @@ from idu_api.urban_api.dto import (
     SocValueDTO,
     UrbanFunctionDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.service_types import (
     add_service_type_to_db,
     add_urban_function_to_db,
@@ -124,16 +125,6 @@ async def test_add_service_type_to_db(mock_conn: MockConnection, service_type_po
     """Test the add_service_type_to_db function."""
 
     # Arrange
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_urban_function(conn, table, conditions):
-        if table == urban_functions_dict:
-            return False
-        return True
-
     statement_insert = (
         insert(service_types_dict)
         .values(**service_type_post_req.model_dump())
@@ -141,19 +132,7 @@ async def test_add_service_type_to_db(mock_conn: MockConnection, service_type_po
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_service_type_to_db(mock_conn, service_type_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_urban_function),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_service_type_to_db(mock_conn, service_type_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        result = await add_service_type_to_db(mock_conn, service_type_post_req)
+    result = await add_service_type_to_db(mock_conn, service_type_post_req)
 
     # Assert
     assert isinstance(result, ServiceTypeDTO), "Result should be a ServiceTypeDTO."
@@ -167,48 +146,24 @@ async def test_put_service_type_to_db(mock_conn: MockConnection, service_type_pu
     """Test the put_service_type_to_db function."""
 
     # Arrange
-    async def check_service_type_name(conn, table, conditions, not_conditions=None):
-        if table == service_types_dict and conditions == {"name": service_type_put_req.name}:
-            return False
-        return True
-
-    async def check_urban_function(conn, table, conditions, not_conditions=None):
-        if table == urban_functions_dict:
-            return False
-        return True
-
-    statement_update = (
-        update(service_types_dict)
-        .where(service_types_dict.c.name == service_type_put_req.name)
-        .values(**service_type_put_req.model_dump())
-        .returning(service_types_dict.c.service_type_id)
-    )
-    statement_insert = (
+    statement = (
         insert(service_types_dict)
         .values(**service_type_put_req.model_dump())
+        .on_conflict_do_update(
+            index_elements=["name"],
+            set_=service_type_put_req.model_dump(),
+        )
         .returning(service_types_dict.c.service_type_id)
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_urban_function),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_service_type_to_db(mock_conn, service_type_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_service_type_name),
-    ):
-        await put_service_type_to_db(mock_conn, service_type_put_req)
     result = await put_service_type_to_db(mock_conn, service_type_put_req)
 
     # Assert
     assert isinstance(result, ServiceTypeDTO), "Result should be a ServiceTypeDTO."
     assert isinstance(ServiceType.from_dto(result), ServiceType), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    mock_conn.execute_mock.assert_any_call(str(statement_insert))
-    assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.commit_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -223,16 +178,6 @@ async def test_patch_service_type_to_db(mock_conn: MockConnection, service_type_
             return False
         return True
 
-    async def check_service_type_name(conn, table, conditions, not_conditions=None):
-        if table == service_types_dict and conditions == {"name": service_type_patch_req.name}:
-            return False
-        return True
-
-    async def check_urban_function(conn, table, conditions, not_conditions=None):
-        if table == urban_functions_dict:
-            return False
-        return True
-
     statement_update = (
         update(service_types_dict)
         .where(service_types_dict.c.service_type_id == service_type_id)
@@ -240,25 +185,13 @@ async def test_patch_service_type_to_db(mock_conn: MockConnection, service_type_
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await patch_service_type_to_db(mock_conn, service_type_id, service_type_patch_req)
     with patch(
         "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
         new=AsyncMock(side_effect=check_service_type_id),
     ):
         with pytest.raises(EntityNotFoundById):
             await patch_service_type_to_db(mock_conn, service_type_id, service_type_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_urban_function),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_service_type_to_db(mock_conn, service_type_id, service_type_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_service_type_name),
-    ):
-        result = await patch_service_type_to_db(mock_conn, service_type_id, service_type_patch_req)
+    result = await patch_service_type_to_db(mock_conn, service_type_id, service_type_patch_req)
 
     # Assert
     assert isinstance(result, ServiceTypeDTO), "Result should be a ServiceTypeDTO."
@@ -366,16 +299,6 @@ async def test_add_urban_function_to_db(mock_conn: MockConnection, urban_functio
     """Test the add_urban_function_to_db function."""
 
     # Arrange
-    async def check_function(conn, table, conditions):
-        if conditions == {"name": urban_function_post_req.name}:
-            return False
-        return True
-
-    async def check_parent_function(conn, table, conditions):
-        if conditions == {"urban_function_id": urban_function_post_req.parent_id}:
-            return False
-        return True
-
     statement = (
         insert(urban_functions_dict)
         .values(**urban_function_post_req.model_dump())
@@ -383,19 +306,7 @@ async def test_add_urban_function_to_db(mock_conn: MockConnection, urban_functio
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_urban_function_to_db(mock_conn, urban_function_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_parent_function),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_urban_function_to_db(mock_conn, urban_function_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_function),
-    ):
-        result = await add_urban_function_to_db(mock_conn, urban_function_post_req)
+    result = await add_urban_function_to_db(mock_conn, urban_function_post_req)
 
     # Assert
     assert isinstance(result, UrbanFunctionDTO), "Result should be a UrbanFunctionDTO."
@@ -409,50 +320,24 @@ async def test_put_urban_function_to_db(mock_conn: MockConnection, urban_functio
     """Test the put_urban_function_to_db function."""
 
     # Arrange
-    async def check_function(conn, table, conditions):
-        if conditions == {"name": urban_function_put_req.name}:
-            return False
-        return True
-
-    async def check_parent_function(conn, table, conditions):
-        if conditions == {"urban_function_id": urban_function_put_req.parent_id}:
-            return False
-        return True
-
-    statement_insert = (
+    statement = (
         insert(urban_functions_dict)
-        .values(
-            **urban_function_put_req.model_dump(),
-        )
-        .returning(urban_functions_dict.c.urban_function_id)
-    )
-    statement_update = (
-        update(urban_functions_dict)
-        .where(urban_functions_dict.c.name == urban_function_put_req.name)
         .values(**urban_function_put_req.model_dump())
+        .on_conflict_do_update(
+            index_elements=["name"],
+            set_=urban_function_put_req.model_dump(),
+        )
         .returning(urban_functions_dict.c.urban_function_id)
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_parent_function),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_urban_function_to_db(mock_conn, urban_function_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_function),
-    ):
-        await put_urban_function_to_db(mock_conn, urban_function_put_req)
     result = await put_urban_function_to_db(mock_conn, urban_function_put_req)
 
     # Assert
     assert isinstance(result, UrbanFunctionDTO), "Result should be a UrbanFunctionDTO."
     assert isinstance(UrbanFunction.from_dto(result), UrbanFunction), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_insert))
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.commit_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -467,16 +352,6 @@ async def test_patch_urban_function_to_db(mock_conn: MockConnection, urban_funct
             return False
         return True
 
-    async def check_function_name(conn, table, conditions, not_conditions=None):
-        if conditions == {"name": urban_function_patch_req.name}:
-            return False
-        return True
-
-    async def check_parent_function(conn, table, conditions, not_conditions=None):
-        if conditions == {"urban_function_id": urban_function_patch_req.parent_id}:
-            return False
-        return True
-
     statement = (
         update(urban_functions_dict)
         .where(urban_functions_dict.c.urban_function_id == urban_function_id)
@@ -484,25 +359,7 @@ async def test_patch_urban_function_to_db(mock_conn: MockConnection, urban_funct
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await patch_urban_function_to_db(mock_conn, urban_function_id, urban_function_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_function_id),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_urban_function_to_db(mock_conn, urban_function_id, urban_function_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_parent_function),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_urban_function_to_db(mock_conn, urban_function_id, urban_function_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.service_types.check_existence",
-        new=AsyncMock(side_effect=check_function_name),
-    ):
-        result = await patch_urban_function_to_db(mock_conn, urban_function_id, urban_function_patch_req)
+    result = await patch_urban_function_to_db(mock_conn, urban_function_id, urban_function_patch_req)
 
     # Assert
     assert isinstance(result, UrbanFunctionDTO), "Result should be a UrbanFunctionDTO."

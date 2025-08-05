@@ -48,7 +48,7 @@ async def get_service_types_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     service_types = await territories_service.get_service_types_by_territory_id(
@@ -113,13 +113,13 @@ async def get_services_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -198,13 +198,13 @@ async def get_services_with_geometry_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -275,13 +275,13 @@ async def get_services_geojson_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if service_type_id is not None and urban_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either service_type_id or urban_function_id",
+            detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
         )
 
     services = await territories_service.get_services_with_geometry_by_territory_id(

@@ -34,7 +34,7 @@ async def test_get_territory_types(urban_api_host: str, territory_type: dict[str
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )
@@ -79,7 +79,7 @@ async def test_get_target_city_types(urban_api_host: str, target_city_type: dict
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )

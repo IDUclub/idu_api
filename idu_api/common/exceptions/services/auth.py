@@ -2,14 +2,14 @@
 
 from fastapi import status
 
-from idu_api.urban_api.exceptions import IduApiError
+from idu_api.common.exceptions import IduApiError
 
 
 class ExpiredToken(IduApiError):
     """Exception to raise when token has expired."""
 
     def __str__(self) -> str:
-        return "Token has expired"
+        return "Срок действия токена истёк."
 
     def get_status_code(self) -> int:
         """
@@ -22,7 +22,7 @@ class JWTDecodeError(IduApiError):
     """Exception to raise when token decoding has failed."""
 
     def __str__(self) -> str:
-        return "JWT decoding error"
+        return "Ошибка декодирования JWT."
 
     def get_status_code(self) -> int:
         """
@@ -35,7 +35,7 @@ class InvalidTokenSignature(IduApiError):
     """Exception to raise when validating token by external service has failed."""
 
     def __str__(self) -> str:
-        return "Invalid token signature"
+        return "Недопустимая подпись токена."
 
     def get_status_code(self) -> int:
         """

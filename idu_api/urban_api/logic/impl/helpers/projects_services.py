@@ -20,16 +20,16 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import (
+    EntityAlreadyEdited,
+    EntityNotFoundById,
+    EntityNotFoundByParams,
+)
 from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
     ScenarioServiceWithGeometryDTO,
     ScenarioUrbanObjectDTO,
     UserDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
-    EntityAlreadyEdited,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.projects_urban_objects import get_scenario_urban_object_by_ids_from_db
@@ -890,15 +890,6 @@ async def add_service_to_db(
                 "urban object", service.physical_object_id, service.object_geometry_id, scenario_id
             )
 
-    if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service.service_type_id}):
-        raise EntityNotFoundById(service.service_type_id, "service type")
-
-    if service.territory_type_id is not None:
-        if not await check_existence(
-            conn, territory_types_dict, conditions={"territory_type_id": service.territory_type_id}
-        ):
-            raise EntityNotFoundById(service.territory_type_id, "territory type")
-
     statement = (
         insert(projects_services_data)
         .values(
@@ -1045,15 +1036,6 @@ async def put_service_to_db(
     ):
         raise EntityNotFoundById(service_id, "service")
 
-    if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service.service_type_id}):
-        raise EntityNotFoundById(service.service_type_id, "service type")
-
-    if service.territory_type_id is not None:
-        if not await check_existence(
-            conn, territory_types_dict, conditions={"territory_type_id": service.territory_type_id}
-        ):
-            raise EntityNotFoundById(service.territory_type_id, "territory type")
-
     if not is_scenario_object:
         statement = (
             select(projects_services_data.c.service_id)
@@ -1186,16 +1168,6 @@ async def patch_service_to_db(
     requested_service = (await conn.execute(statement)).mappings().one_or_none()
     if requested_service is None:
         raise EntityNotFoundById(service_id, "service")
-
-    if service.service_type_id is not None:
-        if not await check_existence(conn, service_types_dict, conditions={"service_type_id": service.service_type_id}):
-            raise EntityNotFoundById(service.service_type_id, "service type")
-
-    if service.territory_type_id is not None:
-        if not await check_existence(
-            conn, territory_types_dict, conditions={"territory_type_id": service.territory_type_id}
-        ):
-            raise EntityNotFoundById(service.territory_type_id, "territory type")
 
     if not is_scenario_object:
         statement = (

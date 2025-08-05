@@ -13,7 +13,7 @@ from geoalchemy2.functions import (
     ST_IsEmpty,
     ST_Within,
 )
-from sqlalchemy import ScalarSelect, case, delete, insert, literal, or_, select, text, union_all, update
+from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
 from idu_api.common.db.entities import (
@@ -33,9 +33,8 @@ from idu_api.common.db.entities import (
     territory_types_dict,
     urban_objects_data,
 )
-from idu_api.urban_api.dto import ObjectGeometryDTO, ScenarioGeometryDTO, ScenarioGeometryWithAllObjectsDTO, UserDTO
-from idu_api.urban_api.dto.object_geometries import GeometryWithAllObjectsDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
+from idu_api.urban_api.dto import ScenarioGeometryDTO, ScenarioGeometryWithAllObjectsDTO, UserDTO
 from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
     delete_object_geometry_from_db,
     get_context_geometries_from_db,
@@ -48,11 +47,8 @@ from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
 )
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_territories_cte
 from idu_api.urban_api.schemas import (
-    AllObjects,
-    GeometryAttributes,
     ObjectGeometryPatch,
     ObjectGeometryPut,
-    ScenarioAllObjects,
     ScenarioGeometryAttributes,
     ScenarioObjectGeometry,
 )
@@ -857,11 +853,6 @@ async def test_put_scenario_object_geometry_to_db(
             return False
         return True
 
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
     scenario_id = 1
     object_geometry_id = 1
     is_scenario_object = True
@@ -891,14 +882,6 @@ async def test_put_scenario_object_geometry_to_db(
             await put_object_geometry_to_db(
                 mock_conn, object_geometries_put_req, scenario_id, object_geometry_id, is_scenario_object, user
             )
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_geometries.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_object_geometry_to_db(
-                mock_conn, object_geometries_put_req, scenario_id, object_geometry_id, is_scenario_object, user
-            )
     result = await put_object_geometry_to_db(
         mock_conn, object_geometries_put_req, scenario_id, object_geometry_id, is_scenario_object, user
     )
@@ -919,11 +902,6 @@ async def test_patch_scenario_object_geometry_to_db(
     """Test the patch_object_geometry_to_db function."""
 
     # Arrange
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
     scenario_id = 1
     object_geometry_id = 1
     is_scenario_object = True
@@ -936,14 +914,6 @@ async def test_patch_scenario_object_geometry_to_db(
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_geometries.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_object_geometry_to_db(
-                mock_conn, object_geometries_patch_req, scenario_id, object_geometry_id, is_scenario_object, user
-            )
     result = await patch_object_geometry_to_db(
         mock_conn, object_geometries_patch_req, scenario_id, object_geometry_id, is_scenario_object, user
     )

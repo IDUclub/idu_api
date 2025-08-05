@@ -345,7 +345,10 @@ async def get_service_types_hierarchy(
         try:
             ids = {int(type_id.strip()) for type_id in service_types_ids.split(",")}
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пожалуйста, укажите идентификаторы в правильном формате, разделив их запятой.",
+            ) from exc
 
     hierarchy = await service_types_service.get_service_types_hierarchy(ids)
 

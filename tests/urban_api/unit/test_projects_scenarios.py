@@ -16,8 +16,9 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
+from idu_api.common.exceptions.logic.projects import InvalidBaseScenario
 from idu_api.urban_api.dto import ScenarioDTO, UserDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import (
     copy_scenario_to_db,
     delete_scenario_from_db,
@@ -198,7 +199,7 @@ async def test_put_scenario_to_db(mock_conn: MockConnection, scenario_put_req: S
     scenario_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
     check_statement = (
-        select(scenarios_data, projects_data.c.project_id, projects_data.c.user_id)
+        select(projects_data, scenarios_data.c.parent_id, scenarios_data.c.is_based)
         .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
         .where(scenarios_data.c.scenario_id == scenario_id)
     )
@@ -210,7 +211,7 @@ async def test_put_scenario_to_db(mock_conn: MockConnection, scenario_put_req: S
     not_based_scenario = ScenarioPut(**scenario_put_req.model_dump(exclude={"is_based"}), is_based=False)
 
     # Act
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidBaseScenario):
         await put_scenario_to_db(mock_conn, not_based_scenario, scenario_id, user)
     result = await put_scenario_to_db(mock_conn, scenario_put_req, scenario_id, user)
 
@@ -229,7 +230,7 @@ async def test_patch_scenario_to_db(mock_conn: MockConnection, scenario_patch_re
     scenario_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
     check_statement = (
-        select(scenarios_data, projects_data.c.project_id, projects_data.c.user_id)
+        select(projects_data, scenarios_data.c.parent_id, scenarios_data.c.is_based)
         .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
         .where(scenarios_data.c.scenario_id == scenario_id)
     )
@@ -243,7 +244,7 @@ async def test_patch_scenario_to_db(mock_conn: MockConnection, scenario_patch_re
     )
 
     # Act
-    with pytest.raises(ValueError):
+    with pytest.raises(InvalidBaseScenario):
         await patch_scenario_to_db(mock_conn, not_based_scenario, scenario_id, user)
     result = await patch_scenario_to_db(mock_conn, scenario_patch_req, scenario_id, user)
 

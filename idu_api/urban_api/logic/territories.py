@@ -29,7 +29,7 @@ from idu_api.urban_api.dto import (
     TerritoryTypeDTO,
     TerritoryWithIndicatorsDTO,
     TerritoryWithNormativesDTO,
-    TerritoryWithoutGeometryDTO,
+    TerritoryWithoutGeometryDTO, SocValueIndicatorValueDTO,
 )
 from idu_api.urban_api.schemas import (
     HexagonPost,
@@ -355,3 +355,17 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         service_type_id: int | None,
     ) -> list[BufferDTO]:
         """Get buffers by territory identifier."""
+
+    @abc.abstractmethod
+    async def get_soc_values_indicator_values_by_territory_id(
+        self,
+        territory_id: int,
+        year: int | None,
+        last_only: bool,
+        include_child_territories: bool,
+        cities_only: bool,
+    ) -> list[SocValueIndicatorValueDTO]:
+        """Get social value indicator values by territory identifier.
+
+        Could be specified by last_only to get only last indicator values.
+        """

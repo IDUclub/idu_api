@@ -21,9 +21,9 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, territory_id_param, version",
     [
         (200, None, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None, 1),
-        (400, "Please, choose either specific year or last_only", None, 2),
-        (404, "not found", 1e9, None),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None, 1),
+        (400, "пожалуйста, выберите либо конкретный год, либо last_only", None, 2),
+        (404, "не найден", 1e9, None),
     ],
     ids=["success", "bad_request_1", "bad_request_2", "not_found"],
 )
@@ -65,8 +65,8 @@ async def test_get_territory_normatives(
     "expected_status, error_message, territory_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -102,7 +102,7 @@ async def test_post_territory_normatives(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -138,7 +138,7 @@ async def test_put_territory_normatives(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -174,7 +174,7 @@ async def test_patch_territory_normatives(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -207,8 +207,8 @@ async def test_delete_territory_normatives(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "Please, choose either specific year or last_only", None),
-        (404, "not found", 1e9),
+        (400, "пожалуйста, выберите либо конкретный год, либо last_only", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )

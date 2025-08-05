@@ -5,7 +5,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from geoalchemy2.functions import ST_AsEWKB
 from shapely.geometry import LineString, MultiLineString, MultiPoint, MultiPolygon, Point, Polygon
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 
 from idu_api.common.db.entities import (
     buffer_types_dict,
@@ -19,15 +20,11 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundByParams
 from idu_api.urban_api.dto import (
     BufferDTO,
     BufferTypeDTO,
     DefaultBufferValueDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
-    EntityAlreadyExists,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
 )
 from idu_api.urban_api.logic.impl.helpers.buffers import (
     add_buffer_type_to_db,
@@ -86,11 +83,7 @@ async def test_add_buffer_type_to_db(mock_conn: MockConnection, buffer_type_post
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.buffers.check_existence") as mock_check_existence:
-        with pytest.raises(EntityAlreadyExists):
-            await add_buffer_type_to_db(mock_conn, buffer_type_post_req)
-        mock_check_existence.return_value = False
-        result = await add_buffer_type_to_db(mock_conn, buffer_type_post_req)
+    result = await add_buffer_type_to_db(mock_conn, buffer_type_post_req)
 
     # Assert
     assert isinstance(result, BufferTypeDTO), "Result should be a BufferTypeDTO."
@@ -191,21 +184,6 @@ async def test_add_default_buffer_value_to_db(
     """Test the add_default_buffer_value_to_db function."""
 
     # Arrange
-    async def check_default_buffer_value(conn, table, conditions=None):
-        if table == default_buffer_values_dict:
-            return False
-        return True
-
-    async def check_physical_object_type(conn, table, conditions=None):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions=None):
-        if table == service_types_dict:
-            return False
-        return True
-
     statement = (
         insert(default_buffer_values_dict)
         .values(**default_buffer_value_post_req.model_dump())
@@ -213,28 +191,7 @@ async def test_add_default_buffer_value_to_db(
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_default_buffer_value_to_db(mock_conn, default_buffer_value_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_default_buffer_value_to_db(mock_conn, default_buffer_value_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            req = default_buffer_value_post_req
-            req.service_type_id = 1
-            req.physical_object_type_id = None
-            await add_default_buffer_value_to_db(mock_conn, req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_default_buffer_value),
-    ):
-        result = await add_default_buffer_value_to_db(mock_conn, default_buffer_value_post_req)
+    result = await add_default_buffer_value_to_db(mock_conn, default_buffer_value_post_req)
 
     # Assert
     assert isinstance(result, DefaultBufferValueDTO), "Result should be a DefaultBufferValueDTO."
@@ -254,16 +211,6 @@ async def test_put_default_buffer_value_to_db(
     # Arrange
     async def check_default_buffer_value(conn, table, conditions=None):
         if table == default_buffer_values_dict:
-            return False
-        return True
-
-    async def check_physical_object_type(conn, table, conditions=None):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions=None):
-        if table == service_types_dict:
             return False
         return True
 
@@ -294,21 +241,6 @@ async def test_put_default_buffer_value_to_db(
 
     # Act
     await put_default_buffer_value_to_db(mock_conn, default_buffer_value_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_default_buffer_value_to_db(mock_conn, default_buffer_value_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            req = default_buffer_value_put_req
-            req.service_type_id = 1
-            req.physical_object_type_id = None
-            await add_default_buffer_value_to_db(mock_conn, req)
     with patch(
         "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
         new=AsyncMock(side_effect=check_default_buffer_value),
@@ -386,58 +318,32 @@ async def test_put_buffer_to_db(mock_conn: MockConnection, buffer_put_req: Buffe
     """Test the put_buffer_to_db function."""
 
     # Arrange
-    async def check_urban_object(conn, table, conditions=None):
-        if table == urban_objects_data:
-            return False
-        return True
-
-    async def check_buffer_type(conn, table, conditions=None):
-        if table == buffer_types_dict:
-            return False
-        return True
-
-    async def check_buffer(conn, table, conditions=None):
-        if table == buffers_data:
-            return False
-        return True
-
     values = extract_values_from_model(buffer_put_req, exclude_unset=True, allow_null_geometry=True)
-    statement_update = (
-        update(buffers_data)
-        .where(
-            buffers_data.c.buffer_type_id == buffer_put_req.buffer_type_id,
-            buffers_data.c.urban_object_id == buffer_put_req.urban_object_id,
+    statement = (
+        insert(buffers_data)
+        .values(
+            buffer_type_id=values["buffer_type_id"],
+            urban_object_id=values["urban_object_id"],
+            geometry=values["geometry"],
+            is_custom=values["geometry"] is not None,
         )
-        .values(**values, is_custom=True)
+        .on_conflict_do_update(
+            index_elements=["urban_object_id", "buffer_type_id"],
+            set_={
+                "geometry": values["geometry"],
+                "is_custom": values["geometry"] is not None,
+            },
+        )
     )
-    statement_insert = insert(buffers_data).values(**values, is_custom=buffer_put_req.geometry is not None)
 
     # Act
-    await put_buffer_to_db(mock_conn, buffer_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_urban_object),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_buffer_to_db(mock_conn, buffer_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_buffer_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_buffer_to_db(mock_conn, buffer_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.buffers.check_existence",
-        new=AsyncMock(side_effect=check_buffer),
-    ):
-        result = await put_buffer_to_db(mock_conn, buffer_put_req)
+    result = await put_buffer_to_db(mock_conn, buffer_put_req)
 
     # Assert
     assert isinstance(result, BufferDTO), "Result should be a BufferDTO."
     assert isinstance(Buffer.from_dto(result), Buffer), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    mock_conn.execute_mock.assert_any_call(str(statement_insert))
-    assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.commit_mock.assert_called_once()
 
 
 @pytest.mark.asyncio

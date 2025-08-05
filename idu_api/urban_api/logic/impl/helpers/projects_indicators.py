@@ -20,6 +20,8 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
+from idu_api.common.exceptions.logic.projects import NotAllowedInProjectScenario
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import (
     HexagonWithIndicatorsDTO,
@@ -27,8 +29,6 @@ from idu_api.urban_api.dto import (
     ShortScenarioIndicatorValueDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
-from idu_api.urban_api.exceptions.logic.projects import NotAllowedInProjectScenario
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import ScenarioIndicatorValuePatch, ScenarioIndicatorValuePost, ScenarioIndicatorValuePut
@@ -144,35 +144,6 @@ async def add_scenario_indicator_value_to_db(
 
     scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
 
-    if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator_value.indicator_id}):
-        raise EntityNotFoundById(indicator_value.indicator_id, "indicator")
-
-    if indicator_value.territory_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": indicator_value.territory_id}):
-            raise EntityNotFoundById(indicator_value.territory_id, "territory")
-
-    if indicator_value.hexagon_id is not None:
-        if not await check_existence(conn, hexagons_data, conditions={"hexagon_id": indicator_value.hexagon_id}):
-            raise EntityNotFoundById(indicator_value.hexagon_id, "hexagon")
-
-    if await check_existence(
-        conn,
-        projects_indicators_data,
-        conditions={
-            "indicator_id": indicator_value.indicator_id,
-            "scenario_id": indicator_value.scenario_id,
-            "territory_id": indicator_value.territory_id,
-            "hexagon_id": indicator_value.hexagon_id,
-        },
-    ):
-        raise EntityAlreadyExists(
-            "project indicator value",
-            indicator_value.scenario_id,
-            indicator_value.indicator_id,
-            indicator_value.territory_id,
-            indicator_value.hexagon_id,
-        )
-
     statement = (
         insert(projects_indicators_data)
         .values(**indicator_value.model_dump())
@@ -214,17 +185,6 @@ async def put_scenario_indicator_value_to_db(
     """Update scenario's indicator value by all attributes."""
 
     scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
-
-    if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator_value.indicator_id}):
-        raise EntityNotFoundById(indicator_value.indicator_id, "indicator")
-
-    if indicator_value.territory_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": indicator_value.territory_id}):
-            raise EntityNotFoundById(indicator_value.territory_id, "territory")
-
-    if indicator_value.hexagon_id is not None:
-        if not await check_existence(conn, hexagons_data, conditions={"hexagon_id": indicator_value.hexagon_id}):
-            raise EntityNotFoundById(indicator_value.hexagon_id, "hexagon")
 
     if await check_existence(
         conn,
@@ -291,20 +251,12 @@ async def put_scenario_indicator_value_to_db(
 async def patch_scenario_indicator_value_to_db(
     conn: AsyncConnection,
     indicator_value: ScenarioIndicatorValuePatch,
-    scenario_id: int | None,
+    scenario_id: int,
     indicator_value_id: int,
     user: UserDTO,
     kafka_producer: KafkaProducerClient,
 ) -> ScenarioIndicatorValueDTO:
     """Update scenario's indicator value by only given attributes."""
-
-    if scenario_id is None:
-        statement = select(projects_indicators_data.c.scenario_id).where(
-            projects_indicators_data.c.indicator_value_id == indicator_value_id
-        )
-        scenario_id = (await conn.execute(statement)).scalar_one_or_none()
-        if scenario_id is None:
-            raise EntityNotFoundById(indicator_value_id, "indicator value")
 
     scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
 
@@ -361,19 +313,11 @@ async def delete_scenario_indicators_values_by_scenario_id_from_db(
 
 async def delete_scenario_indicator_value_by_id_from_db(
     conn: AsyncConnection,
-    scenario_id: int | None,
+    scenario_id: int,
     indicator_value_id: int,
     user: UserDTO,
 ) -> dict:
     """Delete specific scenario's indicator values by indicator value identifier if you're the project owner."""
-
-    if scenario_id is None:
-        statement = select(projects_indicators_data.c.scenario_id).where(
-            projects_indicators_data.c.indicator_value_id == indicator_value_id
-        )
-        scenario_id = (await conn.execute(statement)).scalar_one_or_none()
-        if scenario_id is None:
-            raise EntityNotFoundById(indicator_value_id, "indicator value")
 
     await check_scenario(conn, scenario_id, user, to_edit=True)
 
@@ -463,6 +407,7 @@ async def get_hexagons_with_indicators_by_scenario_id_from_db(
     return [HexagonWithIndicatorsDTO(**result) for result in list(grouped_data.values())]
 
 
+# TODO: remove this function
 async def update_all_indicators_values_by_scenario_id_to_db(
     conn: AsyncConnection, scenario_id: int, user: UserDTO, logger: structlog.stdlib.BoundLogger
 ) -> dict[str, Any]:

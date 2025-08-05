@@ -16,8 +16,8 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import ObjectGeometryDTO, PhysicalObjectDTO, UrbanObjectDTO
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.urban_objects import get_urban_objects_by_ids_from_db
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
@@ -144,9 +144,6 @@ async def put_object_geometry_to_db(
     if not await check_existence(conn, object_geometries_data, conditions={"object_geometry_id": object_geometry_id}):
         raise EntityNotFoundById(object_geometry_id, "object geometry")
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": object_geometry.territory_id}):
-        raise EntityNotFoundById(object_geometry.territory_id, "territory")
-
     values = extract_values_from_model(object_geometry, to_update=True)
     statement = (
         update(object_geometries_data)
@@ -170,12 +167,7 @@ async def patch_object_geometry_to_db(
     if not await check_existence(conn, object_geometries_data, conditions={"object_geometry_id": object_geometry_id}):
         raise EntityNotFoundById(object_geometry_id, "object geometry")
 
-    if object_geometry.territory_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": object_geometry.territory_id}):
-            raise EntityNotFoundById(object_geometry.territory_id, "territory")
-
     values = extract_values_from_model(object_geometry, exclude_unset=True, to_update=True)
-
     statement = (
         update(object_geometries_data)
         .where(object_geometries_data.c.object_geometry_id == object_geometry_id)
@@ -209,11 +201,7 @@ async def add_object_geometry_to_physical_object_to_db(
     if not await check_existence(conn, physical_objects_data, conditions={"physical_object_id": physical_object_id}):
         raise EntityNotFoundById(physical_object_id, "physical object")
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": object_geometry.territory_id}):
-        raise EntityNotFoundById(object_geometry.territory_id, "territory")
-
     values = extract_values_from_model(object_geometry)
-
     statement = insert(object_geometries_data).values(**values).returning(object_geometries_data.c.object_geometry_id)
     object_geometry_id = (await conn.execute(statement)).scalar_one()
 

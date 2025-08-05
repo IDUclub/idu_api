@@ -6,7 +6,7 @@ import httpx
 import pytest
 
 from idu_api.urban_api.schemas import TargetCityTypePost, TerritoryPatch, TerritoryPost, TerritoryPut, TerritoryTypePost
-from idu_api.urban_api.schemas.geometries import Geometry
+from idu_api.urban_api.schemas.geometries import Geometry, Point
 
 __all__ = [
     "city",
@@ -101,14 +101,14 @@ def city(urban_api_host, territory_type, municipality) -> dict[str, Any]:
 
 
 @pytest.fixture
-def territory_type_post_req() -> TerritoryPost:
+def territory_type_post_req() -> TerritoryTypePost:
     """POST request template for territories types data."""
 
     return TerritoryTypePost(name="Test Territory Type Name")
 
 
 @pytest.fixture
-def target_city_type_post_req() -> TerritoryPost:
+def target_city_type_post_req() -> TargetCityTypePost:
     """POST request template for target city types data."""
 
     return TargetCityTypePost(name="Test Target City Type Name", description="Test Description")
@@ -145,10 +145,7 @@ def territory_put_req() -> TerritoryPut:
             type="Polygon",
             coordinates=[[[30.22, 59.86], [30.22, 59.85], [30.25, 59.85], [30.25, 59.86], [30.22, 59.86]]],
         ),
-        centre_point=Geometry(
-            type="Point",
-            coordinates=[30.22, 59.86],
-        ),
+        centre_point=Point(coordinates=[30.22, 59.86]),
         territory_type_id=1,
         parent_id=1,
         properties={},

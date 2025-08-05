@@ -61,14 +61,15 @@ async def get_scenarios(
     if parent_id is None and project_id is not None and is_based:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Incompatible parameters parent_id=None, project_id={project_id}, is_based=True. This will "
-            f"always return an empty list, as the user project may not have any base regional scenario.",
+            detail=f"Несовместимые параметры parent_id=None, project_id={project_id}, is_based=True. Это"
+            f"всегда будет возвращать пустой список, так как пользовательский проект "
+            f"может не иметь какого-либо базового регионального сценария.",
         )
 
     if only_own and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to view own scenarios.",
+            detail="Для просмотра собственных сценариев необходима аутентификация.",
         )
 
     scenarios = await user_project_service.get_scenarios(parent_id, project_id, territory_id, is_based, only_own, user)
@@ -218,10 +219,7 @@ async def put_scenario(
     """
     user_project_service: UserProjectService = request.state.user_project_service
 
-    try:
-        scenario = await user_project_service.put_scenario(scenario, scenario_id, user)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    scenario = await user_project_service.put_scenario(scenario, scenario_id, user)
 
     return Scenario.from_dto(scenario)
 
@@ -261,10 +259,7 @@ async def patch_scenario(
     """
     user_project_service: UserProjectService = request.state.user_project_service
 
-    try:
-        scenario = await user_project_service.patch_scenario(scenario, scenario_id, user)
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    scenario = await user_project_service.patch_scenario(scenario, scenario_id, user)
 
     return Scenario.from_dto(scenario)
 

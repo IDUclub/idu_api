@@ -199,7 +199,6 @@ class MockConnection:
             try:
                 return col.type.python_type
             except Exception as e:
-                print(col.name)
                 raise NotImplementedError(f"Unsupported column type: {col.type}") from e
 
         def process_columns(columns):

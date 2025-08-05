@@ -27,15 +27,15 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import (
+    EntityNotFoundById,
+    EntityNotFoundByParams,
+)
+from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.dto import (
     ScenarioBufferDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import (
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-)
-from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.logic.impl.helpers.projects_buffers import (
     delete_buffer_from_db,
     get_buffer_from_db,
@@ -607,11 +607,6 @@ async def test_put_scenario_buffer_to_db(mock_conn: MockConnection, scenario_buf
     """Test the put_buffer_to_db function."""
 
     # Arrange
-    async def check_buffer_type(conn, table, conditions=None):
-        if table == buffer_types_dict:
-            return False
-        return True
-
     async def check_buffer(conn, table, conditions=None):
         if table == projects_buffers_data:
             return False
@@ -653,13 +648,6 @@ async def test_put_scenario_buffer_to_db(mock_conn: MockConnection, scenario_buf
         await put_buffer_to_db(mock_conn, scenario_buffer_put_req, scenario_id, user)
     with patch("idu_api.urban_api.logic.impl.helpers.projects_buffers.check_scenario") as mock_check:
         await put_buffer_to_db(mock_conn, scenario_buffer_put_req, scenario_id, user)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_buffers.check_existence",
-        new=AsyncMock(side_effect=check_buffer_type),
-    ):
-        with patch("idu_api.urban_api.logic.impl.helpers.projects_buffers.check_scenario") as mock_check:
-            with pytest.raises(EntityNotFoundById):
-                await put_buffer_to_db(mock_conn, scenario_buffer_put_req, scenario_id, user)
     with patch(
         "idu_api.urban_api.logic.impl.helpers.projects_buffers.check_existence",
         new=AsyncMock(side_effect=check_buffer),

@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators
+from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators, SocValueIndicatorValue
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from idu_api.urban_api.schemas.short_models import ShortIndicatorValueInfo
 from tests.urban_api.helpers.utils import assert_response
@@ -21,13 +21,13 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
 async def test_get_indicators_by_territory_id(
     urban_api_host: str,
-    region: dict[str, Any],
+    indicator_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     territory_id_param: int | None,
@@ -35,7 +35,7 @@ async def test_get_indicators_by_territory_id(
     """Test GET /territory/{territory_id}/indicators method."""
 
     # Arrange
-    territory_id = territory_id_param or region["territory_id"]
+    territory_id = territory_id_param or indicator_value["territory"]["id"]
 
     # Act
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
@@ -55,8 +55,8 @@ async def test_get_indicators_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None),
-        (404, "not found", 1e9),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -100,7 +100,7 @@ async def test_get_indicator_values_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -145,3 +145,43 @@ async def test_get_indicator_values_by_parent_id(
             ShortIndicatorValueInfo(**result["features"][0]["properties"]["indicators"][0])
         except ValidationError as e:
             pytest.fail(f"Pydantic validation error: {str(e)}")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "expected_status, error_message, territory_id_param",
+    [
+        (200, None, None),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None),
+        (404, "не найден", 1e9),
+    ],
+    ids=["success", "bad_request", "not_found"],
+)
+async def test_get_soc_values_indicator_values_by_territory_id(
+    urban_api_host: str,
+    social_value_indicator: dict[str, Any],
+    expected_status: int,
+    error_message: str | None,
+    territory_id_param: int | None,
+):
+    """Test GET /territory/{territory_id}/soc_values/indicators method."""
+
+    # Arrange
+    territory_id = territory_id_param or social_value_indicator["territory"]["id"]
+    params = {
+        "last_only": True,
+        "include_child_territories": expected_status != 400,
+        "cities_only": expected_status == 400,
+    }
+
+    # Act
+    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
+        response = await client.get(f"/territory/{territory_id}/soc_values/indicators", params=params)
+        result = response.json()
+
+    # Assert
+    if response.status_code == 200:
+        assert_response(response, expected_status, SocValueIndicatorValue, error_message, result_type="list")
+        assert len(result) > 0, "Response should contain at least one indicator value."
+    else:
+        assert_response(response, expected_status, SocValueIndicatorValue, error_message)

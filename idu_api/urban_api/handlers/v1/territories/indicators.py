@@ -8,7 +8,7 @@ from geojson_pydantic.geometries import Geometry
 from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators
+from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators, SocValueIndicatorValue
 from idu_api.urban_api.schemas.enums import ValueType
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 
@@ -91,7 +91,7 @@ async def get_indicator_values_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if indicator_ids is not None:
@@ -100,7 +100,7 @@ async def get_indicator_values_by_territory_id(
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please, pass the indicator identifiers in the correct format separated by comma",
+                detail="Пожалуйста, укажите идентификаторы индикаторов в правильном формате, разделив их запятой.",
             ) from exc
 
     value_type_field = value_type.value if value_type is not None else None
@@ -169,7 +169,7 @@ async def get_indicator_values_by_parent_id(
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please, pass the indicator identifiers in the correct format separated by comma",
+                detail="Пожалуйста, укажите идентификаторы индикаторов в правильном формате, разделив их запятой.",
             ) from exc
 
     value_type_field = value_type.value if value_type is not None else None
@@ -186,3 +186,61 @@ async def get_indicator_values_by_parent_id(
     )
 
     return await GeoJSONResponse.from_list([territory.to_geojson_dict() for territory in territories], centers_only)
+
+
+@territories_router.get(
+    "/territory/{territory_id}/soc_values/indicators",
+    response_model=list[SocValueIndicatorValue],
+    status_code=status.HTTP_200_OK,
+)
+async def get_soc_values_indicator_values_by_territory_id(
+    request: Request,
+    territory_id: int | None = Path(..., description="territory identifier", gt=0),
+    year: int | None = Query(None, description="year when value was modeled (skip to get values for all years)", gt=0),
+    last_only: bool = Query(True, description="to get last indicators"),
+    include_child_territories: bool = Query(False, description="to get from child territories"),
+    cities_only: bool = Query(False, description="to get only for cities"),
+) -> list[SocValueIndicatorValue]:
+    """
+    ## Get social values indicator values for a given territory.
+
+    **WARNING:** Set `cities_only = True` only if you want to get entities from child territories.
+
+    ### Parameters:
+    - **territory_id** (int, Path): Unique identifier of the territory.
+    - **year** (int, Query): Filter results by specified year.
+    - **last_only** (int, Query): To get only the last indicator value for each social group's value (default: true).
+    - **include_child_territories** (bool, Query): If True, includes data from child territories (default: false).
+    - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
+
+    ### Returns:
+    - **list[IndicatorValue]**: A list of indicator values matching the filters.
+
+    ### Errors:
+    - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False
+    or the indicator_ids is specified in the wrong form.
+    - **404 Not Found**: If the territory does not exist.
+    """
+    territories_service: TerritoriesService = request.state.territories_service
+
+    if last_only and year is not None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Пожалуйста, выберите либо конкретный год, либо last_only.",
+        )
+
+    if not include_child_territories and cities_only:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
+        )
+
+    indicator_values = await territories_service.get_soc_values_indicator_values_by_territory_id(
+        territory_id,
+        year,
+        last_only,
+        include_child_territories,
+        cities_only,
+    )
+
+    return [SocValueIndicatorValue.from_dto(value) for value in indicator_values]

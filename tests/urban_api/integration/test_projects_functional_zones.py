@@ -28,9 +28,9 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -77,9 +77,9 @@ async def test_get_functional_zone_sources_by_scenario_id(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -128,9 +128,9 @@ async def test_get_functional_zones_by_scenario_id(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -175,9 +175,9 @@ async def test_get_context_functional_zone_sources(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -228,9 +228,9 @@ async def test_get_context_functional_zones(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (201, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -288,9 +288,9 @@ async def test_add_scenario_functional_zones(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -335,9 +335,9 @@ async def test_put_scenario_functional_zone(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -382,9 +382,9 @@ async def test_patch_scenario_functional_zone(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )

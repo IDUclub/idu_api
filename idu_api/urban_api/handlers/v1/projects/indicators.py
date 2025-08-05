@@ -65,7 +65,7 @@ async def get_indicators_values_by_scenario_id(
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please, pass the indicator identifiers in the correct format separated by comma",
+                detail="Пожалуйста, укажите идентификаторы индикаторов в правильном формате, разделив их запятой.",
             ) from exc
 
     indicators = await user_project_service.get_scenario_indicators_values(
@@ -317,7 +317,7 @@ async def get_hexagons_with_indicators_values_by_scenario_id(
         except ValueError as exc:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Please, pass the indicator identifiers in the correct format separated by comma",
+                detail="Пожалуйста, укажите идентификаторы индикаторов в правильном формате, разделив их запятой.",
             ) from exc
 
     hexagons = await user_project_service.get_hexagons_with_indicators_by_scenario_id(
@@ -357,167 +357,5 @@ async def update_all_indicators_values_by_scenario_id(
     user_project_service: UserProjectService = request.state.user_project_service
 
     await user_project_service.update_all_indicators_values_by_scenario_id(scenario_id, user)
-
-    return OkResponse()
-
-
-@projects_router.post(
-    "/scenarios/indicators_values",
-    response_model=ScenarioIndicatorValue,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def add_scenario_indicator_deprecated(
-    request: Request, indicator_value: ScenarioIndicatorValuePost, user: UserDTO = Depends(get_user)
-) -> ScenarioIndicatorValue:
-    """
-    ## Add a new indicator value for a given scenario.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use **POST /scenarios/{scenario_id}/indicators_values**.
-
-    ### Parameters:
-    - **indicator_value** (ScenarioIndicatorValuePost, Body): The indicator value data to be added.
-
-    ### Returns:
-    - **ScenarioIndicatorValue**: The created indicator value.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario (or related entity) does not exist.
-    - **409 Conflict**: If an indicator value with such attributes already exists.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    indicator = await user_project_service.add_scenario_indicator_value(
-        indicator_value, indicator_value.scenario_id, user
-    )
-
-    return ScenarioIndicatorValue.from_dto(indicator)
-
-
-@projects_router.put(
-    "/scenarios/indicators_values",
-    response_model=ScenarioIndicatorValue,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def put_scenario_indicator_deprecated(
-    request: Request,
-    indicator_value: ScenarioIndicatorValuePut,
-    user: UserDTO = Depends(get_user),
-) -> ScenarioIndicatorValue:
-    """
-    ## Update or create an indicator value for a given scenario.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use **PUT /scenarios/{scenario_id}/indicators_values**.
-
-    **NOTE:** If an indicator value with the specified attributes already exists, it will be updated.
-    Otherwise, a new indicator value will be created.
-
-    ### Parameters:
-    - **indicator_value** (ScenarioIndicatorValuePut, Body): The indicator value data to update or create.
-
-    ### Returns:
-    - **ScenarioIndicatorValue**: The updated or created indicator value.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    indicator = await user_project_service.put_scenario_indicator_value(
-        indicator_value, indicator_value.scenario_id, user
-    )
-
-    return ScenarioIndicatorValue.from_dto(indicator)
-
-
-@projects_router.patch(
-    "/scenarios/indicators_values/{indicator_value_id}",
-    response_model=ScenarioIndicatorValue,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def patch_scenario_indicator_deprecated(
-    request: Request,
-    indicator_value: ScenarioIndicatorValuePatch,
-    indicator_value_id: int = Path(..., description="indicator value identifier", gt=0),
-    user: UserDTO = Depends(get_user),
-) -> ScenarioIndicatorValue:
-    """
-    ## Update specific fields of an indicator value for a given scenario.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use **PATCH /scenarios/{scenario_id}/indicators_values/{indicator_value_id}**.
-
-    ### Parameters:
-    - **indicator_value_id** (int, Path): Unique identifier of the indicator value.
-    - **indicator_value** (ScenarioIndicatorValuePatch, Body): The partial indicator value data to update.
-
-    ### Returns:
-    - **ScenarioIndicatorValue**: The updated indicator value.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario or indicator value (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    indicator = await user_project_service.patch_scenario_indicator_value(
-        indicator_value, None, indicator_value_id, user
-    )
-
-    return ScenarioIndicatorValue.from_dto(indicator)
-
-
-@projects_router.delete(
-    "/scenarios/indicators_values/{indicator_value_id}",
-    response_model=OkResponse,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def delete_scenario_indicator_by_id_deprecated(
-    request: Request,
-    indicator_value_id: int = Path(..., description="indicator value identifier", gt=0),
-    user: UserDTO = Depends(get_user),
-) -> OkResponse:
-    """
-    ## Delete a specific indicator value for a given scenario.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use **DELETE /scenarios/{scenario_id}/indicators_values/{indicator_value_id}**.
-
-    ### Parameters:
-    - **indicator_value_id** (int, Path): Unique identifier of the indicator value.
-
-    ### Returns:
-    - **OkResponse**: A confirmation message of the deletion.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario or indicator value does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    await user_project_service.delete_scenario_indicator_value_by_id(None, indicator_value_id, user)
 
     return OkResponse()

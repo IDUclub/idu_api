@@ -29,17 +29,17 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityAlreadyEdited,
+    EntityAlreadyExists,
+    EntityNotFoundById,
+)
 from idu_api.urban_api.dto import (
     ScenarioPhysicalObjectDTO,
     ScenarioPhysicalObjectWithGeometryDTO,
     ScenarioUrbanObjectDTO,
     UserDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityAlreadyEdited,
-    EntityAlreadyExists,
-    EntityNotFoundById,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.projects_urban_objects import get_scenario_urban_object_by_ids_from_db
@@ -1169,16 +1169,6 @@ async def add_physical_object_with_geometry_to_db(
 
     await check_scenario(conn, scenario_id, user, to_edit=True)
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": physical_object.territory_id}):
-        raise EntityNotFoundById(physical_object.territory_id, "territory")
-
-    if not await check_existence(
-        conn,
-        physical_object_types_dict,
-        conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-    ):
-        raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
-
     statement = (
         insert(projects_physical_objects_data)
         .values(
@@ -1234,13 +1224,6 @@ async def put_physical_object_to_db(
         conditions={"physical_object_id": physical_object_id},
     ):
         raise EntityNotFoundById(physical_object_id, "physical object")
-
-    if not await check_existence(
-        conn,
-        physical_object_types_dict,
-        conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-    ):
-        raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
 
     if not is_scenario_object:
         statement = (
@@ -1382,14 +1365,6 @@ async def patch_physical_object_to_db(
     requested_physical_object = (await conn.execute(statement)).mappings().one_or_none()
     if requested_physical_object is None:
         raise EntityNotFoundById(physical_object_id, "physical object")
-
-    if physical_object.physical_object_type_id is not None:
-        if not await check_existence(
-            conn,
-            physical_object_types_dict,
-            conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-        ):
-            raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
 
     if not is_scenario_object:
         statement = (
@@ -1655,7 +1630,7 @@ async def update_physical_objects_by_function_id_to_db(
     if len(physical_object_types) > len(list(result)):
         raise EntitiesNotFoundByIds("physical object type")
     if any(physical_object_function_id != function_id for function_id in result):
-        raise ValueError("You can only upload physical objects with given physical object function")
+        raise ValueError("Вы можете загружать физические объекты только с заданной функцией физического объекта.")
 
     project_geometry = (
         select(projects_territory_data.c.geometry)
@@ -1838,13 +1813,6 @@ async def add_building_to_db(
 
     scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
 
-    if not await check_existence(
-        conn,
-        projects_physical_objects_data if building.is_scenario_object else physical_objects_data,
-        conditions={"physical_object_id": building.physical_object_id},
-    ):
-        raise EntityNotFoundById(building.physical_object_id, "physical object")
-
     if not building.is_scenario_object:
         statement = (
             select(projects_physical_objects_data.c.physical_object_id)
@@ -1863,14 +1831,7 @@ async def add_building_to_db(
         )
         public_physical_object = (await conn.execute(statement)).scalar_one_or_none()
         if public_physical_object is not None:
-            raise EntityAlreadyExists("scenario physical object", building.physical_object_id)
-
-    if await check_existence(
-        conn,
-        projects_buildings_data if building.is_scenario_object else buildings_data,
-        conditions={"physical_object_id": building.physical_object_id},
-    ):
-        raise EntityAlreadyExists("building", building.physical_object_id)
+            raise EntityAlreadyEdited("scenario physical object", building.physical_object_id)
 
     if building.is_scenario_object:
         statement = insert(projects_buildings_data).values(**building.model_dump(exclude={"is_scenario_object"}))
@@ -1978,13 +1939,6 @@ async def put_building_to_db(
     """Update or create building for given scenario."""
 
     scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
-
-    if not await check_existence(
-        conn,
-        projects_physical_objects_data if building.is_scenario_object else physical_objects_data,
-        conditions={"physical_object_id": building.physical_object_id},
-    ):
-        raise EntityNotFoundById(building.physical_object_id, "physical object")
 
     if not building.is_scenario_object:
         statement = (
@@ -2134,13 +2088,6 @@ async def patch_building_to_db(
     if requested_building is None:
         raise EntityNotFoundById(building_id, "building")
 
-    if not await check_existence(
-        conn,
-        projects_buildings_data if is_scenario_object else buildings_data,
-        conditions={"building_id": building_id},
-    ):
-        raise EntityNotFoundById(building_id, "building")
-
     values = extract_values_from_model(building, exclude_unset=True)
 
     if is_scenario_object:
@@ -2271,13 +2218,6 @@ async def delete_building_from_db(
         statement = select(buildings_data).where(buildings_data.c.building_id == building_id)
     requested_building = (await conn.execute(statement)).mappings().one_or_none()
     if requested_building is None:
-        raise EntityNotFoundById(building_id, "building")
-
-    if not await check_existence(
-        conn,
-        projects_buildings_data if is_scenario_object else buildings_data,
-        conditions={"building_id": building_id},
-    ):
         raise EntityNotFoundById(building_id, "building")
 
     if is_scenario_object:

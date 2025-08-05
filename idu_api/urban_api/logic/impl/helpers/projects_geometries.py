@@ -33,12 +33,12 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyEdited, EntityNotFoundById
 from idu_api.urban_api.dto import (
     ScenarioGeometryDTO,
     ScenarioGeometryWithAllObjectsDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyEdited, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
@@ -1152,9 +1152,6 @@ async def put_object_geometry_to_db(
     ):
         raise EntityNotFoundById(object_geometry_id, "object geometry")
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": object_geometry.territory_id}):
-        raise EntityNotFoundById(object_geometry.territory_id, "territory")
-
     if not is_scenario_object:
         statement = (
             select(projects_object_geometries_data.c.object_geometry_id)
@@ -1295,10 +1292,6 @@ async def patch_object_geometry_to_db(
     requested_geometry = (await conn.execute(statement)).mappings().one_or_none()
     if requested_geometry is None:
         raise EntityNotFoundById(object_geometry_id, "object geometry")
-
-    if object_geometry.territory_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": object_geometry.territory_id}):
-            raise EntityNotFoundById(object_geometry.territory_id, "territory")
 
     if not is_scenario_object:
         statement = (

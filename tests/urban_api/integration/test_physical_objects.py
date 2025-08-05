@@ -33,7 +33,7 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -67,7 +67,7 @@ async def test_get_physical_object_by_id(
     "expected_status, error_message, type_id_param, territory_id_param",
     [
         (201, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -101,7 +101,7 @@ async def test_add_physical_object_with_geometry(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -133,7 +133,7 @@ async def test_put_physical_object(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -165,7 +165,7 @@ async def test_patch_physical_object(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -203,8 +203,8 @@ async def test_delete_physical_object(
     "expected_status, error_message, object_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "отсутствует в таблице", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -240,7 +240,7 @@ async def test_add_building(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "отсутствует в таблице", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -276,7 +276,7 @@ async def test_put_building(
     "expected_status, error_message, building_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -312,7 +312,7 @@ async def test_patch_building(
     "expected_status, error_message, building_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -346,7 +346,7 @@ async def test_delete_building(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -378,7 +378,7 @@ async def test_get_buildings_by_physical_object_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -404,7 +404,7 @@ async def test_get_services_by_physical_object_id(
         assert_response(response, expected_status, Service, error_message, result_type="list")
         assert any(
             service["service_id"] == item["service_id"] for item in response.json()
-        ), "Expected service was not found in result."
+        ), "Expected service was не найден in result."
     else:
         assert_response(response, expected_status, Service, error_message)
 
@@ -414,7 +414,7 @@ async def test_get_services_by_physical_object_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -440,7 +440,7 @@ async def test_get_services_with_geometry_by_physical_object_id(
         assert_response(response, expected_status, ServiceWithGeometry, error_message, result_type="list")
         assert any(
             service["service_id"] == item["service_id"] for item in response.json()
-        ), "Expected service was not found in result."
+        ), "Expected service was не найден in result."
     else:
         assert_response(response, expected_status, ServiceWithGeometry, error_message)
 
@@ -450,7 +450,7 @@ async def test_get_services_with_geometry_by_physical_object_id(
     "expected_status, error_message, object_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -477,7 +477,7 @@ async def test_get_physical_object_geometries(
         assert_response(response, expected_status, ObjectGeometry, error_message, result_type="list")
         assert any(
             object_geometry_id == item["object_geometry_id"] for item in response.json()
-        ), "Expected geometry was not found in result."
+        ), "Expected geometry was не найден in result."
     else:
         assert_response(response, expected_status, ObjectGeometry, error_message)
 
@@ -512,7 +512,7 @@ async def test_get_physical_objects_around_geometry(
         assert_response(response, expected_status, PhysicalObjectWithGeometry, error_message, result_type="list")
         assert any(
             physical_object_id == item["physical_object_id"] for item in response.json()
-        ), "Expected physical object was not found in result."
+        ), "Expected physical object was не найден in result."
     else:
         assert_response(response, expected_status, PhysicalObjectWithGeometry, error_message)
 
@@ -522,7 +522,7 @@ async def test_get_physical_objects_around_geometry(
     "expected_status, error_message, geometry_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

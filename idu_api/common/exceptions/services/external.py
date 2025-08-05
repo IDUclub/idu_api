@@ -2,7 +2,7 @@
 
 from fastapi import status
 
-from idu_api.urban_api.exceptions import IduApiError
+from idu_api.common.exceptions import IduApiError
 
 
 class ExternalServiceResponseError(IduApiError):
@@ -15,7 +15,7 @@ class ExternalServiceResponseError(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f'External service "{self.service}" response error: {self.exc}'
+        return f"Ошибка в ответе внешнего сервиса '{self.service}': {self.exc}"
 
     def get_status_code(self) -> int:
         """
@@ -32,7 +32,7 @@ class ExternalServiceUnavailable(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"External service ({self.service}) is unavailable."
+        return f"Внешний сервис ({self.service}) недоступен."
 
     def get_status_code(self) -> int:
         """

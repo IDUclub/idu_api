@@ -2,11 +2,12 @@
 
 from collections import defaultdict
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import datetime
 
 from otteroad import KafkaProducerClient
 from otteroad.models import IndicatorValuesUpdated
-from sqlalchemy import delete, func, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -19,17 +20,16 @@ from idu_api.common.db.entities import (
     territories_data,
     territory_indicators_data,
 )
+from idu_api.common.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityNotFoundById,
+    EntityNotFoundByParams,
+)
 from idu_api.urban_api.dto import (
     IndicatorDTO,
     IndicatorsGroupDTO,
     IndicatorValueDTO,
     MeasurementUnitDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityAlreadyExists,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import build_recursive_query, check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
@@ -59,9 +59,6 @@ async def add_measurement_unit_to_db(
     measurement_unit: MeasurementUnitPost,
 ) -> MeasurementUnitDTO:
     """Create measurement unit object."""
-
-    if await check_existence(conn, measurement_units_dict, conditions={"name": measurement_unit.name}):
-        raise EntityAlreadyExists("measurement unit", measurement_unit.name)
 
     statement = insert(measurement_units_dict).values(name=measurement_unit.name).returning(measurement_units_dict)
     result = (await conn.execute(statement)).mappings().one()
@@ -144,9 +141,6 @@ async def add_indicators_group_to_db(
     indicators = [IndicatorDTO(**indicator) for indicator in indicators]
     if len(indicators) < len(indicators_group.indicators_ids):
         raise EntitiesNotFoundByIds("indicator")
-
-    if await check_existence(conn, indicators_groups_dict, conditions={"name": indicators_group.name}):
-        raise EntityAlreadyExists("indicators group", indicators_group.name)
 
     statement = (
         insert(indicators_groups_dict)
@@ -382,27 +376,6 @@ async def add_indicator_to_db(conn: AsyncConnection, indicator: IndicatorPost) -
         if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator.parent_id}):
             raise EntityNotFoundById(indicator.parent_id, "indicator")
 
-    if indicator.measurement_unit_id is not None:
-        if not await check_existence(
-            conn, measurement_units_dict, conditions={"measurement_unit_id": indicator.measurement_unit_id}
-        ):
-            raise EntityNotFoundById(indicator.measurement_unit_id, "measurement unit")
-
-    if indicator.service_type_id is not None:
-        if not await check_existence(
-            conn, service_types_dict, conditions={"service_type_id": indicator.service_type_id}
-        ):
-            raise EntityNotFoundById(indicator.service_type_id, "service type")
-
-    if indicator.physical_object_type_id is not None:
-        if not await check_existence(
-            conn, physical_object_types_dict, conditions={"physical_object_type_id": indicator.physical_object_type_id}
-        ):
-            raise EntityNotFoundById(indicator.physical_object_type_id, "physical object type")
-
-    if await check_existence(conn, indicators_dict, conditions={"name_full": indicator.name_full}):
-        raise EntityAlreadyExists("indicator", indicator.name_full)
-
     statement = insert(indicators_dict).values(**indicator.model_dump()).returning(indicators_dict.c.indicator_id)
     indicator_id = (await conn.execute(statement)).scalar_one()
 
@@ -418,34 +391,12 @@ async def put_indicator_to_db(conn: AsyncConnection, indicator: IndicatorPut) ->
         if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator.parent_id}):
             raise EntityNotFoundById(indicator.parent_id, "indicator")
 
-    if indicator.measurement_unit_id is not None:
-        if not await check_existence(
-            conn, measurement_units_dict, conditions={"measurement_unit_id": indicator.measurement_unit_id}
-        ):
-            raise EntityNotFoundById(indicator.measurement_unit_id, "measurement unit")
-
-    if indicator.service_type_id is not None:
-        if not await check_existence(
-            conn, service_types_dict, conditions={"service_type_id": indicator.service_type_id}
-        ):
-            raise EntityNotFoundById(indicator.service_type_id, "service type")
-
-    if indicator.physical_object_type_id is not None:
-        if not await check_existence(
-            conn, physical_object_types_dict, conditions={"physical_object_type_id": indicator.physical_object_type_id}
-        ):
-            raise EntityNotFoundById(indicator.physical_object_type_id, "physical object type")
-
-    if await check_existence(conn, indicators_dict, conditions={"name_full": indicator.name_full}):
-        values = extract_values_from_model(indicator, to_update=True)
-        statement = (
-            update(indicators_dict)
-            .where(indicators_dict.c.name_full == indicator.name_full)
-            .values(**values)
-            .returning(indicators_dict.c.indicator_id)
-        )
-    else:
-        statement = insert(indicators_dict).values(**indicator.model_dump()).returning(indicators_dict.c.indicator_id)
+    statement = (
+        insert(indicators_dict)
+        .values(**indicator.model_dump())
+        .on_conflict_do_update(index_elements=["name_full"], set_=indicator.model_dump())
+        .returning(indicators_dict.c.indicator_id)
+    )
 
     indicator_id = (await conn.execute(statement)).scalar_one()
     await conn.commit()
@@ -463,35 +414,7 @@ async def patch_indicator_to_db(conn: AsyncConnection, indicator_id: int, indica
         if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator.parent_id}):
             raise EntityNotFoundById(indicator.parent_id, "indicator")
 
-    if indicator.measurement_unit_id is not None:
-        if not await check_existence(
-            conn, measurement_units_dict, conditions={"measurement_unit_id": indicator.measurement_unit_id}
-        ):
-            raise EntityNotFoundById(indicator.measurement_unit_id, "measurement unit")
-
-    if indicator.service_type_id is not None:
-        if not await check_existence(
-            conn, service_types_dict, conditions={"service_type_id": indicator.service_type_id}
-        ):
-            raise EntityNotFoundById(indicator.service_type_id, "service type")
-
-    if indicator.physical_object_type_id is not None:
-        if not await check_existence(
-            conn, physical_object_types_dict, conditions={"physical_object_type_id": indicator.physical_object_type_id}
-        ):
-            raise EntityNotFoundById(indicator.physical_object_type_id, "physical object type")
-
-    if indicator.name_full is not None:
-        if await check_existence(
-            conn,
-            indicators_dict,
-            conditions={"name_full": indicator.name_full},
-            not_conditions={"indicator_id": indicator_id},
-        ):
-            raise EntityAlreadyExists("indicator", indicator.name_full)
-
     values = extract_values_from_model(indicator, exclude_unset=True, to_update=True)
-
     statement = update(indicators_dict).where(indicators_dict.c.indicator_id == indicator_id).values(**values)
 
     await conn.execute(statement)
@@ -607,34 +530,6 @@ async def add_indicator_value_to_db(
 ) -> IndicatorValueDTO:
     """Create indicator value object."""
 
-    if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator_value.indicator_id}):
-        raise EntityNotFoundById(indicator_value.indicator_id, "indicator")
-
-    if not await check_existence(conn, territories_data, conditions={"territory_id": indicator_value.territory_id}):
-        raise EntityNotFoundById(indicator_value.territory_id, "territory")
-
-    if await check_existence(
-        conn,
-        territory_indicators_data,
-        conditions={
-            "indicator_id": indicator_value.indicator_id,
-            "territory_id": indicator_value.territory_id,
-            "date_type": indicator_value.date_type,
-            "date_value": func.date(indicator_value.date_value),
-            "value_type": indicator_value.value_type,
-            "information_source": indicator_value.information_source,
-        },
-    ):
-        raise EntityAlreadyExists(
-            "indicator value",
-            indicator_value.indicator_id,
-            indicator_value.territory_id,
-            indicator_value.date_type,
-            indicator_value.date_value,
-            indicator_value.value_type,
-            indicator_value.information_source,
-        )
-
     statement = (
         insert(territory_indicators_data)
         .values(**indicator_value.model_dump())
@@ -663,43 +558,22 @@ async def put_indicator_value_to_db(
 ) -> IndicatorValueDTO:
     """Update existing indicator value or create new if it doesn't exist."""
 
-    if not await check_existence(conn, indicators_dict, conditions={"indicator_id": indicator_value.indicator_id}):
-        raise EntityNotFoundById(indicator_value.indicator_id, "indicator")
-
-    if not await check_existence(conn, territories_data, conditions={"territory_id": indicator_value.territory_id}):
-        raise EntityNotFoundById(indicator_value.territory_id, "territory")
-
-    if await check_existence(
-        conn,
-        territory_indicators_data,
-        conditions={
-            "indicator_id": indicator_value.indicator_id,
-            "territory_id": indicator_value.territory_id,
-            "date_type": indicator_value.date_type,
-            "date_value": indicator_value.date_value,
-            "value_type": indicator_value.value_type,
-            "information_source": indicator_value.information_source,
-        },
-    ):
-        statement = (
-            update(territory_indicators_data)
-            .values(value=indicator_value.value, updated_at=datetime.now(timezone.utc))
-            .where(
-                territory_indicators_data.c.indicator_id == indicator_value.indicator_id,
-                territory_indicators_data.c.territory_id == indicator_value.territory_id,
-                territory_indicators_data.c.date_type == indicator_value.date_type,
-                territory_indicators_data.c.date_value == indicator_value.date_value,
-                territory_indicators_data.c.value_type == indicator_value.value_type,
-                territory_indicators_data.c.information_source == indicator_value.information_source,
-            )
-            .returning(territory_indicators_data.c.indicator_value_id)
+    statement = (
+        insert(territory_indicators_data)
+        .values(**indicator_value.model_dump())
+        .on_conflict_do_update(
+            index_elements=[
+                "indicator_id",
+                "territory_id",
+                "date_type",
+                "date_value",
+                "value_type",
+                "information_source",
+            ],
+            set_={"value": indicator_value.value},
         )
-    else:
-        statement = (
-            insert(territory_indicators_data)
-            .values(**indicator_value.model_dump())
-            .returning(territory_indicators_data.c.indicator_value_id)
-        )
+        .returning(territory_indicators_data.c.indicator_value_id)
+    )
 
     indicator_value_id = (await conn.execute(statement)).scalar_one()
 

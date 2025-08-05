@@ -4,10 +4,12 @@ from http.client import HTTPException
 
 import structlog
 from fastapi import Request
+from sqlalchemy.exc import SQLAlchemyError
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from idu_api.common.exceptions import IduApiError
+from idu_api.common.exceptions.utils.translate import extract_sql, translate_db_error
 from idu_api.urban_api.dto.users.users import UserDTO
-from idu_api.urban_api.exceptions.base import IduApiError
 from idu_api.urban_api.prometheus import metrics
 from idu_api.urban_api.utils.logging import get_handler_from_path
 
@@ -52,12 +54,22 @@ class LoggingMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-m
             duration_seconds = (time_finish - time_begin) / 1e9
 
             if isinstance(exc, (IduApiError, HTTPException)):
-                log_func = logger.aerror
+                await logger.aerror(
+                    "failed to handle request", time_consumed=round(duration_seconds, 3), error_type=type(exc).__name__
+                )
+            elif isinstance(exc, SQLAlchemyError):
+                translated = translate_db_error(exc)
+                sql = extract_sql(exc)
+                await logger.aerror(
+                    "failed to handle request",
+                    time_consumed=round(duration_seconds, 3),
+                    error_type=type(translated).__name__,
+                    sql=sql,
+                )
             else:
-                log_func = logger.aexception
-            await log_func(
-                "failed to handle request", time_consumed=round(duration_seconds, 3), error_type=type(exc).__name__
-            )
+                await logger.aexception(
+                    "failed to handle request", time_consumed=round(duration_seconds, 3), error_type=type(exc).__name__
+                )
             raise
         finally:
             metrics.REQUESTS_COUNTER.labels(
