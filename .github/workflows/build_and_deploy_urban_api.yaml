@@ -1,0 +1,111 @@
+name: build_and_deploy_urban_api
+on: workflow_dispatch
+
+env:
+  IMAGE_API: ${{ secrets.REGISTRY }}/urban_api
+  IMAGE_MIGRATOR: ${{ secrets.REGISTRY }}/urban_migrator
+  API_CONTAINER_NAME: urban_api
+  MIGRATOR_CONTAINER_NAME: migrator
+
+jobs:
+  build:
+    runs-on: 47_runner
+    outputs:
+      tag: ${{ steps.date.outputs.NOW }}
+    steps:
+      - name: Get build tag
+        id: date
+        run: echo "NOW=$(date +'%Y-%m-%dT%H-%M-%S')" >> $GITHUB_OUTPUT
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build migrator image
+        run: docker build -f migrations.Dockerfile -t $IMAGE_MIGRATOR:${{ steps.date.outputs.NOW }} .
+
+      - name: Build API image
+        run: docker build -f urban_api/Dockerfile -t $IMAGE_API:${{ steps.date.outputs.NOW }} .
+
+      - name: Push migrator image
+        run: docker push $IMAGE_MIGRATOR:${{ steps.date.outputs.NOW }}
+
+      - name: Push API image
+        run: docker push $IMAGE_API:${{ steps.date.outputs.NOW }}
+
+  deploy_47:
+    needs: build
+    runs-on: 47_runner
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Set image versions
+        run: |
+          echo "IMAGE_API=${{ env.IMAGE_API }}:$TAG" >> $GITHUB_ENV
+          echo "IMAGE_MIGRATOR=${{ env.IMAGE_MIGRATOR }}:$TAG" >> $GITHUB_ENV
+
+      - name: Copy env file
+        env:
+          ENV_PATH: ${{ secrets.ENV_PATH }}
+        run: cp $ENV_PATH/.env.47 ./urban_api/
+
+      - name: Stop old containers
+        run: |
+          docker rm -f $API_CONTAINER_NAME || true
+          docker rm -f $MIGRATOR_CONTAINER_NAME || true
+
+      - name: Deploy
+        run: docker compose -f urban_api/docker-compose.deploy.yaml --env-file urban_api/.env.47 up -d
+
+  deploy_65:
+    needs: build
+    runs-on: 65_runner
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image versions
+        run: |
+          echo "IMAGE_API=${{ env.IMAGE_API }}:$TAG" >> $GITHUB_ENV
+          echo "IMAGE_MIGRATOR=${{ env.IMAGE_MIGRATOR }}:$TAG" >> $GITHUB_ENV
+
+      - name: Copy env file
+        env:
+          ENV_PATH: ${{ secrets.ENV_PATH }}
+        run: cp $ENV_PATH/.env.65 ./urban_api/
+
+      - name: Stop old container
+        run: |
+          docker rm -f $API_CONTAINER_NAME || true
+          docker rm -f $MIGRATOR_CONTAINER_NAME || true
+
+      - name: Deploy
+        run: docker compose -f urban_api/docker-compose.deploy.yaml --env-file urban_api/.env.65 up -d
+
+  deploy_107:
+    needs: build
+    runs-on: 107_runner
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set image versions
+        run: |
+          echo "IMAGE_API=${{ env.IMAGE_API }}:$TAG" >> $GITHUB_ENV
+          echo "IMAGE_MIGRATOR=${{ env.IMAGE_MIGRATOR }}:$TAG" >> $GITHUB_ENV
+
+      - name: Copy env file
+        env:
+          ENV_PATH: ${{ secrets.ENV_PATH }}
+        run: cp $ENV_PATH/.env.107 ./urban_api/
+
+      - name: Stop old container
+        run: |
+          docker rm -f $API_CONTAINER_NAME || true
+          docker rm -f $MIGRATOR_CONTAINER_NAME || true
+
+      - name: Deploy
+        run: docker compose -f urban_api/docker-compose.deploy.yaml --env-file urban_api/.env.107 up -d

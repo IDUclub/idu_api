@@ -52,7 +52,7 @@ async def async_main(connection_manager: PostgresConnectionManager, logger: stru
 @click.option(
     "--config_path",
     envvar="CONFIG_PATH",
-    default="../../../urban-api.config.yaml",
+    default="../../../config.yaml",
     type=click.Path(exists=True, dir_okay=False, path_type=str),
     show_default=True,
     show_envvar=True,

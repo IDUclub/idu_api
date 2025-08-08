@@ -44,8 +44,10 @@ services:
     build:
       context: ..
       dockerfile: migrations.Dockerfile
-    env_file:
-      - ./.env
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+    volumes:
+      - ${REAL_CONFIG_PATH}:/app/config.yaml
     depends_on:
       database:
         condition: service_healthy
@@ -58,10 +60,11 @@ services:
     restart: on-failure
     ports:
       - ${EXPORT_API_PORT:-8000}:${PORT:-8000}
-    env_file:
-      - ./.env
+    environment:
+      - CONFIG_PATH=/app/config.yaml
     volumes:
       - ./logs:/app/logs
+      - ${REAL_CONFIG_PATH}:/app/config.yaml
     depends_on:
       fileserver:
         condition: service_healthy

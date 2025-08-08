@@ -30,3 +30,6 @@ pg_data/
 # Ignore coverage files
 htmlcov/
 .coverage
+
+logs/
+urban_api/logs/
