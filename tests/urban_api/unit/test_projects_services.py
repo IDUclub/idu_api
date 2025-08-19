@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Intersects, ST_Within
+from geoalchemy2.functions import ST_AsEWKB, ST_Intersects, ST_Within, ST_IsEmpty, ST_Intersection, ST_Centroid
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -126,7 +126,6 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             True,
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
 
@@ -203,10 +202,10 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
                 projects_urban_objects_data.c.service_id.isnot(None)
                 | projects_urban_objects_data.c.public_service_id.isnot(None)
             ),
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
-    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query)
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
 
     # Act
     result = await get_services_by_scenario_id_from_db(mock_conn, scenario_id, user, service_type_id, urban_function_id)
@@ -215,7 +214,7 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
     assert isinstance(result, list), "Result should be a list."
     assert all(isinstance(item, ScenarioServiceDTO) for item in result), "Each item should be a ScenarioServiceDTO."
     assert isinstance(ScenarioService.from_dto(result[0]), ScenarioService), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -291,7 +290,6 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             True,
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
     scenario_urban_objects_query = (
@@ -392,10 +390,10 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
                 projects_urban_objects_data.c.service_id.isnot(None)
                 | projects_urban_objects_data.c.public_service_id.isnot(None)
             ),
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
-    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query)
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
 
     # Act
     result = await get_services_with_geometry_by_scenario_id_from_db(
@@ -412,7 +410,7 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
         ScenarioServiceWithGeometryAttributes(**geojson_result.features[0].properties),
         ScenarioServiceWithGeometryAttributes,
     ), "Couldn't create pydantic model from geojson properties."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -496,7 +494,6 @@ async def test_get_context_services_from_db(mock_conn: MockConnection):
                 urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
             )
         )
-        .where(service_types_dict.c.service_type_id == service_type_id)
     )
     scenario_services_query = (
         select(
@@ -571,10 +568,10 @@ async def test_get_context_services_from_db(mock_conn: MockConnection):
                 projects_urban_objects_data.c.service_id.isnot(None)
                 | projects_urban_objects_data.c.public_service_id.isnot(None)
             ),
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
-    union_query = union_all(public_services_query, scenario_services_query)
+    union_query = union_all(public_services_query, scenario_services_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
 
     # Act
     with patch(
@@ -588,7 +585,7 @@ async def test_get_context_services_from_db(mock_conn: MockConnection):
     assert isinstance(result, list), "Result should be a list."
     assert all(isinstance(item, ScenarioServiceDTO) for item in result), "Each item should be a ScenarioServiceDTO."
     assert isinstance(ScenarioService.from_dto(result[0]), ScenarioService), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -622,6 +619,7 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
         )
         .cte(name="objects_intersecting")
     )
+    intersected_geom = ST_Intersection(object_geometries_data.c.geometry, mock_geom)
     public_services_query = (
         select(
             services_data.c.service_id,
@@ -644,8 +642,8 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
             object_geometries_data.c.object_geometry_id,
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_service"),
@@ -678,7 +676,15 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
                 urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
             )
         )
-        .where(service_types_dict.c.service_type_id == service_type_id)
+        .where(~ST_IsEmpty(intersected_geom))
+        .distinct()
+    )
+    geom_expr = ST_Intersection(
+        coalesce(
+            projects_object_geometries_data.c.geometry,
+            object_geometries_data.c.geometry,
+        ),
+        mock_geom,
     )
     scenario_services_query = (
         select(
@@ -714,18 +720,8 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
                 projects_object_geometries_data.c.osm_id,
                 object_geometries_data.c.osm_id,
             ).label("osm_id"),
-            ST_AsEWKB(
-                coalesce(
-                    projects_object_geometries_data.c.geometry,
-                    object_geometries_data.c.geometry,
-                ),
-            ).label("geometry"),
-            ST_AsEWKB(
-                coalesce(
-                    projects_object_geometries_data.c.centre_point,
-                    object_geometries_data.c.centre_point,
-                ),
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
@@ -778,10 +774,12 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
                 projects_urban_objects_data.c.service_id.isnot(None)
                 | projects_urban_objects_data.c.public_service_id.isnot(None)
             ),
-            service_types_dict.c.service_type_id == service_type_id,
+            ~ST_IsEmpty(geom_expr),
         )
+        .distinct()
     )
-    union_query = union_all(public_services_query, scenario_services_query)
+    union_query = union_all(public_services_query, scenario_services_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
 
     # Act
     with patch(
@@ -803,7 +801,7 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
         ScenarioServiceWithGeometryAttributes(**geojson_result.features[0].properties),
         ScenarioServiceWithGeometryAttributes,
     ), "Couldn't create pydantic model from geojson properties."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio

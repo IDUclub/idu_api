@@ -218,15 +218,15 @@ async def test_upload_logo(storage_manager, fake_logger, file_ext, expected_path
 @pytest.mark.parametrize(
     "existing_objects, expected_result",
     [
-        (["1/logo/image.jpg"], "http://logo.url"),
-        ([], None),
+        (["1/logo/image.jpg"], "1/logo/image.jpg"),
+        ([], "defaultLogo.svg"),
     ],
 )
 async def test_get_logo_url(storage_manager, fake_logger, existing_objects, expected_result):
     session = AsyncMock()
     storage_manager._client.get_session.return_value.__aenter__.return_value = session
     storage_manager._client.list_objects.return_value = existing_objects
-    storage_manager._client.generate_presigned_urls.return_value = ["http://logo.url"]
+    storage_manager._client.generate_presigned_urls.return_value = existing_objects or ["defaultLogo.svg"]
 
     result = await storage_manager.get_logo_url(1, fake_logger)
     assert result == expected_result

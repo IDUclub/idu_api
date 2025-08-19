@@ -575,6 +575,7 @@ async def test_get_project_phases_by_id_from_db(mock_check: AsyncMock, mock_conn
             projects_phases_data.c.construction,
             projects_phases_data.c.operation,
             projects_phases_data.c.decommission,
+            projects_phases_data.c.properties,
         )
         .select_from(projects_phases_data)
         .where(projects_phases_data.c.project_id == project_id)

@@ -98,3 +98,4 @@ class ProjectPhasesDTO:
     construction: float
     operation: float
     decommission: float
+    properties: dict[str, Any]

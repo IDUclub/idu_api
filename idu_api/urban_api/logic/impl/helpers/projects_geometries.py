@@ -666,7 +666,6 @@ async def get_context_geometries_from_db(
             )
         )
         .where(~ST_IsEmpty(intersected_geom))
-        .distinct()
     )
 
     # Step 4: Collect all geometries from parent regional scenario intersecting context geometry

@@ -621,22 +621,32 @@ async def test_get_social_groups_by_service_type_id_from_db(mock_conn: MockConne
         return True
 
     service_type_id = 1
-    statement = (
+    soc_groups_query = (
+        select(soc_groups_dict)
+        .select_from(
+            soc_groups_dict.join(
+                soc_group_values_data,
+                soc_groups_dict.c.soc_group_id == soc_group_values_data.c.soc_group_id,
+            )
+        )
+        .where(soc_group_values_data.c.service_type_id == service_type_id)
+        .order_by(soc_groups_dict.c.soc_group_id)
+        .distinct()
+    )
+    service_types_query = (
         select(
-            soc_groups_dict,
+            soc_group_values_data.c.soc_group_id,
             service_types_dict.c.service_type_id.label("id"),
-            service_types_dict.c.name.label("service_type_name"),
+            service_types_dict.c.name.label("name"),
             soc_group_values_data.c.infrastructure_type,
         )
         .select_from(
-            service_types_dict.join(
-                soc_group_values_data,
-                soc_group_values_data.c.service_type_id == service_types_dict.c.service_type_id,
-            ).join(soc_groups_dict, soc_groups_dict.c.soc_group_id == soc_group_values_data.c.soc_group_id)
+            soc_group_values_data.join(
+                service_types_dict, soc_group_values_data.c.service_type_id == service_types_dict.c.service_type_id
+            )
         )
-        .where(service_types_dict.c.service_type_id == service_type_id)
-        .order_by(soc_groups_dict.c.soc_group_id)
-        .distinct()
+        .where(soc_group_values_data.c.soc_group_id.in_([1]))
+        .order_by(service_types_dict.c.service_type_id)
     )
 
     # Act
@@ -656,7 +666,8 @@ async def test_get_social_groups_by_service_type_id_from_db(mock_conn: MockConne
     assert isinstance(
         SocGroupWithServiceTypes.from_dto(result[0]), SocGroupWithServiceTypes
     ), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_called_with(str(statement))
+    mock_conn.execute_mock.assert_any_call(str(soc_groups_query))
+    mock_conn.execute_mock.assert_any_call(str(service_types_query))
 
 
 @pytest.mark.asyncio

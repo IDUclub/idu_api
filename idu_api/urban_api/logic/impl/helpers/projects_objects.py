@@ -235,6 +235,7 @@ async def get_project_phases_by_id_from_db(conn, project_id: int, user: UserDTO 
         projects_phases_data.c.construction,
         projects_phases_data.c.operation,
         projects_phases_data.c.decommission,
+        projects_phases_data.c.properties,
     ).where(projects_phases_data.c.project_id == project_id)
 
     result = (await conn.execute(statement)).mappings().one_or_none()

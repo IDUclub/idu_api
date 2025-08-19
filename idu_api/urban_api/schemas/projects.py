@@ -166,6 +166,11 @@ class ProjectPhases(BaseModel):
     construction: float = Field(default=0.0, ge=0, le=100, examples=[60.4])
     operation: float = Field(default=0.0, ge=0, le=100, examples=[80.5])
     decommission: float = Field(default=0.0, ge=0, le=100, examples=[100])
+    properties: dict[str, Any] = Field(
+        default_factory=dict,
+        description="project's phases additional properties",
+        examples=[{"additional_attribute_name": "additional_attribute_value"}],
+    )
 
     @classmethod
     def from_dto(cls, dto: ProjectPhasesDTO) -> "ProjectPhases":
@@ -180,6 +185,7 @@ class ProjectPhases(BaseModel):
             construction=dto.construction,
             operation=dto.operation,
             decommission=dto.decommission,
+            properties=dto.properties,
         )
 
 
@@ -196,3 +202,8 @@ class ProjectPhasesPut(BaseModel):
     construction: float = Field(..., ge=0, le=100, examples=[60.4])
     operation: float = Field(..., ge=0, le=100, examples=[80.5])
     decommission: float = Field(..., ge=0, le=100, examples=[100])
+    properties: dict[str, Any] = Field(
+        ...,
+        description="project's phases additional properties",
+        examples=[{"additional_attribute_name": "additional_attribute_value"}],
+    )

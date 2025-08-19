@@ -65,6 +65,7 @@ def project(
         description="Test Project Description",
         public=False,
         is_city=False,
+        is_regional=False,
         territory=ProjectTerritoryPost(
             geometry=Geometry(
                 type="Polygon",
@@ -132,6 +133,7 @@ def project_phases_put_req() -> ProjectPhasesPut:
         construction=1,
         operation=1,
         decommission=1,
+        properties={},
     )
 
 

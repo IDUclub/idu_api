@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within
+from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within, \
+    ST_IsEmpty
 from sqlalchemy import ScalarSelect, case, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -72,10 +73,6 @@ async def test_get_geometries_by_scenario_id_from_db(mock_conn: MockConnection):
         .where(projects_urban_objects_data.c.scenario_id == scenario_id)
         .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
     ).cte(name="public_urban_object_ids")
-
-    project_geometry = (
-        select(projects_territory_data.c.geometry).where(projects_territory_data.c.project_id == 1)
-    ).scalar_subquery()
 
     public_urban_objects_query = (
         select(
@@ -206,6 +203,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
         select(
             physical_objects_data.c.physical_object_id,
             physical_object_types_dict.c.physical_object_type_id,
+            physical_object_types_dict.c.physical_object_function_id,
             physical_object_types_dict.c.name.label("physical_object_type_name"),
             physical_objects_data.c.name.label("physical_object_name"),
             physical_objects_data.c.properties.label("physical_object_properties"),
@@ -224,6 +222,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             services_data.c.is_capacity_real,
             services_data.c.properties.label("service_properties"),
             service_types_dict.c.service_type_id,
+            service_types_dict.c.urban_function_id,
             service_types_dict.c.name.label("service_type_name"),
             territory_types_dict.c.territory_type_id,
             territory_types_dict.c.name.label("territory_type_name"),
@@ -266,8 +265,6 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             True,
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
 
@@ -283,6 +280,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
                 projects_physical_objects_data.c.physical_object_id, physical_objects_data.c.physical_object_id
             ).label("physical_object_id"),
             physical_object_types_dict.c.physical_object_type_id,
+            physical_object_types_dict.c.physical_object_function_id,
             physical_object_types_dict.c.name.label("physical_object_type_name"),
             coalesce(projects_physical_objects_data.c.name, physical_objects_data.c.name).label("physical_object_name"),
             coalesce(projects_physical_objects_data.c.properties, physical_objects_data.c.properties).label(
@@ -312,6 +310,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             ),
             coalesce(projects_services_data.c.properties, services_data.c.properties).label("service_properties"),
             service_types_dict.c.service_type_id,
+            service_types_dict.c.urban_function_id,
             service_types_dict.c.name.label("service_type_name"),
             territory_types_dict.c.territory_type_id,
             territory_types_dict.c.name.label("territory_type_name"),
@@ -383,14 +382,16 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
         .where(
             projects_urban_objects_data.c.scenario_id == scenario_id,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
 
     union_query = union_all(
         public_urban_objects_query,
         scenario_urban_objects_query,
+    ).cte(name="union_query")
+    statement = select(union_query).where(
+        union_query.c.physical_object_type_id == physical_object_type_id,
+        union_query.c.service_type_id == service_type_id,
     )
 
     # Act
@@ -403,7 +404,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
     assert all(
         isinstance(item, ScenarioGeometryWithAllObjectsDTO) for item in result
     ), "Each item should be a ScenarioGeometryWithAllObjectsDTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -434,6 +435,7 @@ async def test_get_context_geometries_from_db(mock_conn: MockConnection):
         )
         .cte(name="objects_intersecting")
     )
+    intersected_geom = ST_Intersection(object_geometries_data.c.geometry, mock_geom)
     public_geoms_query = (
         select(
             object_geometries_data.c.object_geometry_id,
@@ -441,24 +443,8 @@ async def test_get_context_geometries_from_db(mock_conn: MockConnection):
             object_geometries_data.c.osm_id,
             object_geometries_data.c.created_at,
             object_geometries_data.c.updated_at,
-            ST_AsEWKB(
-                case(
-                    (
-                        ~ST_Within(object_geometries_data.c.geometry, mock_geom),
-                        ST_Intersection(object_geometries_data.c.geometry, mock_geom),
-                    ),
-                    else_=object_geometries_data.c.geometry,
-                )
-            ).label("geometry"),
-            ST_AsEWKB(
-                case(
-                    (
-                        ~ST_Within(object_geometries_data.c.geometry, mock_geom),
-                        ST_Centroid(ST_Intersection(object_geometries_data.c.geometry, mock_geom)),
-                    ),
-                    else_=object_geometries_data.c.centre_point,
-                )
-            ).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_object"),
@@ -477,7 +463,14 @@ async def test_get_context_geometries_from_db(mock_conn: MockConnection):
                 territories_data.c.territory_id == object_geometries_data.c.territory_id,
             )
         )
-        .distinct()
+        .where(~ST_IsEmpty(intersected_geom))
+    )
+    geom_expr = ST_Intersection(
+        coalesce(
+            projects_object_geometries_data.c.geometry,
+            object_geometries_data.c.geometry,
+        ),
+        mock_geom,
     )
     regional_scenario_geoms_query = (
         select(
@@ -501,26 +494,8 @@ async def test_get_context_geometries_from_db(mock_conn: MockConnection):
                 projects_object_geometries_data.c.updated_at,
                 object_geometries_data.c.updated_at,
             ).label("updated_at"),
-            ST_AsEWKB(
-                ST_Intersection(
-                    coalesce(
-                        projects_object_geometries_data.c.geometry,
-                        object_geometries_data.c.geometry,
-                    ),
-                    mock_geom,
-                )
-            ).label("geometry"),
-            ST_AsEWKB(
-                ST_Centroid(
-                    ST_Intersection(
-                        coalesce(
-                            projects_object_geometries_data.c.geometry,
-                            object_geometries_data.c.geometry,
-                        ),
-                        mock_geom,
-                    )
-                )
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (object_geometries_data.c.object_geometry_id.isnot(None)).label("is_scenario_object"),
@@ -558,6 +533,7 @@ async def test_get_context_geometries_from_db(mock_conn: MockConnection):
         .where(
             projects_urban_objects_data.c.scenario_id == 1,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
+            ~ST_IsEmpty(geom_expr),
         )
     )
     union_query = union_all(
@@ -611,10 +587,12 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
         .cte(name="objects_intersecting")
     )
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
+    intersected_geom = ST_Intersection(object_geometries_data.c.geometry, mock_geom)
     public_geoms_query = (
         select(
             physical_objects_data.c.physical_object_id,
             physical_object_types_dict.c.physical_object_type_id,
+            physical_object_types_dict.c.physical_object_function_id,
             physical_object_types_dict.c.name.label("physical_object_type_name"),
             physical_objects_data.c.name.label("physical_object_name"),
             physical_objects_data.c.properties.label("physical_object_properties"),
@@ -625,14 +603,15 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             territories_data.c.name.label("territory_name"),
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(ST_Intersection(object_geometries_data.c.geometry, mock_geom)).label("geometry"),
-            ST_AsEWKB(ST_Centroid(ST_Intersection(object_geometries_data.c.geometry, mock_geom))).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             services_data.c.service_id,
             services_data.c.name.label("service_name"),
             services_data.c.capacity,
             services_data.c.is_capacity_real,
             services_data.c.properties.label("service_properties"),
             service_types_dict.c.service_type_id,
+            service_types_dict.c.urban_function_id,
             service_types_dict.c.name.label("service_type_name"),
             territory_types_dict.c.territory_type_id,
             territory_types_dict.c.name.label("territory_type_name"),
@@ -674,23 +653,27 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
                 buildings_data,
                 buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
             )
-        )
-        .where(
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
-        )
+        ).where(~ST_IsEmpty(intersected_geom))
     )
     coalesce_building_columns = [
         coalesce(up_col, pub_col).label(pub_col.name)
         for pub_col, up_col in zip(buildings_data.c, projects_buildings_data.c)
         if pub_col.name not in ("physical_object_id", "properties")
     ]
+    geom_expr = ST_Intersection(
+        coalesce(
+            projects_object_geometries_data.c.geometry,
+            object_geometries_data.c.geometry,
+        ),
+        mock_geom,
+    )
     regional_scenario_geoms_query = (
         select(
             coalesce(
                 projects_physical_objects_data.c.physical_object_id, physical_objects_data.c.physical_object_id
             ).label("physical_object_id"),
             physical_object_types_dict.c.physical_object_type_id,
+            physical_object_types_dict.c.physical_object_function_id,
             physical_object_types_dict.c.name.label("physical_object_type_name"),
             coalesce(projects_physical_objects_data.c.name, physical_objects_data.c.name).label("physical_object_name"),
             coalesce(projects_physical_objects_data.c.properties, physical_objects_data.c.properties).label(
@@ -705,26 +688,8 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             territories_data.c.name.label("territory_name"),
             coalesce(projects_object_geometries_data.c.address, object_geometries_data.c.address).label("address"),
             coalesce(projects_object_geometries_data.c.osm_id, object_geometries_data.c.osm_id).label("osm_id"),
-            ST_AsEWKB(
-                ST_Intersection(
-                    coalesce(
-                        projects_object_geometries_data.c.geometry,
-                        object_geometries_data.c.geometry,
-                    ),
-                    mock_geom,
-                )
-            ).label("geometry"),
-            ST_AsEWKB(
-                ST_Centroid(
-                    ST_Intersection(
-                        coalesce(
-                            projects_object_geometries_data.c.geometry,
-                            object_geometries_data.c.geometry,
-                        ),
-                        mock_geom,
-                    )
-                )
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
             coalesce(projects_services_data.c.name, services_data.c.name).label("service_name"),
             coalesce(projects_services_data.c.capacity, services_data.c.capacity).label("capacity"),
@@ -733,6 +698,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             ),
             coalesce(projects_services_data.c.properties, services_data.c.properties).label("service_properties"),
             service_types_dict.c.service_type_id,
+            service_types_dict.c.urban_function_id,
             service_types_dict.c.name.label("service_type_name"),
             territory_types_dict.c.territory_type_id,
             territory_types_dict.c.name.label("territory_type_name"),
@@ -804,12 +770,15 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
         .where(
             projects_urban_objects_data.c.scenario_id == 1,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
+            ~ST_IsEmpty(geom_expr),
         )
     )
 
-    union_query = union_all(public_geoms_query, regional_scenario_geoms_query)
+    union_query = union_all(public_geoms_query, regional_scenario_geoms_query).cte(name="union_query")
+    statement = select(union_query).where(
+        union_query.c.physical_object_type_id == physical_object_type_id,
+        union_query.c.service_type_id == service_type_id,
+    )
 
     # Act
     with patch(
@@ -826,7 +795,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
     assert all(
         isinstance(item, ScenarioGeometryWithAllObjectsDTO) for item in result
     ), "Each item should be a ObjectGeometryDTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio

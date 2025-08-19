@@ -1261,6 +1261,7 @@ async def test_put_project_phases(
         "construction": 1,
         "operation": 1,
         "decommission": 1,
+        "properties": {},
     }
 
     # Act

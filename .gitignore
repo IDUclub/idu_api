@@ -20,6 +20,7 @@ pg_data/
 /dist
 
 *.config.yaml
+config.yaml
 
 # Ignore pylint config
 .pylintrc

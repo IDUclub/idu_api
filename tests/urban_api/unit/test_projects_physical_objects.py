@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within
+from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within, \
+    ST_IsEmpty
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -132,7 +133,6 @@ async def test_get_physical_objects_by_scenario_id_from_db(mock_conn: MockConnec
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             True,
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
         )
         .distinct()
     )
@@ -258,11 +258,11 @@ async def test_get_physical_objects_by_scenario_id_from_db(mock_conn: MockConnec
         .where(
             projects_urban_objects_data.c.scenario_id == scenario_id,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
         )
         .distinct()
     )
-    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query)
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.physical_object_type_id == physical_object_type_id)
 
     # Act
     result = await get_physical_objects_by_scenario_id_from_db(
@@ -277,7 +277,7 @@ async def test_get_physical_objects_by_scenario_id_from_db(mock_conn: MockConnec
     assert isinstance(
         ScenarioPhysicalObject.from_dto(result[0]), ScenarioPhysicalObject
     ), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -352,7 +352,6 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             True,
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
         )
     )
 
@@ -498,10 +497,10 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
         .where(
             projects_urban_objects_data.c.scenario_id == scenario_id,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
         )
     )
-    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query)
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.physical_object_type_id == physical_object_type_id)
 
     # Act
     result = await get_physical_objects_with_geometry_by_scenario_id_from_db(
@@ -518,7 +517,7 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
         ScenarioPhysicalObjectWithGeometryAttributes(**geojson_result.features[0].properties),
         ScenarioPhysicalObjectWithGeometryAttributes,
     ), "Couldn't create pydantic model from geojson properties."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -600,9 +599,6 @@ async def test_get_context_physical_objects_from_db(mock_conn: MockConnection):
                 buildings_data,
                 buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
             )
-        )
-        .where(
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
         )
     )
 
@@ -727,11 +723,11 @@ async def test_get_context_physical_objects_from_db(mock_conn: MockConnection):
         .where(
             projects_urban_objects_data.c.scenario_id == 1,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
         )
         .distinct()
     )
-    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query)
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.physical_object_type_id == physical_object_type_id)
 
     # Act
     with patch(
@@ -751,7 +747,7 @@ async def test_get_context_physical_objects_from_db(mock_conn: MockConnection):
     assert isinstance(
         ScenarioPhysicalObject.from_dto(result[0]), ScenarioPhysicalObject
     ), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
@@ -786,6 +782,7 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
         .cte(name="objects_intersecting")
     )
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
+    intersected_geom = ST_Intersection(object_geometries_data.c.geometry, mock_geom)
     public_urban_objects_query = (
         select(
             physical_objects_data.c.physical_object_id,
@@ -802,8 +799,8 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
             object_geometries_data.c.object_geometry_id,
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(ST_Intersection(object_geometries_data.c.geometry, mock_geom)).label("geometry"),
-            ST_AsEWKB(ST_Centroid(ST_Intersection(object_geometries_data.c.geometry, mock_geom))).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_physical_object"),
@@ -840,8 +837,16 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
                 buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
             )
         )
+        .where(~ST_IsEmpty(intersected_geom))
         .distinct()
-    ).where(physical_object_types_dict.c.physical_object_type_id == physical_object_type_id)
+    )
+    geom_expr = ST_Intersection(
+        coalesce(
+            projects_object_geometries_data.c.geometry,
+            object_geometries_data.c.geometry,
+        ),
+        mock_geom,
+    )
     scenario_urban_objects_query = (
         select(
             coalesce(
@@ -920,26 +925,8 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
                 projects_object_geometries_data.c.osm_id,
                 object_geometries_data.c.osm_id,
             ).label("osm_id"),
-            ST_AsEWKB(
-                ST_Intersection(
-                    coalesce(
-                        projects_object_geometries_data.c.geometry,
-                        object_geometries_data.c.geometry,
-                    ),
-                    mock_geom,
-                )
-            ).label("geometry"),
-            ST_AsEWKB(
-                ST_Centroid(
-                    ST_Intersection(
-                        coalesce(
-                            projects_object_geometries_data.c.geometry,
-                            object_geometries_data.c.geometry,
-                        ),
-                        mock_geom,
-                    )
-                )
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_physical_object"),
@@ -996,11 +983,12 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
         .where(
             projects_urban_objects_data.c.scenario_id == 1,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
+            ~ST_IsEmpty(geom_expr),
         )
         .distinct()
     )
-    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query)
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query).where(union_query.c.physical_object_type_id == physical_object_type_id)
 
     # Act
     with patch(
@@ -1022,7 +1010,7 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
         ScenarioPhysicalObjectWithGeometryAttributes(**geojson_result.features[0].properties),
         ScenarioPhysicalObjectWithGeometryAttributes,
     ), "Couldn't create pydantic model from geojson properties."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio

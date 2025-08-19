@@ -85,6 +85,7 @@ projects_phases_data = Table(
     Column("construction", Float(precision=53), server_default=text("0"), nullable=False),
     Column("operation", Float(precision=53), server_default=text("0"), nullable=False),
     Column("decommission", Float(precision=53), server_default=text("0"), nullable=False),
+    Column("properties", JSONB(astext_type=Text()), server_default=text("'{}'::jsonb"), nullable=False),
     schema="user_projects",
 )
 
@@ -101,4 +102,5 @@ Project data:
 - construction float
 - operation float
 - decommission float
+- properties jsonb
 """

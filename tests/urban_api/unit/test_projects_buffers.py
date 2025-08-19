@@ -117,9 +117,6 @@ async def test_get_buffers_by_scenario_id_from_db(mock_conn: MockConnection):
         .where(
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             ST_Intersects(buffers_data.c.geometry, project_geometry),
-            buffer_types_dict.c.buffer_type_id == buffer_type_id,
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
     locked_regional_scenario_buffers_query = (
@@ -206,9 +203,6 @@ async def test_get_buffers_by_scenario_id_from_db(mock_conn: MockConnection):
             ST_Intersects(projects_buffers_data.c.geometry, project_geometry),
             ~ST_Intersects(object_geometries_data.c.geometry, project_geometry),
             ~ST_Intersects(projects_object_geometries_data.c.geometry, project_geometry),
-            buffer_types_dict.c.buffer_type_id == buffer_type_id,
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
     scenario_buffers_query = (
@@ -292,9 +286,6 @@ async def test_get_buffers_by_scenario_id_from_db(mock_conn: MockConnection):
         )
         .where(
             projects_urban_objects_data.c.scenario_id == scenario_id,
-            buffer_types_dict.c.buffer_type_id == buffer_type_id,
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
 
@@ -302,6 +293,11 @@ async def test_get_buffers_by_scenario_id_from_db(mock_conn: MockConnection):
         public_buffers_query,
         locked_regional_scenario_buffers_query,
         scenario_buffers_query,
+    ).cte(name="union_query")
+    statement = select(union_query).where(
+        union_query.c.buffer_type_id == buffer_type_id,
+        union_query.c.physical_object_type_id == physical_object_type_id,
+        union_query.c.service_type_id == service_type_id,
     )
 
     # Act
@@ -318,7 +314,7 @@ async def test_get_buffers_by_scenario_id_from_db(mock_conn: MockConnection):
     assert isinstance(result, list), "Result should be a list."
     assert all(isinstance(item, ScenarioBufferDTO) for item in result), "Each item should be a ScenarioBufferDTO."
     assert isinstance(ScenarioBuffer.from_dto(result[0]), ScenarioBuffer), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
     mock_check.assert_called_once_with(mock_conn, scenario_id, user, allow_regional=False, return_value=True)
 
 
@@ -398,11 +394,6 @@ async def test_get_context_buffers_from_db(mock_conn: MockConnection):
             .join(territories_data, territories_data.c.territory_id == object_geometries_data.c.territory_id)
             .outerjoin(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
             .outerjoin(service_types_dict, service_types_dict.c.service_type_id == services_data.c.service_type_id)
-        )
-        .where(
-            buffer_types_dict.c.buffer_type_id == buffer_type_id,
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
 
@@ -488,12 +479,14 @@ async def test_get_context_buffers_from_db(mock_conn: MockConnection):
         .where(
             projects_urban_objects_data.c.scenario_id == 1,
             ST_Intersects(projects_buffers_data.c.geometry, mock_geom),
-            buffer_types_dict.c.buffer_type_id == buffer_type_id,
-            physical_object_types_dict.c.physical_object_type_id == physical_object_type_id,
-            service_types_dict.c.service_type_id == service_type_id,
         )
     )
-    union_query = union_all(public_buffers_query, regional_scenario_buffers_query)
+    union_query = union_all(public_buffers_query, regional_scenario_buffers_query).cte(name="union_query")
+    statement = select(union_query).where(
+        union_query.c.buffer_type_id == buffer_type_id,
+        union_query.c.physical_object_type_id == physical_object_type_id,
+        union_query.c.service_type_id == service_type_id,
+    )
 
     # Act
     with pytest.raises(NotAllowedInRegionalScenario):
@@ -509,7 +502,7 @@ async def test_get_context_buffers_from_db(mock_conn: MockConnection):
     assert isinstance(result, list), "Result should be a list."
     assert all(isinstance(item, ScenarioBufferDTO) for item in result), "Each item should be a BufferDTO."
     assert isinstance(ScenarioBuffer.from_dto(result[0]), ScenarioBuffer), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(union_query))
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio
