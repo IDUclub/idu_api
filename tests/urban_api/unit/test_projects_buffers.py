@@ -351,50 +351,47 @@ async def test_get_context_buffers_from_db(mock_conn: MockConnection):
         )
         .cte(name="objects_intersecting")
     )
-    public_buffers_query = (
-        select(
-            buffer_types_dict.c.buffer_type_id,
-            buffer_types_dict.c.name.label("buffer_type_name"),
-            urban_objects_data.c.urban_object_id,
-            physical_objects_data.c.physical_object_id,
-            physical_objects_data.c.name.label("physical_object_name"),
-            physical_object_types_dict.c.physical_object_type_id,
-            physical_object_types_dict.c.name.label("physical_object_type_name"),
-            object_geometries_data.c.object_geometry_id,
-            territories_data.c.territory_id,
-            territories_data.c.name.label("territory_name"),
-            services_data.c.service_id,
-            services_data.c.name.label("service_name"),
-            service_types_dict.c.service_type_id,
-            service_types_dict.c.name.label("service_type_name"),
-            ST_AsEWKB(ST_Intersection(buffers_data.c.geometry, mock_geom)).label("geometry"),
-            buffers_data.c.is_custom,
-            literal(False).label("is_scenario_object"),
-            literal(True).label("is_locked"),
+    public_buffers_query = select(
+        buffer_types_dict.c.buffer_type_id,
+        buffer_types_dict.c.name.label("buffer_type_name"),
+        urban_objects_data.c.urban_object_id,
+        physical_objects_data.c.physical_object_id,
+        physical_objects_data.c.name.label("physical_object_name"),
+        physical_object_types_dict.c.physical_object_type_id,
+        physical_object_types_dict.c.name.label("physical_object_type_name"),
+        object_geometries_data.c.object_geometry_id,
+        territories_data.c.territory_id,
+        territories_data.c.name.label("territory_name"),
+        services_data.c.service_id,
+        services_data.c.name.label("service_name"),
+        service_types_dict.c.service_type_id,
+        service_types_dict.c.name.label("service_type_name"),
+        ST_AsEWKB(ST_Intersection(buffers_data.c.geometry, mock_geom)).label("geometry"),
+        buffers_data.c.is_custom,
+        literal(False).label("is_scenario_object"),
+        literal(True).label("is_locked"),
+    ).select_from(
+        buffers_data.join(buffer_types_dict, buffer_types_dict.c.buffer_type_id == buffers_data.c.buffer_type_id)
+        .join(urban_objects_data, urban_objects_data.c.urban_object_id == buffers_data.c.urban_object_id)
+        .join(
+            physical_objects_data,
+            physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
         )
-        .select_from(
-            buffers_data.join(buffer_types_dict, buffer_types_dict.c.buffer_type_id == buffers_data.c.buffer_type_id)
-            .join(urban_objects_data, urban_objects_data.c.urban_object_id == buffers_data.c.urban_object_id)
-            .join(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
-            )
-            .join(
-                physical_object_types_dict,
-                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
-            )
-            .join(
-                object_geometries_data,
-                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
-            )
-            .join(
-                objects_intersecting,
-                objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
-            )
-            .join(territories_data, territories_data.c.territory_id == object_geometries_data.c.territory_id)
-            .outerjoin(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
-            .outerjoin(service_types_dict, service_types_dict.c.service_type_id == services_data.c.service_type_id)
+        .join(
+            physical_object_types_dict,
+            physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
         )
+        .join(
+            object_geometries_data,
+            object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+        )
+        .join(
+            objects_intersecting,
+            objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+        )
+        .join(territories_data, territories_data.c.territory_id == object_geometries_data.c.territory_id)
+        .outerjoin(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
+        .outerjoin(service_types_dict, service_types_dict.c.service_type_id == services_data.c.service_type_id)
     )
 
     regional_scenario_buffers_query = (

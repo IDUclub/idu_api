@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Intersects, ST_Within, ST_IsEmpty, ST_Intersection, ST_Centroid
+from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_Intersection, ST_Intersects, ST_IsEmpty, ST_Within
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -444,55 +444,52 @@ async def test_get_context_services_from_db(mock_conn: MockConnection):
         )
         .cte(name="objects_intersecting")
     )
-    public_services_query = (
-        select(
-            services_data.c.service_id,
-            services_data.c.name,
-            services_data.c.capacity,
-            services_data.c.is_capacity_real,
-            services_data.c.properties,
-            services_data.c.created_at,
-            services_data.c.updated_at,
-            service_types_dict.c.service_type_id,
-            service_types_dict.c.urban_function_id,
-            urban_functions_dict.c.name.label("urban_function_name"),
-            service_types_dict.c.name.label("service_type_name"),
-            service_types_dict.c.capacity_modeled.label("service_type_capacity_modeled"),
-            service_types_dict.c.code.label("service_type_code"),
-            service_types_dict.c.infrastructure_type,
-            service_types_dict.c.properties.label("service_type_properties"),
-            territory_types_dict.c.territory_type_id,
-            territory_types_dict.c.name.label("territory_type_name"),
-            territories_data.c.territory_id,
-            territories_data.c.name.label("territory_name"),
-            literal(False).label("is_scenario_object"),
+    public_services_query = select(
+        services_data.c.service_id,
+        services_data.c.name,
+        services_data.c.capacity,
+        services_data.c.is_capacity_real,
+        services_data.c.properties,
+        services_data.c.created_at,
+        services_data.c.updated_at,
+        service_types_dict.c.service_type_id,
+        service_types_dict.c.urban_function_id,
+        urban_functions_dict.c.name.label("urban_function_name"),
+        service_types_dict.c.name.label("service_type_name"),
+        service_types_dict.c.capacity_modeled.label("service_type_capacity_modeled"),
+        service_types_dict.c.code.label("service_type_code"),
+        service_types_dict.c.infrastructure_type,
+        service_types_dict.c.properties.label("service_type_properties"),
+        territory_types_dict.c.territory_type_id,
+        territory_types_dict.c.name.label("territory_type_name"),
+        territories_data.c.territory_id,
+        territories_data.c.name.label("territory_name"),
+        literal(False).label("is_scenario_object"),
+    ).select_from(
+        urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
+        .join(
+            object_geometries_data,
+            object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
         )
-        .select_from(
-            urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
-            .join(
-                object_geometries_data,
-                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
-            )
-            .join(
-                objects_intersecting,
-                objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
-            )
-            .join(
-                territories_data,
-                territories_data.c.territory_id == object_geometries_data.c.territory_id,
-            )
-            .join(
-                service_types_dict,
-                service_types_dict.c.service_type_id == services_data.c.service_type_id,
-            )
-            .outerjoin(
-                territory_types_dict,
-                territory_types_dict.c.territory_type_id == services_data.c.territory_type_id,
-            )
-            .join(
-                urban_functions_dict,
-                urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
-            )
+        .join(
+            objects_intersecting,
+            objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+        )
+        .join(
+            territories_data,
+            territories_data.c.territory_id == object_geometries_data.c.territory_id,
+        )
+        .join(
+            service_types_dict,
+            service_types_dict.c.service_type_id == services_data.c.service_type_id,
+        )
+        .outerjoin(
+            territory_types_dict,
+            territory_types_dict.c.territory_type_id == services_data.c.territory_type_id,
+        )
+        .join(
+            urban_functions_dict,
+            urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
         )
     )
     scenario_services_query = (

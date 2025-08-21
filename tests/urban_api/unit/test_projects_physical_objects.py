@@ -4,8 +4,15 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within, \
-    ST_IsEmpty
+from geoalchemy2.functions import (
+    ST_AsEWKB,
+    ST_Centroid,
+    ST_GeomFromWKB,
+    ST_Intersection,
+    ST_Intersects,
+    ST_IsEmpty,
+    ST_Within,
+)
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -552,53 +559,50 @@ async def test_get_context_physical_objects_from_db(mock_conn: MockConnection):
         .cte(name="objects_intersecting")
     )
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
-    public_urban_objects_query = (
-        select(
-            physical_objects_data.c.physical_object_id,
-            physical_object_types_dict.c.physical_object_type_id,
-            physical_object_types_dict.c.name.label("physical_object_type_name"),
-            physical_object_functions_dict.c.physical_object_function_id,
-            physical_object_functions_dict.c.name.label("physical_object_function_name"),
-            physical_objects_data.c.name,
-            physical_objects_data.c.properties,
-            physical_objects_data.c.created_at,
-            physical_objects_data.c.updated_at,
-            *building_columns,
-            buildings_data.c.properties.label("building_properties"),
-            territories_data.c.territory_id,
-            territories_data.c.name.label("territory_name"),
-            literal(False).label("is_scenario_object"),
+    public_urban_objects_query = select(
+        physical_objects_data.c.physical_object_id,
+        physical_object_types_dict.c.physical_object_type_id,
+        physical_object_types_dict.c.name.label("physical_object_type_name"),
+        physical_object_functions_dict.c.physical_object_function_id,
+        physical_object_functions_dict.c.name.label("physical_object_function_name"),
+        physical_objects_data.c.name,
+        physical_objects_data.c.properties,
+        physical_objects_data.c.created_at,
+        physical_objects_data.c.updated_at,
+        *building_columns,
+        buildings_data.c.properties.label("building_properties"),
+        territories_data.c.territory_id,
+        territories_data.c.name.label("territory_name"),
+        literal(False).label("is_scenario_object"),
+    ).select_from(
+        urban_objects_data.join(
+            physical_objects_data,
+            physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
         )
-        .select_from(
-            urban_objects_data.join(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
-            )
-            .join(
-                object_geometries_data,
-                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
-            )
-            .join(
-                objects_intersecting,
-                objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
-            )
-            .join(
-                territories_data,
-                territories_data.c.territory_id == object_geometries_data.c.territory_id,
-            )
-            .join(
-                physical_object_types_dict,
-                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
-            )
-            .join(
-                physical_object_functions_dict,
-                physical_object_functions_dict.c.physical_object_function_id
-                == physical_object_types_dict.c.physical_object_function_id,
-            )
-            .outerjoin(
-                buildings_data,
-                buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
-            )
+        .join(
+            object_geometries_data,
+            object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+        )
+        .join(
+            objects_intersecting,
+            objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+        )
+        .join(
+            territories_data,
+            territories_data.c.territory_id == object_geometries_data.c.territory_id,
+        )
+        .join(
+            physical_object_types_dict,
+            physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
+        )
+        .join(
+            physical_object_functions_dict,
+            physical_object_functions_dict.c.physical_object_function_id
+            == physical_object_types_dict.c.physical_object_function_id,
+        )
+        .outerjoin(
+            buildings_data,
+            buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
         )
     )
 

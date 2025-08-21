@@ -16,6 +16,7 @@ from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
 from idu_api.urban_api.minio.services import ProjectStorageManager, get_project_storage_manager
 from idu_api.urban_api.schemas import (
+    MinioFile,
     MinioImageURL,
     OkResponse,
     Page,
@@ -1022,7 +1023,7 @@ async def get_preview_project_main_image_url(
 
 @projects_router.get(
     "/projects/{project_id}/logo",
-    response_model=str | None,
+    response_model=str,
     status_code=status.HTTP_200_OK,
 )
 async def get_project_logo_url(
@@ -1030,15 +1031,15 @@ async def get_project_logo_url(
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(get_user),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-) -> str | None:
+) -> str:
     """
-    ## Get a presigned URL to the logo of the project. Returns null there is no logo for given project.
+    ## Get a presigned URL to the logo of the project. Returns default if there is no logo for given project.
 
     ### Parameters:
     - **project_id** (int, Path): Unique identifier of the project.
 
     ### Returns:
-    - **str | None**: Presigned URL to the logo of the project or null if it does not exist.
+    - **str**: Presigned URL to the logo of the project or default if it does not exist.
 
     ### Errors:
     - **403 Forbidden**: If the user does not have access rights.
@@ -1145,7 +1146,7 @@ async def delete_project_logo(
 
 @projects_router.get(
     "/projects/{project_id}/phases/documents",
-    response_model=list[str],
+    response_model=list[MinioFile],
     status_code=status.HTTP_200_OK,
 )
 async def get_project_phase_documents_urls(
@@ -1154,7 +1155,7 @@ async def get_project_phase_documents_urls(
     phase: ProjectPhase = Query(..., description="phase name"),
     user: UserDTO = Depends(get_user),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-) -> list[str]:
+) -> list[MinioFile]:
     """
     ## Get a list of presigned URLs to all project's documents for given phase.
 
@@ -1180,12 +1181,12 @@ async def get_project_phase_documents_urls(
 
     urls = await project_storage_manager.get_phase_document_urls(project.project_id, phase.value, logger)
 
-    return urls
+    return [MinioFile(**url) for url in urls]
 
 
 @projects_router.post(
     "/projects/{project_id}/phases/documents",
-    response_model=str,
+    response_model=MinioFile,
     status_code=status.HTTP_201_CREATED,
     dependencies=[Security(HTTPBearer())],
 )
@@ -1196,7 +1197,7 @@ async def upload_phase_document(
     file: UploadFile = File(...),
     user: UserDTO = Depends(get_user),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-) -> str:
+) -> MinioFile:
     """
     ## Upload a document for the specified project's phase to MinIO file server.
 
@@ -1226,12 +1227,12 @@ async def upload_phase_document(
         project.project_id, phase.value, await file.read(), file_name, file_ext, logger
     )
 
-    return url
+    return MinioFile(**url)
 
 
 @projects_router.patch(
     "/projects/{project_id}/phases/documents",
-    response_model=str,
+    response_model=MinioFile,
     status_code=status.HTTP_200_OK,
     dependencies=[Security(HTTPBearer())],
 )
@@ -1243,7 +1244,7 @@ async def rename_phase_document(
     new_key: str = Query(..., description="file name (with extension)"),
     user: UserDTO = Depends(get_user),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-) -> str:
+) -> MinioFile:
     """
     ## Rename the document for the specified project's phase in MinIO file server.
 
@@ -1270,7 +1271,7 @@ async def rename_phase_document(
 
     url = await project_storage_manager.rename_phase_document(project.project_id, phase.value, old_key, new_key, logger)
 
-    return url
+    return MinioFile(**url)
 
 
 @projects_router.delete(

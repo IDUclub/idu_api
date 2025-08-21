@@ -13,3 +13,8 @@ class MinioImageURL(BaseModel):
 
     project_id: int = Field(..., description="project identifier")
     url: str = Field(..., description="minio url for preview image")
+
+
+class MinioFile(BaseModel):
+    url: str = Field(..., description="minio presigned url to get file")
+    filename: str = Field(..., description="display file name")

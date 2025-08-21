@@ -59,7 +59,7 @@ from .indicators import (
     ScenarioIndicatorValuePost,
     ScenarioIndicatorValuePut,
 )
-from .minio import MinioImagesURL, MinioImageURL
+from .minio import MinioFile, MinioImagesURL, MinioImageURL
 from .normatives import Normative, NormativeDelete, NormativePatch, NormativePost
 from .object_geometries import (
     AllObjects,
@@ -309,4 +309,5 @@ __all__ = [
     "ScenarioBufferPut",
     "ScenarioBufferDelete",
     "ScenarioBufferAttributes",
+    "MinioFile",
 ]

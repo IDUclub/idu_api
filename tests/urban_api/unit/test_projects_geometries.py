@@ -4,8 +4,15 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within, \
-    ST_IsEmpty
+from geoalchemy2.functions import (
+    ST_AsEWKB,
+    ST_Centroid,
+    ST_GeomFromWKB,
+    ST_Intersection,
+    ST_Intersects,
+    ST_IsEmpty,
+    ST_Within,
+)
 from sqlalchemy import ScalarSelect, case, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -653,7 +660,8 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
                 buildings_data,
                 buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
             )
-        ).where(~ST_IsEmpty(intersected_geom))
+        )
+        .where(~ST_IsEmpty(intersected_geom))
     )
     coalesce_building_columns = [
         coalesce(up_col, pub_col).label(pub_col.name)

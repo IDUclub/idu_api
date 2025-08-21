@@ -456,7 +456,7 @@ class ProjectStorageManager:
         file_name: str,
         file_ext: str,
         logger: BoundLogger,
-    ) -> str:
+    ) -> dict[str, str]:
         """
         Upload a document to the specified phase. Adds suffix if name already exists.
 
@@ -481,11 +481,18 @@ class ProjectStorageManager:
                 i += 1
 
             await self._client.upload_file(session, file_data, object_name, logger)
-            return (await self._client.generate_presigned_urls(session, [object_name], logger))[0]
 
-    async def get_phase_document_urls(self, project_id: int, phase: ProjectPhase, logger: BoundLogger) -> list[str]:
+            url = (await self._client.generate_presigned_urls(session, [object_name], logger))[0]
+            return {"url": url, "filename": object_name.split("/")[-1]}
+
+    async def get_phase_document_urls(
+        self,
+        project_id: int,
+        phase: ProjectPhase,
+        logger: BoundLogger,
+    ) -> list[dict[str, str]]:
         """
-        list all presigned URLs for documents under a specific project phase.
+        Get a list of all presigned URLs for documents under a specific project phase.
 
         Args:
             project_id: Project identifier.
@@ -497,7 +504,10 @@ class ProjectStorageManager:
         """
         async with self._client.get_session() as session:
             keys = await self._client.list_objects(session, logger, prefix=self._phase_prefix(project_id, phase))
-            return await self._client.generate_presigned_urls(session, keys, logger)
+            return [
+                {"url": url, "filename": key.split("/")[-1]}
+                for url, key in zip(await self._client.generate_presigned_urls(session, keys, logger), keys)
+            ]
 
     async def rename_phase_document(
         self,
@@ -506,7 +516,7 @@ class ProjectStorageManager:
         old_key: str,
         new_key: str,
         logger: BoundLogger,
-    ) -> str:
+    ) -> dict[str, str]:
         """
         Rename a document in a project phase.
 
@@ -530,7 +540,8 @@ class ProjectStorageManager:
             await self._client.copy_object(session, old_object, new_object, logger)
             await self._client.delete_file(session, old_object, logger)
 
-            return (await self._client.generate_presigned_urls(session, [new_object], logger))[0]
+            url = (await self._client.generate_presigned_urls(session, [new_object], logger))[0]
+            return {"url": url, "filename": new_key}
 
     async def delete_phase_document(
         self,
@@ -553,6 +564,7 @@ class ProjectStorageManager:
         async with self._client.get_session() as session:
             if object_name not in await self._client.list_objects(session, logger, prefix=prefix):
                 raise FileNotFound(project_id, file_name)
+
             await self._client.delete_file(session, object_name, logger)
 
 
