@@ -124,6 +124,16 @@ class Geometry(BaseModel):
         return cls(**geom.mapping(geometry))
 
 
+class Point(Geometry):
+    """
+    Geometry representation for GeoJSON model appliable for points only.
+    """
+
+    type: Literal["Point"] = Field(examples=["Point"])
+    coordinates: list[float] = Field(description="list[float]", examples=[[30.22, 59.86]])
+    _shapely_geom: _BaseGeomTypes | None = None
+
+
 T = TypeVar("T", bound="GeometryValidationModel")
 
 
@@ -131,7 +141,7 @@ class GeometryValidationModel(BaseModel):
     """Base model with geometry validation methods."""
 
     geometry: Geometry | None = None
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
 
     @classmethod
     @field_validator("geometry")
@@ -147,7 +157,7 @@ class GeometryValidationModel(BaseModel):
 
     @classmethod
     @field_validator("centre_point")
-    def validate_centre_point(cls, centre_point: Geometry | None) -> Geometry | None:
+    def validate_centre_point(cls, centre_point: Point | None) -> Point | None:
         """Validate that given centre_point is a valid Point geometry."""
         if centre_point:
             if centre_point.type != "Point":

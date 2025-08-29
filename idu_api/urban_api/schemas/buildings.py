@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from idu_api.urban_api.dto import BuildingDTO, BuildingWithGeometryDTO
-from idu_api.urban_api.schemas.geometries import Geometry
+from idu_api.urban_api.schemas.geometries import Geometry, Point
 from idu_api.urban_api.schemas.short_models import PhysicalObjectTypeBasic, ShortPhysicalObjectWithoutLivingBuilding
 
 
@@ -31,7 +31,7 @@ class BuildingWithGeometry(BaseModel):
     address: str | None = Field(None, description="geometry address", examples=["--"])
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
     geometry: Geometry
-    centre_point: Geometry
+    centre_point: Point
 
     @classmethod
     def from_dto(cls, dto: BuildingWithGeometryDTO) -> "BuildingWithGeometry":
@@ -62,7 +62,7 @@ class BuildingWithGeometry(BaseModel):
             address=dto.address,
             osm_id=dto.osm_id,
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
         )
 
 

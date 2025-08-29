@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, Field, model_validator
 
 from idu_api.urban_api.dto import ObjectGeometryDTO, ScenarioGeometryDTO
-from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel
+from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.short_models import (
     ShortPhysicalObject,
     ShortScenarioPhysicalObject,
@@ -23,7 +23,7 @@ class ObjectGeometry(BaseModel):
     address: str | None = Field(..., description="physical object address", examples=["--"])
     osm_id: str | None = Field(..., description="open street map identifier", examples=["1"])
     geometry: Geometry
-    centre_point: Geometry
+    centre_point: Point
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), description="the time when the geometry was created"
     )
@@ -42,7 +42,7 @@ class ObjectGeometry(BaseModel):
             address=dto.address,
             osm_id=dto.osm_id,
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             created_at=dto.created_at,
             updated_at=dto.updated_at,
         )
@@ -64,7 +64,7 @@ class ScenarioObjectGeometry(ObjectGeometry):
             address=dto.address,
             osm_id=dto.osm_id,
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             created_at=dto.created_at,
             updated_at=dto.updated_at,
             is_scenario_object=dto.is_scenario_object,
@@ -76,7 +76,7 @@ class ObjectGeometryPost(GeometryValidationModel):
 
     territory_id: int = Field(..., examples=[1])
     geometry: Geometry
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     address: str | None = Field(None, description="physical object address", examples=["--"])
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
 
@@ -86,7 +86,7 @@ class ObjectGeometryPut(GeometryValidationModel):
 
     territory_id: int = Field(..., examples=[1])
     geometry: Geometry
-    centre_point: Geometry
+    centre_point: Point
     address: str | None = Field(..., description="physical object address", examples=["--"])
     osm_id: str | None = Field(..., description="open street map identifier", examples=["1"])
 
@@ -96,7 +96,7 @@ class ObjectGeometryPatch(GeometryValidationModel):
 
     territory_id: int | None = Field(None, examples=[1])
     geometry: Geometry | None = None
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     address: str | None = Field(None, description="physical object address", examples=["--"])
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
 

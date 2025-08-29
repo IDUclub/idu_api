@@ -12,7 +12,7 @@ from idu_api.urban_api.dto import (
     TerritoryTypeDTO,
     TerritoryWithoutGeometryDTO,
 )
-from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel
+from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.short_models import (
     ShortIndicatorValueInfo,
     ShortNormativeInfo,
@@ -82,7 +82,7 @@ class Territory(BaseModel):
         description="territory additional properties",
         examples=[{"additional_attribute_name": "additional_attribute_value"}],
     )
-    centre_point: Geometry
+    centre_point: Point
     admin_center: ShortTerritory | None
     target_city_type: TargetCityTypeBasic | None
     okato_code: str | None = Field(..., examples=["1"])
@@ -107,7 +107,7 @@ class Territory(BaseModel):
             geometry=Geometry.from_shapely_geometry(dto.geometry),
             level=dto.level,
             properties=dto.properties,
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             admin_center=(
                 ShortTerritory(
                     id=dto.admin_center_id,
@@ -145,7 +145,7 @@ class TerritoryPost(GeometryValidationModel):
         description="territory additional properties",
         examples=[{"additional_attribute_name": "additional_attribute_value"}],
     )
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     admin_center_id: int | None = Field(None, examples=[1])
     target_city_type_id: int | None = Field(None, examples=[1])
     okato_code: str | None = Field(None, examples=["1"])
@@ -165,7 +165,7 @@ class TerritoryPut(GeometryValidationModel):
         description="territory additional properties",
         examples=[{"additional_attribute_name": "additional_attribute_value"}],
     )
-    centre_point: Geometry
+    centre_point: Point
     admin_center_id: int | None = Field(..., examples=[1])
     target_city_type_id: int | None = Field(..., examples=[1])
     okato_code: str | None = Field(..., examples=["1"])
@@ -185,7 +185,7 @@ class TerritoryPatch(GeometryValidationModel):
         description="territory additional properties",
         examples=[{"additional_attribute_name": "additional_attribute_value"}],
     )
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     admin_center_id: int | None = Field(None, examples=[1])
     target_city_type_id: int | None = Field(None, examples=[1])
     okato_code: str | None = Field(None, examples=["1"])

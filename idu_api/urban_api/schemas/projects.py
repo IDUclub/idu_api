@@ -6,7 +6,7 @@ from typing import Any
 from pydantic import BaseModel, Field, model_validator
 
 from idu_api.urban_api.dto import ProjectDTO, ProjectPhasesDTO, ProjectTerritoryDTO
-from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel
+from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.short_models import ShortProjectWithScenario, ShortScenario, ShortTerritory
 
 
@@ -16,7 +16,7 @@ class ProjectTerritory(BaseModel):
     project_territory_id: int = Field(..., description="project territory id", examples=[1])
     project: ShortProjectWithScenario
     geometry: Geometry
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     properties: dict[str, Any] = Field(
         default_factory=dict,
         description="project territory additional properties",
@@ -37,7 +37,7 @@ class ProjectTerritory(BaseModel):
                 base_scenario=ShortScenario(id=dto.scenario_id, name=dto.scenario_name),
             ),
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             properties=dto.properties,
         )
 
@@ -46,7 +46,7 @@ class ProjectTerritoryPost(GeometryValidationModel):
     """Project territory schema for POST requests."""
 
     geometry: Geometry
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     properties: dict[str, Any] = Field(
         default_factory=dict,
         description="project territory additional properties",

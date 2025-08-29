@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 
 from idu_api.urban_api.dto import ScenarioUrbanObjectDTO, UrbanObjectDTO
-from idu_api.urban_api.schemas.geometries import Geometry
+from idu_api.urban_api.schemas.geometries import Geometry, Point
 from idu_api.urban_api.schemas.object_geometries import ObjectGeometry, ScenarioObjectGeometry
 from idu_api.urban_api.schemas.physical_object_types import PhysicalObjectFunctionBasic
 from idu_api.urban_api.schemas.physical_objects import PhysicalObject, PhysicalObjectType, ScenarioPhysicalObject
@@ -63,7 +63,7 @@ class UrbanObject(BaseModel):
                 address=dto.address,
                 osm_id=dto.osm_id,
                 geometry=Geometry.from_shapely_geometry(dto.geometry),
-                centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+                centre_point=Point.from_shapely_geometry(dto.centre_point),
                 created_at=dto.object_geometry_created_at,
                 updated_at=dto.object_geometry_updated_at,
             ),
@@ -157,7 +157,7 @@ class ScenarioUrbanObject(BaseModel):
                 address=dto.address,
                 osm_id=dto.osm_id,
                 geometry=Geometry.from_shapely_geometry(dto.geometry),
-                centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+                centre_point=Point.from_shapely_geometry(dto.centre_point),
                 created_at=dto.object_geometry_created_at,
                 updated_at=dto.object_geometry_updated_at,
                 is_scenario_object=dto.is_scenario_geometry,

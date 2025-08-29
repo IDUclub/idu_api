@@ -11,7 +11,7 @@ from idu_api.urban_api.dto import (
     ServicesCountCapacityDTO,
     ServiceWithGeometryDTO,
 )
-from idu_api.urban_api.schemas.geometries import Geometry
+from idu_api.urban_api.schemas.geometries import Geometry, Point
 from idu_api.urban_api.schemas.service_types import ServiceType, UrbanFunctionBasic
 from idu_api.urban_api.schemas.territories import ShortTerritory, TerritoryType
 
@@ -158,7 +158,7 @@ class ServiceWithGeometry(BaseModel):
     address: str | None = Field(None, description="physical object address", examples=["--"])
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
     geometry: Geometry
-    centre_point: Geometry
+    centre_point: Point
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), description="the time when the service was created"
     )
@@ -196,7 +196,7 @@ class ServiceWithGeometry(BaseModel):
             address=dto.address,
             osm_id=dto.osm_id,
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             created_at=dto.created_at,
             updated_at=dto.updated_at,
         )

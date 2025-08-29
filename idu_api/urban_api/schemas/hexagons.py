@@ -5,7 +5,7 @@ from typing import Any
 from pydantic import BaseModel, Field
 
 from idu_api.urban_api.dto import HexagonDTO
-from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel
+from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.short_models import ShortProjectIndicatorValue, ShortTerritory
 
 
@@ -15,7 +15,7 @@ class Hexagon(BaseModel):
     hexagon_id: int = Field(..., description="hexagon identifier", examples=[1])
     territory: ShortTerritory
     geometry: Geometry
-    centre_point: Geometry
+    centre_point: Point
     properties: dict[str, Any] = Field(
         default_factory=dict,
         description="hexagon properties",
@@ -33,7 +33,7 @@ class Hexagon(BaseModel):
                 name=dto.territory_name,
             ),
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             properties=dto.properties,
         )
 
@@ -53,7 +53,7 @@ class HexagonPost(GeometryValidationModel):
     """Hexagon schema for POST requests."""
 
     geometry: Geometry
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     properties: dict[str, Any] = Field(
         default_factory=dict,
         description="hexagon properties",

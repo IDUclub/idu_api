@@ -102,12 +102,11 @@ async def add_hexagons_by_territory_id_to_db(
         statement = insert(hexagons_data).values(insert_values).returning(hexagons_data.c.hexagon_id)
         return (await conn.execute(statement)).scalars().all()
 
-    tasks = []
+    results = []
     for batch_start in range(0, len(hexagons), OBJECTS_NUMBER_TO_INSERT_LIMIT):
-        batch = hexagons[batch_start : batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
-        tasks.append(insert_batch(batch))
-
-    results = await asyncio.gather(*tasks)
+        batch = hexagons[batch_start: batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
+        batch_ids = await insert_batch(batch)
+        results.append(batch_ids)
 
     hexagon_ids = [hexagon_id for batch_ids in results for hexagon_id in batch_ids]
 

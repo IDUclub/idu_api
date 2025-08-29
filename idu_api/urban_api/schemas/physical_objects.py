@@ -10,7 +10,7 @@ from idu_api.urban_api.dto import (
     PhysicalObjectWithGeometryDTO,
     ScenarioPhysicalObjectDTO,
 )
-from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel
+from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.physical_object_types import PhysicalObjectFunctionBasic, PhysicalObjectType
 from idu_api.urban_api.schemas.short_models import ShortBuilding
 from idu_api.urban_api.schemas.territories import ShortTerritory
@@ -100,7 +100,7 @@ class PhysicalObjectWithGeometry(BaseModel):
     address: str | None = Field(None, description="physical object address", examples=["--"])
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
     geometry: Geometry
-    centre_point: Geometry
+    centre_point: Point
     created_at: datetime = Field(
         default_factory=lambda: datetime.now(timezone.utc), description="the time when the physical object was created"
     )
@@ -150,7 +150,7 @@ class PhysicalObjectWithGeometry(BaseModel):
             address=dto.address,
             osm_id=dto.osm_id,
             geometry=Geometry.from_shapely_geometry(dto.geometry),
-            centre_point=Geometry.from_shapely_geometry(dto.centre_point),
+            centre_point=Point.from_shapely_geometry(dto.centre_point),
             created_at=dto.created_at,
             updated_at=dto.updated_at,
         )
@@ -161,7 +161,7 @@ class PhysicalObjectWithGeometryPost(GeometryValidationModel):
 
     territory_id: int = Field(..., examples=[1])
     geometry: Geometry
-    centre_point: Geometry | None = None
+    centre_point: Point | None = None
     address: str | None = Field(None, description="physical object address", examples=["--"])
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
     physical_object_type_id: int = Field(..., examples=[1])
