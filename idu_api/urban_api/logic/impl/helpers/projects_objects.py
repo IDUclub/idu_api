@@ -485,9 +485,11 @@ async def add_project_to_db(
 
     scenario_id = await create_project_base_scenario(conn, project_id, project.territory_id)
 
-    id_mapping = await insert_intersecting_geometries(conn, given_geometry)
+    og_id_mapping = await insert_intersecting_geometries(conn, given_geometry)
 
-    await insert_urban_objects(conn, scenario_id, id_mapping)
+    uo_id_mapping = await insert_urban_objects(conn, scenario_id, og_id_mapping)
+
+    await copy_buffers(conn, uo_id_mapping)
 
     await insert_functional_zones(conn, scenario_id, given_geometry)
 
@@ -978,13 +980,22 @@ async def create_project_base_scenario(
         if parent_id is None:
             raise EntityNotFoundByParams("parent regional scenario", territory_id)
 
+    # Base scenario have a predefined profile type (basic).
+    functional_zone_type_id = (
+        await conn.execute(
+            select(functional_zone_types_dict.c.functional_zone_type_id).where(
+                functional_zone_types_dict.c.name == "basic"
+            )
+        )
+    ).scalar_one()
+
     # Insert a new base scenario for the user project with the found or given parent.
     scenario_id = (
         await conn.execute(
             insert(scenarios_data)
             .values(
                 project_id=project_id,
-                functional_zone_type_id=None,  # Base scenario doesn't have a predefined profile type.
+                functional_zone_type_id=functional_zone_type_id,
                 name="Исходный пользовательский сценарий",  # Default name (in Russian).
                 is_based=True,
                 parent_id=parent_id,

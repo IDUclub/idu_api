@@ -241,5 +241,6 @@ class ScenarioBufferAttributes(BaseModel):
 
     buffer_type: BufferTypeBasic
     urban_object: ShortUrbanObject
+    is_custom: bool = Field(..., description="boolean parameter to determine if buffer is custom or default")
     is_scenario_object: bool = Field(..., description="boolean parameter to determine scenario object")
     is_locked: bool = Field(..., description="boolean parameter to determine locked (to edit) object")

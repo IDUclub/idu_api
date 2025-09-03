@@ -104,7 +104,7 @@ async def add_hexagons_by_territory_id_to_db(
 
     results = []
     for batch_start in range(0, len(hexagons), OBJECTS_NUMBER_TO_INSERT_LIMIT):
-        batch = hexagons[batch_start: batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
+        batch = hexagons[batch_start : batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
         batch_ids = await insert_batch(batch)
         results.append(batch_ids)
 
