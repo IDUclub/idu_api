@@ -61,7 +61,7 @@ async def get_buffers_by_scenario_id(
     if physical_object_type_id is not None and service_type_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or service_type_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо service_type_id.",
         )
 
     buffers = await user_project_service.get_buffers_by_scenario_id(
@@ -109,7 +109,7 @@ async def get_context_buffers(
     if physical_object_type_id is not None and service_type_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or service_type_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо service_type_id.",
         )
 
     buffers = await user_project_service.get_context_buffers(

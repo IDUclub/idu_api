@@ -14,18 +14,18 @@ from idu_api.common.db.entities import (
     profiles_reclamation_data,
     territories_data,
 )
-from idu_api.urban_api.dto import (
-    FunctionalZoneDTO,
-    FunctionalZoneTypeDTO,
-    ProfilesReclamationDataDTO,
-    ProfilesReclamationDataMatrixDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
+from idu_api.common.exceptions.logic.common import (
     EntitiesNotFoundByIds,
     EntityAlreadyExists,
     EntityNotFoundById,
     EntityNotFoundByParams,
     TooManyObjectsError,
+)
+from idu_api.urban_api.dto import (
+    FunctionalZoneDTO,
+    FunctionalZoneTypeDTO,
+    ProfilesReclamationDataDTO,
+    ProfilesReclamationDataMatrixDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.functional_zones import (
     add_functional_zone_to_db,
@@ -100,11 +100,7 @@ async def test_add_functional_zone_type_to_db(
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence") as mock_check_existence:
-        with pytest.raises(EntityAlreadyExists):
-            await add_functional_zone_type_to_db(mock_conn, functional_zone_type_post_req)
-        mock_check_existence.return_value = False
-        result = await add_functional_zone_type_to_db(mock_conn, functional_zone_type_post_req)
+    result = await add_functional_zone_type_to_db(mock_conn, functional_zone_type_post_req)
 
     # Assert
     assert isinstance(result, FunctionalZoneTypeDTO), "Result should be a FunctionalZoneTypeDTO."
@@ -181,14 +177,10 @@ async def test_get_profiles_reclamation_data_matrix_from_db(mock_conn: MockConne
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence") as mock_check_existence:
-        await get_profiles_reclamation_data_matrix_from_db(mock_conn, labels, territory_id_none)
-        result = await get_profiles_reclamation_data_matrix_from_db(mock_conn, labels, territory_id_int)
-        mock_check_existence.return_value = False
-        with pytest.raises(EntityNotFoundById):
-            await get_profiles_reclamation_data_matrix_from_db(mock_conn, labels, territory_id_int)
-        with pytest.raises(EntitiesNotFoundByIds):
-            await get_profiles_reclamation_data_matrix_from_db(mock_conn, [1, 2], territory_id_int)
+    await get_profiles_reclamation_data_matrix_from_db(mock_conn, labels, territory_id_none)
+    result = await get_profiles_reclamation_data_matrix_from_db(mock_conn, labels, territory_id_int)
+    with pytest.raises(EntitiesNotFoundByIds):
+        await get_profiles_reclamation_data_matrix_from_db(mock_conn, [1, 2], territory_id_int)
 
     # Assert
     assert isinstance(result, ProfilesReclamationDataMatrixDTO), "Result should be a ProfilesReclamationDataMatrixDTO."
@@ -237,18 +229,6 @@ async def test_add_profiles_reclamation_data_to_db(
     """Test the add_profiles_reclamation_data_to_db function."""
 
     # Arrange
-    async def check_profiles_reclamation_data(conn, table, conditions=None):
-        if table == profiles_reclamation_data:
-            return False
-        return True
-
-    async def check_territories_data(conn, table, conditions=None):
-        if table == profiles_reclamation_data:
-            return False
-        if table == territories_data:
-            return False
-        return True
-
     statement = (
         insert(profiles_reclamation_data)
         .values(**profiles_reclamation_post_req.model_dump())
@@ -256,19 +236,7 @@ async def test_add_profiles_reclamation_data_to_db(
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_profiles_reclamation_data_to_db(mock_conn, profiles_reclamation_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_territories_data),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_profiles_reclamation_data_to_db(mock_conn, profiles_reclamation_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_profiles_reclamation_data),
-    ):
-        result = await add_profiles_reclamation_data_to_db(mock_conn, profiles_reclamation_post_req)
+    result = await add_profiles_reclamation_data_to_db(mock_conn, profiles_reclamation_post_req)
 
     # Assert
     assert isinstance(result, ProfilesReclamationDataDTO), "Result should be a ProfilesReclamationDataDTO."
@@ -291,13 +259,6 @@ async def test_put_profiles_reclamation_data_to_db(
             return False
         return True
 
-    async def check_territories_data(conn, table, conditions=None):
-        if table == profiles_reclamation_data:
-            return False
-        if table == territories_data:
-            return False
-        return True
-
     statement_insert = (
         insert(profiles_reclamation_data)
         .values(**profiles_reclamation_put_req.model_dump())
@@ -316,12 +277,6 @@ async def test_put_profiles_reclamation_data_to_db(
 
     # Act
     await put_profiles_reclamation_data_to_db(mock_conn, profiles_reclamation_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_territories_data),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_profiles_reclamation_data_to_db(mock_conn, profiles_reclamation_put_req)
     with patch(
         "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
         new=AsyncMock(side_effect=check_profiles_reclamation_data),
@@ -424,16 +379,6 @@ async def test_add_functional_zone_to_db(mock_conn: MockConnection, functional_z
     """Test the add_functional_zone_to_db function."""
 
     # Arrange
-    async def check_territory(conn, table, conditions=None):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_functional_zone_type(conn, table, conditions=None):
-        if table == functional_zone_types_dict:
-            return False
-        return True
-
     statement = (
         insert(functional_zones_data)
         .values(
@@ -449,18 +394,6 @@ async def test_add_functional_zone_to_db(mock_conn: MockConnection, functional_z
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_functional_zone_to_db(mock_conn, functional_zone_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_functional_zone_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_functional_zone_to_db(mock_conn, functional_zone_post_req)
     result = await add_functional_zone_to_db(mock_conn, functional_zone_post_req)
 
     # Assert
@@ -475,16 +408,6 @@ async def test_put_functional_zone_to_db(mock_conn: MockConnection, functional_z
     """Test the put_functional_zone_to_db function."""
 
     # Arrange
-    async def check_territory(conn, table, conditions=None):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_functional_zone_type(conn, table, conditions=None):
-        if table == functional_zone_types_dict:
-            return False
-        return True
-
     functional_zone_id = 1
     statement = (
         update(functional_zones_data)
@@ -502,18 +425,6 @@ async def test_put_functional_zone_to_db(mock_conn: MockConnection, functional_z
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_functional_zone_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_put_req)
     result = await put_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_put_req)
 
     # Assert
@@ -528,16 +439,6 @@ async def test_patch_functional_zone_to_db(mock_conn: MockConnection, functional
     """Test the patch_functional_zone_to_db function."""
 
     # Arrange
-    async def check_territory(conn, table, conditions=None):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_functional_zone_type(conn, table, conditions=None):
-        if table == functional_zone_types_dict:
-            return False
-        return True
-
     functional_zone_id = 1
     statement = (
         update(functional_zones_data)
@@ -546,18 +447,6 @@ async def test_patch_functional_zone_to_db(mock_conn: MockConnection, functional
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_functional_zone_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_patch_req)
     result = await patch_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_patch_req)
 
     # Assert

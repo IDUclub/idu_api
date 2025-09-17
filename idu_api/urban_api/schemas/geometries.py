@@ -129,7 +129,7 @@ class Point(Geometry):
     Geometry representation for GeoJSON model appliable for points only.
     """
 
-    type: Literal["Point"] = Field(examples=["Point"])
+    type: Literal["Point"] = "Point"
     coordinates: list[float] = Field(description="list[float]", examples=[[30.22, 59.86]])
     _shapely_geom: _BaseGeomTypes | None = None
 

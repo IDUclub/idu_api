@@ -13,8 +13,8 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import FunctionalZoneDTO, FunctionalZoneSourceDTO, ScenarioFunctionalZoneDTO, UserDTO
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
@@ -283,16 +283,11 @@ async def put_scenario_functional_zone_to_db(
     await check_scenario(conn, scenario_id, user, to_edit=True, allow_regional=False)
 
     if not await check_existence(
-        conn, projects_functional_zones, conditions={"functional_zone_id": functional_zone_id}
+        conn,
+        projects_functional_zones,
+        conditions={"functional_zone_id": functional_zone_id},
     ):
         raise EntityNotFoundById(functional_zone_id, "scenario functional zone")
-
-    if not await check_existence(
-        conn,
-        functional_zone_types_dict,
-        conditions={"functional_zone_type_id": functional_zone.functional_zone_type_id},
-    ):
-        raise EntityNotFoundById(functional_zone.functional_zone_type_id, "functional zone type")
 
     values = extract_values_from_model(functional_zone, to_update=True)
     statement = (
@@ -319,17 +314,11 @@ async def patch_scenario_functional_zone_to_db(
     await check_scenario(conn, scenario_id, user, to_edit=True, allow_regional=False)
 
     if not await check_existence(
-        conn, projects_functional_zones, conditions={"functional_zone_id": functional_zone_id}
+        conn,
+        projects_functional_zones,
+        conditions={"functional_zone_id": functional_zone_id},
     ):
         raise EntityNotFoundById(functional_zone_id, "scenario functional zone")
-
-    if functional_zone.functional_zone_type_id is not None:
-        if not await check_existence(
-            conn,
-            functional_zone_types_dict,
-            conditions={"functional_zone_type_id": functional_zone.functional_zone_type_id},
-        ):
-            raise EntityNotFoundById(functional_zone.functional_zone_type_id, "functional zone type")
 
     values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True)
 

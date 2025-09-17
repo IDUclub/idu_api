@@ -4,7 +4,7 @@ Exceptions connected with entities in urban_db are defined here.
 
 from fastapi import status
 
-from idu_api.urban_api.exceptions import IduApiError
+from idu_api.common.exceptions import IduApiError
 
 
 class NotAllowedInRegionalScenario(IduApiError):
@@ -13,7 +13,7 @@ class NotAllowedInRegionalScenario(IduApiError):
     """
 
     def __str__(self) -> str:
-        return "This method cannot be accessed in a REGIONAL scenario. Pass the identifier of a PROJECT scenario."
+        return "Этот метод недоступен в РЕГИОНАЛЬНОМ сценарии. Передайте идентификатор сценария ПРОЕКТА."
 
     def get_status_code(self) -> int:
         """
@@ -28,7 +28,7 @@ class NotAllowedInProjectScenario(IduApiError):
     """
 
     def __str__(self) -> str:
-        return "This method cannot be accessed in a PROJECT scenario. Pass the identifier of a REGIONAL scenario."
+        return "Этот метод недоступен в сценарии ПРОЕКТА. Укажите идентификатор РЕГИОНАЛЬНОГО сценария."
 
     def get_status_code(self) -> int:
         """
@@ -43,7 +43,24 @@ class NotAllowedInRegionalProject(IduApiError):
     """
 
     def __str__(self) -> str:
-        return "This method cannot be accessed in a REGIONAL project. Pass the identifier of a common PROJECT."
+        return "Этот метод недоступен в РЕГИОНАЛЬНОМ проекте. Укажите идентификатор ОБЫЧНОГО проекта."
+
+    def get_status_code(self) -> int:
+        """
+        Return '400 Bad Request' status code.
+        """
+        return status.HTTP_400_BAD_REQUEST
+
+
+class InvalidBaseScenario(IduApiError):
+    """
+    Exception to raise when attempting to change base scenario by editing itself.
+    """
+
+    def __str__(self) -> str:
+        return (
+            "Если вы хотите создать новый базовый сценарий, измените тот, который должен стать базовым, а не текущий."
+        )
 
     def get_status_code(self) -> int:
         """

@@ -15,8 +15,8 @@ from idu_api.common.db.entities import (
     territories_data,
     territory_types_dict,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import PageDTO, TerritoryDTO, TerritoryWithoutGeometryDTO
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.territories_objects import (
     add_territory_to_db,
     get_common_territory_for_geometry,
@@ -105,26 +105,6 @@ async def test_add_territory_to_db(mock_conn: MockConnection, territory_post_req
     """Test the add_territory_to_db function."""
 
     # Arrange
-    async def check_parent_territory(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_post_req.parent_id}:
-            return False
-        return True
-
-    async def check_admin_center(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_post_req.admin_center_id}:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions):
-        if table == territory_types_dict:
-            return False
-        return True
-
-    async def check_target_city_type(conn, table, conditions):
-        if table == target_city_types_dict:
-            return False
-        return True
-
     statement = (
         insert(territories_data)
         .values(
@@ -144,31 +124,6 @@ async def test_add_territory_to_db(mock_conn: MockConnection, territory_post_req
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_parent_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_territory_to_db(mock_conn, territory_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_admin_center),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_territory_to_db(mock_conn, territory_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_territory_to_db(mock_conn, territory_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_target_city_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_territory_to_db(mock_conn, territory_post_req)
-
     result = await add_territory_to_db(mock_conn, territory_post_req)
 
     # Assert
@@ -187,26 +142,6 @@ async def test_put_territory_to_db(mock_conn: MockConnection, territory_put_req:
 
     async def check_territory(conn, table, conditions):
         if table == territories_data and conditions == {"territory_id": territory_id}:
-            return False
-        return True
-
-    async def check_parent_territory(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_put_req.parent_id}:
-            return False
-        return True
-
-    async def check_admin_center(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_put_req.admin_center_id}:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions):
-        if table == territory_types_dict:
-            return False
-        return True
-
-    async def check_target_city_type(conn, table, conditions):
-        if table == target_city_types_dict:
             return False
         return True
 
@@ -236,30 +171,6 @@ async def test_put_territory_to_db(mock_conn: MockConnection, territory_put_req:
     ):
         with pytest.raises(EntityNotFoundById):
             await put_territory_to_db(mock_conn, territory_id, territory_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_parent_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_territory_to_db(mock_conn, territory_id, territory_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_admin_center),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_territory_to_db(mock_conn, territory_id, territory_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_territory_to_db(mock_conn, territory_id, territory_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_target_city_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_territory_to_db(mock_conn, territory_id, territory_put_req)
     result = await put_territory_to_db(mock_conn, territory_id, territory_put_req)
 
     # Assert
@@ -281,26 +192,6 @@ async def test_patch_territory_to_db(mock_conn: MockConnection, territory_patch_
             return False
         return True
 
-    async def check_parent_territory(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_patch_req.parent_id}:
-            return False
-        return True
-
-    async def check_admin_center(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_patch_req.admin_center_id}:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions):
-        if table == territory_types_dict:
-            return False
-        return True
-
-    async def check_target_city_type(conn, table, conditions):
-        if table == target_city_types_dict:
-            return False
-        return True
-
     statement_update = (
         update(territories_data)
         .where(territories_data.c.territory_id == territory_id)
@@ -311,30 +202,6 @@ async def test_patch_territory_to_db(mock_conn: MockConnection, territory_patch_
     with patch(
         "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
         new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_territory_to_db(mock_conn, territory_id, territory_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_parent_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_territory_to_db(mock_conn, territory_id, territory_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_admin_center),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_territory_to_db(mock_conn, territory_id, territory_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_territory_to_db(mock_conn, territory_id, territory_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_target_city_type),
     ):
         with pytest.raises(EntityNotFoundById):
             await patch_territory_to_db(mock_conn, territory_id, territory_patch_req)

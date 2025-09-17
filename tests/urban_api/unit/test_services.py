@@ -15,8 +15,8 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import ServiceDTO, UrbanObjectDTO
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.services import (
     add_service_to_db,
     add_service_to_object_in_db,
@@ -126,16 +126,6 @@ async def test_put_service_to_db(mock_conn: MockConnection, service_put_req: Ser
             return False
         return True
 
-    async def check_service_type(conn, table, conditions, not_conditions=None):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions, not_conditions=None):
-        if table == territory_types_dict:
-            return False
-        return True
-
     service_id = 1
     update_service_statement = (
         update(services_data)
@@ -147,18 +137,6 @@ async def test_put_service_to_db(mock_conn: MockConnection, service_put_req: Ser
     with patch(
         "idu_api.urban_api.logic.impl.helpers.services.check_existence",
         new=AsyncMock(side_effect=check_service),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_service_to_db(mock_conn, service_put_req, service_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.services.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_service_to_db(mock_conn, service_put_req, service_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.services.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
     ):
         with pytest.raises(EntityNotFoundById):
             await put_service_to_db(mock_conn, service_put_req, service_id)
@@ -181,16 +159,6 @@ async def test_patch_service_to_db(mock_conn: MockConnection, service_patch_req:
             return False
         return True
 
-    async def check_service_type(conn, table, conditions, not_conditions=None):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_territory_type(conn, table, conditions, not_conditions=None):
-        if table == territory_types_dict:
-            return False
-        return True
-
     service_id = 1
     update_service_statement = (
         update(services_data)
@@ -202,18 +170,6 @@ async def test_patch_service_to_db(mock_conn: MockConnection, service_patch_req:
     with patch(
         "idu_api.urban_api.logic.impl.helpers.services.check_existence",
         new=AsyncMock(side_effect=check_service),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_service_to_db(mock_conn, service_patch_req, service_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.services.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_service_to_db(mock_conn, service_patch_req, service_id)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.services.check_existence",
-        new=AsyncMock(side_effect=check_territory_type),
     ):
         with pytest.raises(EntityNotFoundById):
             await patch_service_to_db(mock_conn, service_patch_req, service_id)

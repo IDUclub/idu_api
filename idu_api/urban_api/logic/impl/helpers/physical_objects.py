@@ -6,7 +6,8 @@ from typing import Callable
 from geoalchemy2 import Geography, Geometry
 from geoalchemy2.functions import ST_AsEWKB, ST_GeomFromWKB
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
-from sqlalchemy import cast, delete, func, insert, select, text, update
+from sqlalchemy import cast, delete, func, select, text, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -22,6 +23,11 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityNotFoundById,
+    TooManyObjectsError,
+)
 from idu_api.urban_api.dto import (
     BuildingDTO,
     ObjectGeometryDTO,
@@ -30,12 +36,6 @@ from idu_api.urban_api.dto import (
     ServiceDTO,
     ServiceWithGeometryDTO,
     UrbanObjectDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityAlreadyExists,
-    EntityNotFoundById,
-    TooManyObjectsError,
 )
 from idu_api.urban_api.logic.impl.helpers.urban_objects import get_urban_objects_by_ids_from_db
 from idu_api.urban_api.logic.impl.helpers.utils import (
@@ -227,16 +227,6 @@ async def add_physical_object_with_geometry_to_db(
 ) -> UrbanObjectDTO:
     """Create physical object with geometry."""
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": physical_object.territory_id}):
-        raise EntityNotFoundById(physical_object.territory_id, "territory")
-
-    if not await check_existence(
-        conn,
-        physical_object_types_dict,
-        conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-    ):
-        raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
-
     statement = (
         insert(physical_objects_data)
         .values(
@@ -281,15 +271,7 @@ async def put_physical_object_to_db(
     if not await check_existence(conn, physical_objects_data, conditions={"physical_object_id": physical_object_id}):
         raise EntityNotFoundById(physical_object_id, "physical object")
 
-    if not await check_existence(
-        conn,
-        physical_object_types_dict,
-        conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-    ):
-        raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
-
     values = extract_values_from_model(physical_object, to_update=True)
-
     statement = (
         update(physical_objects_data)
         .where(physical_objects_data.c.physical_object_id == physical_object_id)
@@ -312,16 +294,7 @@ async def patch_physical_object_to_db(
     if not await check_existence(conn, physical_objects_data, conditions={"physical_object_id": physical_object_id}):
         raise EntityNotFoundById(physical_object_id, "physical object")
 
-    if physical_object.physical_object_type_id is not None:
-        if not await check_existence(
-            conn,
-            physical_object_types_dict,
-            conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-        ):
-            raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
-
     values = extract_values_from_model(physical_object, exclude_unset=True, to_update=True)
-
     statement = (
         update(physical_objects_data)
         .where(physical_objects_data.c.physical_object_id == physical_object_id)
@@ -353,14 +326,6 @@ async def add_building_to_db(
 ) -> PhysicalObjectDTO:
     """Create living building object."""
 
-    if not await check_existence(
-        conn, physical_objects_data, conditions={"physical_object_id": building.physical_object_id}
-    ):
-        raise EntityNotFoundById(building.physical_object_id, "physical object")
-
-    if await check_existence(conn, buildings_data, conditions={"physical_object_id": building.physical_object_id}):
-        raise EntityAlreadyExists("living building", building.physical_object_id)
-
     statement = insert(buildings_data).values(**building.model_dump())
 
     await conn.execute(statement)
@@ -372,23 +337,11 @@ async def add_building_to_db(
 async def put_building_to_db(conn: AsyncConnection, building: BuildingPut) -> PhysicalObjectDTO:
     """Update living building object by all its attributes."""
 
-    if not await check_existence(
-        conn, physical_objects_data, conditions={"physical_object_id": building.physical_object_id}
-    ):
-        raise EntityNotFoundById(building.physical_object_id, "physical object")
-
-    if await check_existence(
-        conn,
-        buildings_data,
-        conditions={"physical_object_id": building.physical_object_id},
-    ):
-        statement = (
-            update(buildings_data)
-            .where(buildings_data.c.physical_object_id == building.physical_object_id)
-            .values(**building.model_dump())
-        )
-    else:
-        statement = insert(buildings_data).values(**building.model_dump())
+    statement = (
+        insert(buildings_data)
+        .values(**building.model_dump())
+        .on_conflict_do_update(index_elements=["physical_object_id"], set_=building.model_dump())
+    )
 
     await conn.execute(statement)
     await conn.commit()
@@ -400,21 +353,7 @@ async def patch_building_to_db(conn: AsyncConnection, building: BuildingPatch, b
     """Update living building object by only given attributes."""
 
     if not await check_existence(conn, buildings_data, conditions={"building_id": building_id}):
-        raise EntityNotFoundById(building_id, "living building")
-
-    if building.physical_object_id is not None:
-        if not await check_existence(
-            conn, physical_objects_data, conditions={"physical_object_id": building.physical_object_id}
-        ):
-            raise EntityNotFoundById(building.physical_object_id, "physical object")
-
-        if await check_existence(
-            conn,
-            buildings_data,
-            conditions={"physical_object_id": building.physical_object_id},
-            not_conditions={"building_id": building_id},
-        ):
-            raise EntityAlreadyExists("living building", building.physical_object_id)
+        raise EntityNotFoundById(building_id, "building")
 
     statement = (
         update(buildings_data)
@@ -433,7 +372,7 @@ async def delete_building_from_db(conn: AsyncConnection, building_id: int) -> di
     """Delete living building object."""
 
     if not await check_existence(conn, buildings_data, conditions={"building_id": building_id}):
-        raise EntityNotFoundById(building_id, "living building")
+        raise EntityNotFoundById(building_id, "building")
 
     statement = delete(buildings_data).where(buildings_data.c.building_id == building_id)
     await conn.execute(statement)
@@ -657,13 +596,6 @@ async def add_physical_object_to_object_geometry_to_db(
 
     if not await check_existence(conn, object_geometries_data, conditions={"object_geometry_id": object_geometry_id}):
         raise EntityNotFoundById(object_geometry_id, "object geometry")
-
-    if not await check_existence(
-        conn,
-        physical_object_types_dict,
-        conditions={"physical_object_type_id": physical_object.physical_object_type_id},
-    ):
-        raise EntityNotFoundById(physical_object.physical_object_type_id, "physical object type")
 
     statement = (
         insert(physical_objects_data)

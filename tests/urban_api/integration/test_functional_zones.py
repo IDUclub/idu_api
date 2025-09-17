@@ -45,7 +45,7 @@ async def test_get_functional_zone_types(urban_api_host: str, functional_zone_ty
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )
@@ -75,7 +75,7 @@ async def test_add_functional_zone_type(
     [
         (200, None, None, None),
         (400, None, "1.2.3", None),
-        (404, "not found", None, 1e9),
+        (404, "не найден", None, 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -113,8 +113,8 @@ async def test_get_profiles_reclamation_data_matrix(
     "expected_status, error_message, type_id_param, territory_id_param",
     [
         (201, None, None, None),
-        (404, "not found", 1e9, 1e9),
-        (409, "already exists", None, None),
+        (404, "отсутствует в таблице", 1e9, 1e9),
+        (409, "уже существует", None, None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -149,7 +149,7 @@ async def test_add_profiles_reclamation_data(
     "expected_status, error_message, type_id_param, territory_id_param",
     [
         (200, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -184,7 +184,7 @@ async def test_put_profiles_reclamation_data(
     "expected_status, error_message, type_id_param, territory_id_param",
     [
         (200, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "не найден", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -219,7 +219,7 @@ async def test_delete_profiles_reclamation_data(
     "expected_status, error_message, type_id_param, territory_id_param",
     [
         (201, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -253,7 +253,7 @@ async def test_add_functional_zone(
     "expected_status, error_message, functional_zone_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -285,7 +285,7 @@ async def test_put_functional_zone(
     "expected_status, error_message, functional_zone_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -317,7 +317,7 @@ async def test_patch_functional_zone(
     "expected_status, error_message, functional_zone_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

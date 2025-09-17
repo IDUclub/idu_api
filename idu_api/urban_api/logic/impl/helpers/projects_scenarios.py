@@ -17,10 +17,10 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
+from idu_api.common.exceptions.logic.projects import InvalidBaseScenario, NotAllowedInRegionalScenario
+from idu_api.common.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.dto import ScenarioDTO, UserDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
-from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
-from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.logic.impl.helpers.projects_objects import (
     check_project,
     copy_geometries,
@@ -46,7 +46,7 @@ async def check_scenario(
     """Check scenario existence and user access."""
 
     statement = (
-        select(projects_data, scenarios_data.c.parent_id)
+        select(projects_data, scenarios_data.c.parent_id, scenarios_data.c.is_based)
         .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
         .where(scenarios_data.c.scenario_id == scenario_id)
     )
@@ -239,6 +239,7 @@ async def copy_scenario_to_db(
 
 async def add_new_scenario_to_db(conn: AsyncConnection, scenario: ScenarioPost, user: UserDTO) -> ScenarioDTO:
     """Create a new scenario from base scenario."""
+
     project = (
         (await conn.execute(select(projects_data).where(projects_data.c.project_id == scenario.project_id)))
         .mappings()
@@ -287,27 +288,10 @@ async def put_scenario_to_db(
 ) -> ScenarioDTO:
     """Update scenario object - all attributes."""
 
-    statement = (
-        select(scenarios_data, projects_data.c.project_id, projects_data.c.user_id)
-        .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
-        .where(scenarios_data.c.scenario_id == scenario_id)
-    )
-    requested_scenario = (await conn.execute(statement)).mappings().one_or_none()
-    if requested_scenario is None:
-        raise EntityNotFoundById(scenario_id, "scenario")
-    if requested_scenario.user_id != user.id and not user.is_superuser:
-        raise AccessDeniedError(requested_scenario.project_id, "project")
-
-    if scenario.functional_zone_type_id is not None:
-        if not await check_existence(
-            conn, functional_zone_types_dict, conditions={"functional_zone_type_id": scenario.functional_zone_type_id}
-        ):
-            raise EntityNotFoundById(scenario.functional_zone_type_id, "functional zone type")
+    requested_scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
 
     if requested_scenario.is_based and not scenario.is_based:
-        raise ValueError(
-            "If you want to create new base scenario, change the one that should become the base, not the current one"
-        )
+        raise InvalidBaseScenario()
 
     if not requested_scenario.is_based and scenario.is_based:
         statement = select(scenarios_data.c.scenario_id).where(
@@ -322,8 +306,8 @@ async def put_scenario_to_db(
         await conn.execute(statement)
 
     values = extract_values_from_model(scenario, to_update=True)
-
     statement = update(scenarios_data).where(scenarios_data.c.scenario_id == scenario_id).values(**values)
+
     await conn.execute(statement)
     await conn.commit()
 
@@ -335,27 +319,10 @@ async def patch_scenario_to_db(
 ) -> ScenarioDTO:
     """Update scenario object - only given fields."""
 
-    statement = (
-        select(scenarios_data, projects_data.c.project_id, projects_data.c.user_id)
-        .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
-        .where(scenarios_data.c.scenario_id == scenario_id)
-    )
-    requested_scenario = (await conn.execute(statement)).mappings().one_or_none()
-    if requested_scenario is None:
-        raise EntityNotFoundById(scenario_id, "scenario")
-    if requested_scenario.user_id != user.id and not user.is_superuser:
-        raise AccessDeniedError(requested_scenario.project_id, "project")
-
-    if scenario.functional_zone_type_id is not None:
-        if not await check_existence(
-            conn, functional_zone_types_dict, conditions={"functional_zone_type_id": scenario.functional_zone_type_id}
-        ):
-            raise EntityNotFoundById(scenario.functional_zone_type_id, "functional zone type")
+    requested_scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
 
     if scenario.is_based is not None and requested_scenario.is_based and not scenario.is_based:
-        raise ValueError(
-            "If you want to create new base scenario, change the one that should become the base, not the current one"
-        )
+        raise InvalidBaseScenario()
 
     if scenario.is_based is not None and not requested_scenario.is_based and scenario.is_based:
         statement = select(scenarios_data.c.scenario_id).where(

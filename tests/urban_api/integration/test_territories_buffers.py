@@ -14,9 +14,9 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, territory_id_param, version",
     [
         (200, None, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None, 1),
-        (400, "Please, choose either physical_object_type_id or service_type_id", None, 2),
-        (404, "not found", 1e9, None),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None, 1),
+        (400, "Пожалуйста, выберите либо physical_object_type_id, либо service_type_id", None, 2),
+        (404, "не найден", 1e9, None),
     ],
     ids=["success", "bad_request_1", "bad_request_2", "not_found"],
 )

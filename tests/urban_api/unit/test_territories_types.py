@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy.sql import insert, select
 
 from idu_api.common.db.entities import target_city_types_dict, territory_types_dict
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists
 from idu_api.urban_api.dto import TargetCityTypeDTO, TerritoryTypeDTO
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists
 from idu_api.urban_api.logic.impl.helpers.territories_types import (
     add_target_city_type_to_db,
     add_territory_type_to_db,
@@ -49,11 +49,7 @@ async def test_add_territory_type_to_db(mock_conn: MockConnection, territory_typ
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_territory_type_to_db(mock_conn, territory_type_post_req)
-    with patch("idu_api.urban_api.logic.impl.helpers.territories_types.check_existence") as mock_check_existence:
-        mock_check_existence.return_value = False
-        result = await add_territory_type_to_db(mock_conn, territory_type_post_req)
+    result = await add_territory_type_to_db(mock_conn, territory_type_post_req)
 
     # Assert
     assert isinstance(result, TerritoryTypeDTO), "Result should be a TerritoryTypeDTO."
@@ -91,11 +87,7 @@ async def test_add_target_city_type_to_db(mock_conn: MockConnection, target_city
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_target_city_type_to_db(mock_conn, target_city_type_post_req)
-    with patch("idu_api.urban_api.logic.impl.helpers.territories_types.check_existence") as mock_check_existence:
-        mock_check_existence.return_value = False
-        result = await add_target_city_type_to_db(mock_conn, target_city_type_post_req)
+    result = await add_target_city_type_to_db(mock_conn, target_city_type_post_req)
 
     # Assert
     assert isinstance(result, TargetCityTypeDTO), "Result should be a TargetCityTypeDTO."

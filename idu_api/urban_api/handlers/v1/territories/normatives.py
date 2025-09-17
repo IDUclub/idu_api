@@ -53,13 +53,13 @@ async def get_territory_normatives(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     if year is not None and last_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either specific year or last_only",
+            detail="Пожалуйста, выберите либо конкретный год, либо last_only.",
         )
 
     normatives = await territories_service.get_normatives_by_territory_id(
@@ -233,7 +233,7 @@ async def get_normatives_values_by_parent_id(
     if year is not None and last_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either specific year or last_only",
+            detail="Пожалуйста, выберите либо конкретный год, либо last_only.",
         )
 
     territories = await territories_service.get_normatives_values_by_parent_id(parent_id, year, last_only)

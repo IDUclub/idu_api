@@ -54,8 +54,8 @@ async def test_get_physical_object_types(
     "expected_status, error_message, function_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "отсутствует в таблице", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -71,7 +71,7 @@ async def test_add_physical_object_type(
 
     # Arrange
     new_type = physical_object_type_post_req.model_dump()
-    new_type["name"] = "new name"
+    new_type["name"] = "new name" if expected_status != 404 else "failed name"
     new_type["physical_object_function_id"] = (
         function_id_param or physical_object_function["physical_object_function_id"]
     )
@@ -89,8 +89,8 @@ async def test_add_physical_object_type(
     "expected_status, error_message, type_name_param, type_id_param",
     [
         (200, None, "updated name", None),
-        (404, "not found", "updated name", 1e9),
-        (409, "already exists", "new name", None),
+        (404, "не найден", "updated name", 1e9),
+        (409, "уже существует", "new name", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -124,7 +124,7 @@ async def test_patch_physical_object_type(
     "expected_status, error_message, type_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -161,7 +161,7 @@ async def test_delete_physical_object_type(
     "expected_status, error_message, parent_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -199,8 +199,8 @@ async def test_get_physical_object_functions_by_parent_id(
     "expected_status, error_message, parent_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -215,7 +215,7 @@ async def test_add_physical_object_function(
 
     # Arrange
     new_function = physical_object_function_post_req.model_dump()
-    new_function["name"] = "new name"
+    new_function["name"] = "new name" if expected_status != 404 else "failed name"
     new_function["parent_id"] = parent_id_param
 
     # Act
@@ -231,7 +231,7 @@ async def test_add_physical_object_function(
     "expected_status, error_message, parent_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -246,7 +246,7 @@ async def test_put_physical_object_function(
 
     # Arrange
     new_function = physical_object_function_put_req.model_dump()
-    new_function["name"] = "new name"
+    new_function["name"] = "new name" if expected_status != 404 else "failed name"
     new_function["parent_id"] = parent_id_param
 
     # Act
@@ -262,8 +262,8 @@ async def test_put_physical_object_function(
     "expected_status, error_message, function_name_param, function_id_param",
     [
         (200, None, "updated name", None),
-        (404, "not found", "updated name", 1e9),
-        (409, "already exists", "new name", None),
+        (404, "не найден", "updated name", 1e9),
+        (409, "уже существует", "new name", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -297,7 +297,7 @@ async def test_patch_physical_object_function(
     "expected_status, error_message, function_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -334,7 +334,7 @@ async def test_delete_physical_object_function(
     [
         (200, None, None),
         (400, None, "1.2.3"),
-        (404, "not found", str(10**9)),
+        (404, "не найден", str(10**9)),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -368,7 +368,7 @@ async def test_get_physical_object_types_hierarchy(
     "expected_status, error_message, type_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

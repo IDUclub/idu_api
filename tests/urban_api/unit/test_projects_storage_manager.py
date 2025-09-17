@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from structlog.stdlib import BoundLogger
 
-from idu_api.urban_api.exceptions.utils.minio import FileNotFound
+from idu_api.common.exceptions.services.minio import FileNotFound
 from idu_api.urban_api.minio.client import AsyncMinioClient
 from idu_api.urban_api.minio.services import ProjectStorageManager
 
@@ -284,7 +284,8 @@ async def test_upload_phase_document(storage_manager, fake_logger, existing, exp
         file_ext="pdf",
         logger=fake_logger,
     )
-    assert result == f"http://url/{expected_name}"
+    assert result["filename"] == "plan.pdf"
+    assert result["url"] == f"http://url/{expected_name}"
     storage_manager._client.upload_file.assert_awaited_once()
 
 
@@ -296,7 +297,8 @@ async def test_get_phase_document_urls(storage_manager, fake_logger):
     storage_manager._client.generate_presigned_urls.return_value = ["url1", "url2"]
 
     result = await storage_manager.get_phase_document_urls(1, ScenarioPhase.planning.value, fake_logger)
-    assert result == ["url1", "url2"]
+    assert [res["filename"] for res in result] == ["file1.pdf", "file2.pdf"]
+    assert [res["url"] for res in result] == ["url1", "url2"]
 
 
 @pytest.mark.asyncio
@@ -322,7 +324,8 @@ async def test_rename_phase_document(storage_manager, fake_logger, existing_obje
         )
         storage_manager._client.copy_object.assert_awaited_once()
         storage_manager._client.delete_file.assert_awaited_once()
-        assert result == "url-renamed"
+        assert result["filename"] == "new.pdf"
+        assert result["url"] == "url-renamed"
 
 
 @pytest.mark.asyncio

@@ -13,18 +13,17 @@ from idu_api.common.db.entities import (
     profiles_reclamation_data,
     territories_data,
 )
+from idu_api.common.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityNotFoundById,
+    EntityNotFoundByParams,
+    TooManyObjectsError,
+)
 from idu_api.urban_api.dto import (
     FunctionalZoneDTO,
     FunctionalZoneTypeDTO,
     ProfilesReclamationDataDTO,
     ProfilesReclamationDataMatrixDTO,
-)
-from idu_api.urban_api.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityAlreadyExists,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-    TooManyObjectsError,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
@@ -37,7 +36,6 @@ from idu_api.urban_api.schemas import (
     FunctionalZonePost,
     FunctionalZonePut,
     FunctionalZoneTypePost,
-    ProfilesReclamationData,
     ProfilesReclamationDataPost,
     ProfilesReclamationDataPut,
 )
@@ -59,9 +57,6 @@ async def add_functional_zone_type_to_db(
     functional_zone_type: FunctionalZoneTypePost,
 ) -> FunctionalZoneTypeDTO:
     """Create a new functional zone type object."""
-
-    if await check_existence(conn, functional_zone_types_dict, conditions={"name": functional_zone_type.name}):
-        raise EntityAlreadyExists("functional zone type", functional_zone_type.name)
 
     statement = (
         insert(functional_zone_types_dict)
@@ -165,7 +160,7 @@ async def get_profiles_reclamation_data_matrix_from_db(
 async def get_profiles_reclamation_data_by_id_from_db(
     conn: AsyncConnection,
     profile_reclamation_id: int,
-) -> ProfilesReclamationData:
+) -> ProfilesReclamationDataDTO:
     """Get a profiles reclamation data by identifier."""
 
     statement = (
@@ -188,43 +183,6 @@ async def add_profiles_reclamation_data_to_db(
     conn: AsyncConnection, profiles_reclamation: ProfilesReclamationDataPost
 ) -> ProfilesReclamationDataDTO:
     """Add a new profiles reclamation data."""
-
-    if await check_existence(
-        conn,
-        profiles_reclamation_data,
-        conditions={
-            "territory_id": profiles_reclamation.territory_id,
-            "target_profile_id": profiles_reclamation.target_profile_id,
-            "source_profile_id": profiles_reclamation.source_profile_id,
-        },
-    ):
-        raise EntityAlreadyExists(
-            "profiles reclamation data",
-            profiles_reclamation.source_profile_id,
-            profiles_reclamation.target_profile_id,
-            profiles_reclamation.territory_id,
-        )
-
-    if not await check_existence(
-        conn,
-        functional_zone_types_dict,
-        conditions={"functional_zone_type_id": profiles_reclamation.source_profile_id},
-    ):
-        raise EntityNotFoundById(profiles_reclamation.source_profile_id, "source profile")
-
-    if not await check_existence(
-        conn,
-        functional_zone_types_dict,
-        conditions={"functional_zone_type_id": profiles_reclamation.target_profile_id},
-    ):
-        raise EntityNotFoundById(profiles_reclamation.source_profile_id, "target profile")
-
-    if profiles_reclamation.territory_id is not None and not await check_existence(
-        conn,
-        territories_data,
-        conditions={"territory_id": profiles_reclamation.territory_id},
-    ):
-        raise EntityNotFoundById(profiles_reclamation.territory_id, "territory")
 
     statement = (
         insert(profiles_reclamation_data)
@@ -267,26 +225,6 @@ async def put_profiles_reclamation_data_to_db(
             .returning(profiles_reclamation_data.c.profile_reclamation_id)
         )
     else:
-
-        if not await check_existence(
-            conn,
-            functional_zone_types_dict,
-            conditions={"functional_zone_type_id": profiles_reclamation.source_profile_id},
-        ):
-            raise EntityNotFoundById(profiles_reclamation.source_profile_id, "source profile")
-
-        if not await check_existence(
-            conn,
-            functional_zone_types_dict,
-            conditions={"functional_zone_type_id": profiles_reclamation.target_profile_id},
-        ):
-            raise EntityNotFoundById(profiles_reclamation.source_profile_id, "target profile")
-
-        if profiles_reclamation.territory_id is not None and not await check_existence(
-            conn, territories_data, conditions={"territory_id": profiles_reclamation.territory_id}
-        ):
-            raise EntityNotFoundById(profiles_reclamation.territory_id, "territory")
-
         statement = (
             insert(profiles_reclamation_data)
             .values(**profiles_reclamation.model_dump())
@@ -385,18 +323,7 @@ async def get_functional_zone_by_id(conn: AsyncConnection, functional_zone_id: i
 async def add_functional_zone_to_db(conn: AsyncConnection, functional_zone: FunctionalZonePost) -> FunctionalZoneDTO:
     """Add functional zone."""
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": functional_zone.territory_id}):
-        raise EntityNotFoundById(functional_zone.territory_id, "territory")
-
-    if not await check_existence(
-        conn,
-        functional_zone_types_dict,
-        conditions={"functional_zone_type_id": functional_zone.functional_zone_type_id},
-    ):
-        raise EntityNotFoundById(functional_zone.functional_zone_type_id, "functional zone type")
-
     values = extract_values_from_model(functional_zone)
-
     statement = insert(functional_zones_data).values(**values).returning(functional_zones_data.c.functional_zone_id)
     functional_zone_id = (await conn.execute(statement)).scalar_one()
 
@@ -413,18 +340,7 @@ async def put_functional_zone_to_db(
     if not await check_existence(conn, functional_zones_data, conditions={"functional_zone_id": functional_zone_id}):
         raise EntityNotFoundById(functional_zone_id, "functional zone")
 
-    if not await check_existence(conn, territories_data, conditions={"territory_id": functional_zone.territory_id}):
-        raise EntityNotFoundById(functional_zone.territory_id, "territory")
-
-    if not await check_existence(
-        conn,
-        functional_zone_types_dict,
-        conditions={"functional_zone_type_id": functional_zone.functional_zone_type_id},
-    ):
-        raise EntityNotFoundById(functional_zone.functional_zone_type_id, "functional zone type")
-
     values = extract_values_from_model(functional_zone, to_update=True)
-
     statement = (
         update(functional_zones_data)
         .where(functional_zones_data.c.functional_zone_id == functional_zone_id)
@@ -445,16 +361,7 @@ async def patch_functional_zone_to_db(
     if not await check_existence(conn, functional_zones_data, conditions={"functional_zone_id": functional_zone_id}):
         raise EntityNotFoundById(functional_zone_id, "functional zone")
 
-    if functional_zone.territory_id is not None:
-        if not await check_existence(conn, territories_data):
-            raise EntityNotFoundById(functional_zone.territory_id, "territory")
-
-    if functional_zone.functional_zone_type_id is not None:
-        if not await check_existence(conn, functional_zone_types_dict):
-            raise EntityNotFoundById(functional_zone.functional_zone_type_id, "functional zone type")
-
     values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True)
-
     statement = (
         update(functional_zones_data)
         .where(functional_zones_data.c.functional_zone_id == functional_zone_id)

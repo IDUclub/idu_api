@@ -5,8 +5,6 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import target_city_types_dict, territory_types_dict
 from idu_api.urban_api.dto import TargetCityTypeDTO, TerritoryTypeDTO
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists
-from idu_api.urban_api.logic.impl.helpers.utils import check_existence
 from idu_api.urban_api.schemas import TargetCityTypePost, TerritoryTypePost
 
 
@@ -23,9 +21,6 @@ async def add_territory_type_to_db(
     territory_type: TerritoryTypePost,
 ) -> TerritoryTypeDTO:
     """Create territory type object."""
-
-    if await check_existence(conn, territory_types_dict, conditions={"name": territory_type.name}):
-        raise EntityAlreadyExists("territory type", territory_type.name)
 
     statement = insert(territory_types_dict).values(**territory_type.model_dump()).returning(territory_types_dict)
     result = (await conn.execute(statement)).mappings().one()
@@ -48,9 +43,6 @@ async def add_target_city_type_to_db(
     target_city_type: TargetCityTypePost,
 ) -> TargetCityTypeDTO:
     """Create target cities type object."""
-
-    if await check_existence(conn, target_city_types_dict, conditions={"name": target_city_type.name}):
-        raise EntityAlreadyExists("target city type", target_city_type.name)
 
     statement = insert(target_city_types_dict).values(**target_city_type.model_dump()).returning(target_city_types_dict)
     result = (await conn.execute(statement)).mappings().one()

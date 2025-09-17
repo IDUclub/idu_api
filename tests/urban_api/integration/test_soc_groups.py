@@ -44,7 +44,7 @@ async def test_get_social_groups(urban_api_host: str, social_group: dict[str, An
     "expected_status, error_message, soc_group_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -78,7 +78,7 @@ async def test_get_social_group_by_id(
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )
@@ -107,8 +107,8 @@ async def test_add_social_group(
     "expected_status, error_message, soc_group_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "отсутствует в таблице", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -148,7 +148,7 @@ async def test_add_service_type_to_social_group(
     "expected_status, error_message, soc_group_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -196,7 +196,7 @@ async def test_get_social_values(urban_api_host: str, social_value: dict[str, An
     "expected_status, error_message, soc_value_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -215,7 +215,6 @@ async def test_get_social_value_by_id(
     # Act
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
         response = await client.get(f"/social_values/{soc_value_id}")
-        result = response.json()
 
     # Assert
     assert_response(response, expected_status, SocValue, error_message)
@@ -226,7 +225,7 @@ async def test_get_social_value_by_id(
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )
@@ -255,8 +254,8 @@ async def test_add_social_value(
     "expected_status, error_message, soc_group_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -288,7 +287,7 @@ async def test_add_value_to_social_group(
     "expected_status, error_message, social_value_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -321,8 +320,8 @@ async def test_get_service_types_by_social_value_id(
     "expected_status, error_message, soc_value_id_param",
     [
         (201, None, None),
-        (409, "already exists", None),
-        (404, "not found", 1e9),
+        (409, "уже существует", None),
+        (404, "отсутствует в таблице", 1e9),
     ],
     ids=["success", "conflict", "not_found"],
 )
@@ -360,7 +359,7 @@ async def test_add_service_type_to_social_value(
     "expected_status, error_message, soc_value_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -395,8 +394,8 @@ async def test_delete_social_value(
     "expected_status, error_message, soc_value_id_param",
     [
         (200, None, 1),
-        (404, "not found", 1e9),
-        (422, "please, choose either specific year or last_only", 1e9),
+        (404, "не найден", 1e9),
+        (422, "пожалуйста, выберите либо конкретный год, либо last_only", 1e9),
     ],
     ids=["success", "not_found", "unprocessable_entity"],
 )
@@ -417,9 +416,6 @@ async def test_get_social_value_indicator_values(
         "last_only": expected_status == 422,
     }
 
-    print(params)
-    print("HUUUY")
-
     # Act
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
         response = await client.get(f"/social_values/{soc_value_id}/indicators", params=params)
@@ -438,8 +434,8 @@ async def test_get_social_value_indicator_values(
     "expected_status, error_message, soc_value_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "отсутствует в таблице", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -475,7 +471,7 @@ async def test_add_social_value_indicator_value(
     "expected_status, error_message, soc_value_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "отсутствует в таблице", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -509,7 +505,7 @@ async def test_put_social_value_indicator_value(
     "expected_status, error_message, soc_value_id_param",
     [
         (200, None, 1),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

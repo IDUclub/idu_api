@@ -30,8 +30,8 @@ from tests.urban_api.helpers.utils import assert_response
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -75,8 +75,8 @@ async def test_get_geometries_by_scenario_id(
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -119,9 +119,9 @@ async def test_get_geometries_with_all_objects_by_scenario_id(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -169,9 +169,9 @@ async def test_get_context_geometries(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -220,18 +220,20 @@ async def test_get_context_geometries_with_all_objects(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
-        (409, "has already been edited or deleted for the scenario", None, False),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
+        (409, "уже изменен или удален для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_put_scenario_geometry(
     urban_api_host: str,
     object_geometries_put_req: ObjectGeometryPut,
+    project: dict[str, Any],
     scenario: dict[str, Any],
     scenario_geometry: dict[str, Any],
     object_geometry: dict[str, Any],
+    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -243,6 +245,17 @@ async def test_put_scenario_geometry(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
+    if expected_status != 409 and not is_scenario_param:
+        base_scenario_id = project["base_scenario"]["id"]
+        headers = {"Authorization": f"Bearer {superuser_token}"}
+        new_scenario = {
+            "project_id": project["project_id"],
+            "name": "Test Scenario Name",
+            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
+        }
+        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
+            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+            scenario_id = response.json()["scenario_id"]
     object_geometry_id = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
     )
@@ -270,9 +283,9 @@ async def test_put_scenario_geometry(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
-        (409, "has already been edited or deleted for the scenario", None, False),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
+        (409, "уже изменен или удален для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
@@ -333,8 +346,8 @@ async def test_patch_scenario_geometry(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )

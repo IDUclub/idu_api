@@ -20,8 +20,8 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None),
-        (404, "not found", 1e9),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -63,8 +63,8 @@ async def test_get_functional_zone_sources_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None),
-        (404, "not found", 1e9),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -107,8 +107,8 @@ async def test_get_functional_zones_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None),
-        (404, "not found", 1e9),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )
@@ -154,8 +154,8 @@ async def test_get_functional_zones_geojson_by_territory_id(
     "expected_status, error_message, territory_id_param",
     [
         (200, None, None),
-        (400, "You can use cities_only parameter only with including child territories", None),
-        (404, "not found", 1e9),
+        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "not_found"],
 )

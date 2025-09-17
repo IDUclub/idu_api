@@ -495,7 +495,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
     async def patch_scenario_indicator_value(
         self,
         indicator_value: ScenarioIndicatorValuePatch,
-        scenario_id: int | None,
+        scenario_id: int,
         indicator_value_id: int,
         user: UserDTO,
         kafka_producer: KafkaProducerClient,
@@ -508,7 +508,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
 
     @abc.abstractmethod
     async def delete_scenario_indicator_value_by_id(
-        self, scenario_id: int | None, indicator_value_id: int, user: UserDTO
+        self, scenario_id: int, indicator_value_id: int, user: UserDTO
     ) -> dict:
         """Delete specific project's indicator values by indicator value identifier if you're the project owner."""
 

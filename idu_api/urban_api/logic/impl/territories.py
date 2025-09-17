@@ -29,7 +29,7 @@ from idu_api.urban_api.dto import (
     TerritoryTypeDTO,
     TerritoryWithIndicatorsDTO,
     TerritoryWithNormativesDTO,
-    TerritoryWithoutGeometryDTO,
+    TerritoryWithoutGeometryDTO, SocValueIndicatorValueDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.territories_buffers import get_buffers_by_territory_id_from_db
 from idu_api.urban_api.logic.impl.helpers.territories_buildings import (
@@ -48,7 +48,7 @@ from idu_api.urban_api.logic.impl.helpers.territories_hexagons import (
 from idu_api.urban_api.logic.impl.helpers.territories_indicators import (
     get_indicator_values_by_parent_id_from_db,
     get_indicator_values_by_territory_id_from_db,
-    get_indicators_by_territory_id_from_db,
+    get_indicators_by_territory_id_from_db, get_soc_values_indicator_values_by_territory_id_from_db,
 )
 from idu_api.urban_api.logic.impl.helpers.territories_normatives import (
     add_normatives_to_territory_to_db,
@@ -536,4 +536,17 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 buffer_type_id,
                 physical_object_type_id,
                 service_type_id,
+            )
+
+    async def get_soc_values_indicator_values_by_territory_id(
+        self,
+        territory_id: int,
+        year: int | None,
+        last_only: bool,
+        include_child_territories: bool,
+        cities_only: bool,
+    ) -> list[SocValueIndicatorValueDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            return await get_soc_values_indicator_values_by_territory_id_from_db(
+                conn, territory_id, year, last_only, include_child_territories, cities_only
             )

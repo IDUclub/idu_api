@@ -337,7 +337,10 @@ async def get_physical_object_types_hierarchy(
         try:
             ids = {int(type_id.strip()) for type_id in physical_object_types_ids.split(",")}
         except ValueError as exc:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пожалуйста, укажите идентификаторы в правильном формате, разделив их запятой.",
+            ) from exc
 
     hierarchy = await physical_object_types_service.get_physical_object_types_hierarchy(ids)
 

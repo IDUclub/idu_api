@@ -27,9 +27,9 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a REGIONAL scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "regional", "forbidden", "not_found"],
 )
@@ -73,9 +73,9 @@ async def test_get_buffers_by_scenario_id(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional scenario", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном сценарии", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
@@ -120,9 +120,9 @@ async def test_get_context_buffers(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
-        (409, "has already been edited or deleted for the scenario", None, False),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
+        (409, "уже изменен или удален для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
@@ -183,9 +183,9 @@ async def test_put_scenario_buffer(
     [
         (200, None, None, True),
         (200, None, None, False),
-        (403, "denied", None, True),
-        (404, "not found", 1e9, True),
-        (409, "has already been edited or deleted for the scenario", None, False),
+        (403, "запрещён", None, True),
+        (404, "не найден", 1e9, True),
+        (409, "уже изменен или удален для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )

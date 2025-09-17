@@ -23,7 +23,7 @@ from idu_api.urban_api.schemas import (
     ProjectPost,
     ProjectPut,
     ProjectTerritory,
-    Scenario,
+    Scenario, MinioFile,
 )
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from tests.urban_api.helpers import valid_token
@@ -41,8 +41,8 @@ from tests.urban_api.helpers.utils import assert_response
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -76,9 +76,9 @@ async def test_get_project_by_id(
     "expected_status, error_message, project_id_param, is_regional_param",
     [
         (200, None, None, False),
-        (400, "this method cannot be accessed in a regional project", None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (400, "этот метод недоступен в региональном проекте", None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success", "regional_project", "forbidden", "not_found"],
 )
@@ -118,8 +118,8 @@ async def test_get_project_territory_by_id(
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -161,8 +161,8 @@ async def test_get_scenarios_by_project_id(
     [
         (200, None, False),
         (200, None, True),
-        (400, "Please, choose either regional projects or certain project type", True),
-        (401, "Authentication required to view own projects", False),
+        (400, "Пожалуйста, выберите либо региональные проекты, либо определенный тип проекта", True),
+        (401, "Для просмотра собственных проектов требуется аутентификация", False),
     ],
     ids=["success_common", "success_regional", "bad_request", "unauthorized"],
 )
@@ -216,7 +216,7 @@ async def test_get_projects(
     "expected_status, error_message",
     [
         (200, None),
-        (401, "Authentication required to view own projects"),
+        (401, "Для просмотра собственных проектов требуется аутентификация"),
     ],
     ids=["success", "unauthorized"],
 )
@@ -260,7 +260,7 @@ async def test_get_projects_territories(
         (201, None, None, False),
         (201, None, None, True),
         (403, "not authenticated", None, False),
-        (404, "not found", 1e9, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -306,11 +306,11 @@ async def test_add_project(
     "expected_status, error_message, project_id_param, scenario_id_param, is_regional_project, is_regional_scenario",
     [
         (201, None, None, None, False, True),
-        (400, "this method cannot be accessed in a regional project", None, None, True, True),
-        (400, "this method cannot be accessed in a project scenario", None, None, False, False),
-        (403, "you must be a superuser to create a new base scenario", None, None, True, True),
-        (404, "not found", 1e9, None, False, True),
-        (409, "already exists", None, None, False, True),
+        (400, "этот метод недоступен в региональном проекте", None, None, True, True),
+        (400, "этот метод недоступен в сценарии проекта", None, None, False, False),
+        (403, "вы должны быть суперпользователем, чтобы создать новый базовый сценарий", None, None, True, True),
+        (404, "не найден", 1e9, None, False, True),
+        (409, "уже существует", None, None, False, True),
     ],
     ids=["success", "regional_project", "regional_scenario", "forbidden", "not_found", "conflict"],
 )
@@ -363,8 +363,8 @@ async def test_create_base_scenario(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -407,8 +407,8 @@ async def test_put_project(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -451,8 +451,8 @@ async def test_patch_project(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_authenticated", "not_found"],
 )
@@ -493,8 +493,8 @@ async def test_delete_project(
     "expected_status, error_message",
     [
         (200, None),
-        (400, "Please, choose either regional projects or certain project type"),
-        (401, "Authentication required to view own projects"),
+        (400, "Пожалуйста, выберите либо региональные проекты, либо определенный тип проекта"),
+        (401, "Для просмотра собственных проектов требуется аутентификация"),
     ],
     ids=["success", "bad_request", "unauthorized"],
 )
@@ -545,9 +545,9 @@ async def test_get_projects_main_image_url(
     "expected_status, error_message, file_type, project_id_param",
     [
         (200, None, "image/jpeg", None),
-        (400, "Uploaded file is not an image", "text/plain", None),
-        (403, "denied", "image/jpeg", None),
-        (404, "not found", "image/jpeg", 1e9),
+        (400, "Загруженный файл не является изображением", "text/plain", None),
+        (403, "запрещён", "image/jpeg", None),
+        (404, "не найден", "image/jpeg", 1e9),
     ],
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
@@ -589,9 +589,9 @@ async def test_upload_project_main_image(
     "expected_status, error_message, file_type, project_id_param",
     [
         (201, None, "image/jpeg", None),
-        (400, "Uploaded file is not an image", "text/plain", None),
-        (403, "denied", "image/jpeg", None),
-        (404, "not found", "image/jpeg", 1e9),
+        (400, "Загруженный файл не является изображением", "text/plain", None),
+        (403, "запрещён", "image/jpeg", None),
+        (404, "не найден", "image/jpeg", 1e9),
     ],
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
@@ -633,9 +633,9 @@ async def test_upload_gallery_image(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
-        (404, "not found", None),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
+        (404, "не найден", None),
     ],
     ids=["success", "forbidden", "not_found_project", "not_found_image"],
 )
@@ -679,8 +679,8 @@ async def test_set_project_main_image(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -717,9 +717,9 @@ async def test_get_project_gallery_images_urls(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
-        (404, "not found", None),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
+        (404, "не найден", None),
     ],
     ids=["success", "forbidden", "not_found_project", "not_found_image"],
 )
@@ -763,8 +763,8 @@ async def test_delete_project_gallery_image(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -803,8 +803,8 @@ async def test_get_full_project_image(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -843,8 +843,8 @@ async def test_get_preview_project_image(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -883,8 +883,8 @@ async def test_get_full_project_image_url(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -923,9 +923,9 @@ async def test_get_preview_project_image_url(
     "expected_status, error_message, file_type, project_id_param",
     [
         (200, None, "image/jpeg", None),
-        (400, "Uploaded file is not an image", "text/plain", None),
-        (403, "denied", "image/jpeg", None),
-        (404, "not found", "image/jpeg", 1e9),
+        (400, "Загруженный файл не является изображением", "text/plain", None),
+        (403, "запрещён", "image/jpeg", None),
+        (404, "не найден", "image/jpeg", 1e9),
     ],
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
@@ -967,8 +967,8 @@ async def test_upload_project_logo(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -1003,8 +1003,8 @@ async def test_get_project_logo_url(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -1036,8 +1036,8 @@ async def test_delete_project_logo(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -1063,9 +1063,9 @@ async def test_get_project_phase_documents_urls(
 
     # Assert
     if expected_status == 200:
-        assert_response(response, expected_status, str, error_message, result_type="list")
+        assert_response(response, expected_status, MinioFile, error_message, result_type="list")
     else:
-        assert_response(response, expected_status, str, error_message)
+        assert_response(response, expected_status, MinioFile, error_message)
 
 
 @pytest.mark.asyncio
@@ -1073,8 +1073,8 @@ async def test_get_project_phase_documents_urls(
     "expected_status, error_message, project_id_param",
     [
         (201, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found"],
 )
@@ -1107,9 +1107,9 @@ async def test_upload_phase_document(
 
     # Assert
     if expected_status == 201:
-        assert isinstance(response.json(), str), "Response should be a string."
+        assert_response(response, expected_status, MinioFile, error_message)
     else:
-        assert_response(response, expected_status, ..., error_message)
+        assert_response(response, expected_status, MinioFile, error_message)
 
 
 @pytest.mark.asyncio
@@ -1117,9 +1117,9 @@ async def test_upload_phase_document(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
-        (404, "not found", None),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
+        (404, "не найден", None),
     ],
     ids=["success", "forbidden", "not_found_project", "not_found_file"],
 )
@@ -1149,10 +1149,10 @@ async def test_rename_phase_document(
 
     # Assert
     if expected_status == 200:
-        assert isinstance(response.json(), str), "Response should be a string."
-        assert params["new_key"] in response.json(), "File was not renamed."
+        assert_response(response, expected_status, MinioFile, error_message)
+        assert params["new_key"] == response.json()["filename"], "File was not renamed."
     else:
-        assert_response(response, expected_status, ..., error_message)
+        assert_response(response, expected_status, MinioFile, error_message)
 
 
 @pytest.mark.asyncio
@@ -1160,8 +1160,8 @@ async def test_rename_phase_document(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "forbidden", "not_found_project"],
 )
@@ -1198,8 +1198,8 @@ async def test_delete_project_phase_document(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_authenticated", "not_found"],
 )
@@ -1231,8 +1231,8 @@ async def test_get_project_phases(
     "expected_status, error_message, project_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_authenticated", "not_found"],
 )

@@ -71,7 +71,7 @@ async def get_territory_by_parent_id(
     if not get_all_levels and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including all levels",
+            detail="Вы можете использовать параметр cities_only только при включении всех уровней.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -150,7 +150,7 @@ async def get_territory_without_geometry_by_parent_id(
     if not get_all_levels and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including all levels",
+            detail="Вы можете использовать параметр cities_only только при включении всех уровней.",
         )
 
     order_by_value = order_by.value if order_by is not None else None

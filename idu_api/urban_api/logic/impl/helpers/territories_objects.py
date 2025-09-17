@@ -9,8 +9,8 @@ from sqlalchemy import func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import target_city_types_dict, territories_data, territory_types_dict
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import PageDTO, TerritoryDTO, TerritoryWithoutGeometryDTO
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
     SRID,
@@ -94,25 +94,6 @@ async def get_territory_by_id(conn: AsyncConnection, territory_id: int) -> Terri
 async def add_territory_to_db(conn: AsyncConnection, territory: TerritoryPost) -> TerritoryDTO:
     """Create territory object."""
 
-    if territory.parent_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": territory.parent_id}):
-            raise EntityNotFoundById(territory.parent_id, "parent territory")
-
-    if territory.admin_center_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": territory.admin_center_id}):
-            raise EntityNotFoundById(territory.admin_center_id, "admin center")
-
-    if territory.target_city_type_id is not None:
-        if not await check_existence(
-            conn, target_city_types_dict, conditions={"target_city_type_id": territory.target_city_type_id}
-        ):
-            raise EntityNotFoundById(territory.target_city_type_id, "target city type")
-
-    if not await check_existence(
-        conn, territory_types_dict, conditions={"territory_type_id": territory.territory_type_id}
-    ):
-        raise EntityNotFoundById(territory.territory_type_id, "territory type")
-
     values = extract_values_from_model(territory)
     statement = insert(territories_data).values(**values).returning(territories_data.c.territory_id)
     territory_id = (await conn.execute(statement)).scalar_one()
@@ -131,25 +112,6 @@ async def put_territory_to_db(
     if not await check_existence(conn, territories_data, conditions={"territory_id": territory_id}):
         raise EntityNotFoundById(territory_id, "territory")
 
-    if territory.parent_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": territory.parent_id}):
-            raise EntityNotFoundById(territory.parent_id, "parent territory")
-
-    if territory.admin_center_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": territory.admin_center_id}):
-            raise EntityNotFoundById(territory.admin_center_id, "admin center")
-
-    if territory.target_city_type_id is not None:
-        if not await check_existence(
-            conn, target_city_types_dict, conditions={"target_city_type_id": territory.target_city_type_id}
-        ):
-            raise EntityNotFoundById(territory.target_city_type_id, "target city type")
-
-    if not await check_existence(
-        conn, territory_types_dict, conditions={"territory_type_id": territory.territory_type_id}
-    ):
-        raise EntityNotFoundById(territory.territory_type_id, "territory type")
-
     values = extract_values_from_model(territory, to_update=True)
     statement = update(territories_data).where(territories_data.c.territory_id == territory_id).values(**values)
     await conn.execute(statement)
@@ -167,25 +129,6 @@ async def patch_territory_to_db(
 
     if not await check_existence(conn, territories_data, conditions={"territory_id": territory_id}):
         raise EntityNotFoundById(territory_id, "territory")
-
-    if territory.parent_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": territory.parent_id}):
-            raise EntityNotFoundById(territory.parent_id, "parent territory")
-
-    if territory.admin_center_id is not None:
-        if not await check_existence(conn, territories_data, conditions={"territory_id": territory.admin_center_id}):
-            raise EntityNotFoundById(territory.admin_center_id, "admin center")
-
-    if territory.target_city_type_id is not None:
-        if not await check_existence(
-            conn, target_city_types_dict, conditions={"target_city_type_id": territory.target_city_type_id}
-        ):
-            raise EntityNotFoundById(territory.target_city_type_id, "target city type")
-
-    if not await check_existence(
-        conn, territory_types_dict, conditions={"territory_type_id": territory.territory_type_id}
-    ):
-        raise EntityNotFoundById(territory.territory_type_id, "territory type")
 
     values = extract_values_from_model(territory, exclude_unset=True, to_update=True)
     statement = update(territories_data).where(territories_data.c.territory_id == territory_id).values(**values)

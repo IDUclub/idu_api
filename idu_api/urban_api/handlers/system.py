@@ -13,7 +13,7 @@ from fastapi.responses import StreamingResponse
 from geojson_pydantic import Feature
 from starlette import status
 
-from idu_api.urban_api.exceptions.base import IduApiError
+from idu_api.common.exceptions import IduApiError
 from idu_api.urban_api.logic.system import SystemService
 from idu_api.urban_api.schemas import PingResponse
 from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, GeoJSONResponse

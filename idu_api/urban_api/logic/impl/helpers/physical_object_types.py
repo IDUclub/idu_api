@@ -1,6 +1,7 @@
 """Physical objects types internal logic is defined here."""
 
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -10,13 +11,13 @@ from idu_api.common.db.entities import (
     service_types_dict,
     urban_functions_dict,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById
 from idu_api.urban_api.dto import (
     PhysicalObjectFunctionDTO,
     PhysicalObjectTypeDTO,
     PhysicalObjectTypesHierarchyDTO,
     ServiceTypeDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.utils import build_recursive_query, check_existence
 from idu_api.urban_api.schemas import (
     PhysicalObjectFunctionPatch,
@@ -31,7 +32,7 @@ from idu_api.urban_api.utils.query_filters import EqFilter, ILikeFilter, apply_f
 async def get_physical_object_types_from_db(
     conn: AsyncConnection,
     physical_object_function_id: int | None,
-    name: str | None = None,
+    name: str | None,
 ) -> list[PhysicalObjectTypeDTO]:
     """Get all physical object type objects."""
 
@@ -58,7 +59,7 @@ async def get_physical_object_types_from_db(
 
 async def get_physical_object_type_by_id_from_db(
     conn: AsyncConnection, physical_object_type_id: int
-) -> list[PhysicalObjectTypeDTO]:
+) -> PhysicalObjectTypeDTO:
     """Get physical object type by its identifier."""
 
     statement = (
@@ -86,16 +87,6 @@ async def add_physical_object_type_to_db(
 ) -> PhysicalObjectTypeDTO:
     """Create physical object type object."""
 
-    if not await check_existence(
-        conn,
-        physical_object_functions_dict,
-        conditions={"physical_object_function_id": physical_object_type.physical_object_function_id},
-    ):
-        raise EntityNotFoundById(physical_object_type.physical_object_function_id, "physical object function")
-
-    if await check_existence(conn, physical_object_types_dict, conditions={"name": physical_object_type.name}):
-        raise EntityAlreadyExists("physical object type", physical_object_type.name)
-
     statement = (
         insert(physical_object_types_dict)
         .values(**physical_object_type.model_dump())
@@ -120,23 +111,6 @@ async def patch_physical_object_type_to_db(
     ):
         raise EntityNotFoundById(physical_object_type_id, "physical object type")
 
-    if physical_object_type.physical_object_function_id is not None:
-        if not await check_existence(
-            conn,
-            physical_object_functions_dict,
-            conditions={"physical_object_function_id": physical_object_type.physical_object_function_id},
-        ):
-            raise EntityNotFoundById(physical_object_type.physical_object_function_id, "physical object function")
-
-    if physical_object_type.name is not None:
-        if await check_existence(
-            conn,
-            physical_object_types_dict,
-            conditions={"name": physical_object_type.name},
-            not_conditions={"physical_object_type_id": physical_object_type_id},
-        ):
-            raise EntityAlreadyExists("physical object type", physical_object_type.name)
-
     statement = (
         update(physical_object_types_dict)
         .where(physical_object_types_dict.c.physical_object_type_id == physical_object_type_id)
@@ -153,7 +127,9 @@ async def delete_physical_object_type_from_db(conn: AsyncConnection, physical_ob
     """Delete physical object type object by id."""
 
     if not await check_existence(
-        conn, physical_object_types_dict, conditions={"physical_object_type_id": physical_object_type_id}
+        conn,
+        physical_object_types_dict,
+        conditions={"physical_object_type_id": physical_object_type_id},
     ):
         raise EntityNotFoundById(physical_object_type_id, "physical object type")
 
@@ -176,7 +152,9 @@ async def get_physical_object_functions_by_parent_id_from_db(
 
     if parent_id is not None:
         if not await check_existence(
-            conn, physical_object_functions_dict, conditions={"physical_object_function_id": parent_id}
+            conn,
+            physical_object_functions_dict,
+            conditions={"physical_object_function_id": parent_id},
         ):
             raise EntityNotFoundById(parent_id, "physical object function")
 
@@ -220,7 +198,7 @@ async def get_physical_object_functions_by_parent_id_from_db(
 
 async def get_physical_object_function_by_id_from_db(
     conn: AsyncConnection, physical_object_function_id: int
-) -> list[PhysicalObjectFunctionDTO]:
+) -> PhysicalObjectFunctionDTO:
     """Get physical object function by its identifier."""
 
     physical_object_functions_parents = physical_object_functions_dict.alias("physical_object_functions_parents")
@@ -257,9 +235,6 @@ async def add_physical_object_function_to_db(
         ):
             raise EntityNotFoundById(physical_object_function.parent_id, "physical object function")
 
-    if await check_existence(conn, physical_object_functions_dict, conditions={"name": physical_object_function.name}):
-        raise EntityAlreadyExists("physical object function", physical_object_function.name)
-
     statement = (
         insert(physical_object_functions_dict)
         .values(**physical_object_function.model_dump())
@@ -286,23 +261,15 @@ async def put_physical_object_function_to_db(
         ):
             raise EntityNotFoundById(physical_object_function.parent_id, "physical object function")
 
-    if await check_existence(
-        conn,
-        physical_object_functions_dict,
-        conditions={"name": physical_object_function.name},
-    ):
-        statement = (
-            update(physical_object_functions_dict)
-            .where(physical_object_functions_dict.c.name == physical_object_function.name)
-            .values(**physical_object_function.model_dump())
-            .returning(physical_object_functions_dict.c.physical_object_function_id)
+    statement = (
+        insert(physical_object_functions_dict)
+        .values(**physical_object_function.model_dump())
+        .on_conflict_do_update(
+            index_elements=["name"],
+            set_=physical_object_function.model_dump(),
         )
-    else:
-        statement = (
-            insert(physical_object_functions_dict)
-            .values(**physical_object_function.model_dump())
-            .returning(physical_object_functions_dict.c.physical_object_function_id)
-        )
+        .returning(physical_object_functions_dict.c.physical_object_function_id)
+    )
 
     physical_object_function_id = (await conn.execute(statement)).scalar_one()
     await conn.commit()
@@ -322,9 +289,7 @@ async def patch_physical_object_function_to_db(
     ):
         raise EntityNotFoundById(physical_object_function_id, "physical object function")
 
-    values_to_update = physical_object_function.model_dump(exclude_unset=True)
-
-    if "parent_id" in values_to_update and values_to_update["parent_id"] is not None:
+    if physical_object_function.parent_id is not None:
         if not await check_existence(
             conn,
             physical_object_functions_dict,
@@ -332,15 +297,7 @@ async def patch_physical_object_function_to_db(
         ):
             raise EntityNotFoundById(physical_object_function.parent_id, "physical object function")
 
-    if "name" in values_to_update:
-        if await check_existence(
-            conn,
-            physical_object_functions_dict,
-            conditions={"name": physical_object_function.name},
-            not_conditions={"physical_object_function_id": physical_object_function_id},
-        ):
-            raise EntityAlreadyExists("physical object function", physical_object_function.name)
-
+    values_to_update = physical_object_function.model_dump(exclude_unset=True)
     statement = (
         update(physical_object_functions_dict)
         .where(physical_object_functions_dict.c.physical_object_function_id == physical_object_function_id)
@@ -357,7 +314,9 @@ async def delete_physical_object_function_from_db(conn: AsyncConnection, physica
     """Delete physical object function object by id."""
 
     if not await check_existence(
-        conn, physical_object_functions_dict, conditions={"physical_object_function_id": physical_object_function_id}
+        conn,
+        physical_object_functions_dict,
+        conditions={"physical_object_function_id": physical_object_function_id},
     ):
         raise EntityNotFoundById(physical_object_function_id, "physical object function")
 
@@ -431,11 +390,13 @@ async def get_physical_object_types_hierarchy_from_db(
 async def get_service_types_by_physical_object_type_id_from_db(
     conn: AsyncConnection,
     physical_object_type_id: int | None,
-) -> list[PhysicalObjectTypeDTO]:
+) -> list[ServiceTypeDTO]:
     """Get all available service types by physical object type identifier."""
 
     if not await check_existence(
-        conn, physical_object_types_dict, conditions={"physical_object_type_id": physical_object_type_id}
+        conn,
+        physical_object_types_dict,
+        conditions={"physical_object_type_id": physical_object_type_id},
     ):
         raise EntityNotFoundById(physical_object_type_id, "physical object type")
 

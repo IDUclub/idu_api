@@ -369,7 +369,7 @@ async def get_social_value_indicator_values(
     - **soc_value_id** (int, Path): Social group identifier.
     - **territory_id** (int, Query): Filter results by territory.
     - **year** (int, Query): Filter results by specified year.
-    - **last_only** (int, Query): To get only the last indicator value for each social group's value.
+    - **last_only** (int, Query): To get only the last indicator value for each social group's value (default: false).
 
     ### Returns:
     - **list[SocValueIndicatorValue]**: A list of indicator values for given social value.
@@ -383,7 +383,7 @@ async def get_social_value_indicator_values(
     if last_only and year is not None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail="Please, choose either specific year or last_only",
+            detail="Пожалуйста, выберите либо конкретный год, либо last_only.",
         )
 
     soc_group_indicators = await soc_groups_service.get_social_value_indicator_values(

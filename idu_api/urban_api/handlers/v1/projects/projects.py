@@ -260,13 +260,13 @@ async def get_projects(
     if project_type is not None and is_regional:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either regional projects or certain project type",
+            detail="Пожалуйста, выберите либо региональные проекты, либо определенный тип проекта.",
         )
 
     if only_own and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to view own projects",
+            detail="Для просмотра собственных проектов требуется аутентификация.",
         )
 
     project_type_value = project_type.value if project_type is not None else None
@@ -332,7 +332,7 @@ async def get_projects_territories(
     if only_own and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to view own projects",
+            detail="Для просмотра собственных проектов требуется аутентификация.",
         )
 
     project_type_value = project_type.value if project_type is not None else None
@@ -420,7 +420,7 @@ async def create_base_scenario(
     if not user.is_superuser:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be a superuser to create a new base scenario.",
+            detail="Вы должны быть суперпользователем, чтобы создать новый базовый сценарий.",
         )
 
     try:
@@ -600,13 +600,13 @@ async def get_projects_main_image_url(
     if project_type is not None and is_regional:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either regional projects or certain project type.",
+            detail="Пожалуйста, выберите либо региональные проекты, либо определенный тип проекта.",
         )
 
     if only_own and user is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required to view own projects",
+            detail="Для просмотра собственных проектов требуется аутентификация.",
         )
 
     project_type_value = project_type.value if project_type is not None else None
@@ -674,7 +674,9 @@ async def upload_project_main_image(
     logger: BoundLogger = request.app.state.logger
 
     if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is not an image")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Загруженный файл не является изображением."
+        )
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -727,7 +729,9 @@ async def upload_project_gallery_image(
     logger: BoundLogger = request.app.state.logger
 
     if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is not an image")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Загруженный файл не является изображением."
+        )
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1095,7 +1099,9 @@ async def upload_project_logo(
     logger: BoundLogger = request.app.state.logger
 
     if not file.content_type.startswith("image/"):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded file is not an image")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Загруженный файл не является изображением."
+        )
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1164,7 +1170,7 @@ async def get_project_phase_documents_urls(
     - **phase** (ProjectPhase, Query): One of the project phase.
 
     ### Returns:
-    - **list[str]**: List of presigned URLs to all project's documents for given phase.
+    - **list[MinioFile]**: List of presigned URLs to all project's documents for given phase (with display name).
 
     ### Errors:
     - **403 Forbidden**: If the user does not have access rights.

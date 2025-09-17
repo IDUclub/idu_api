@@ -220,7 +220,7 @@ async def get_indicators_by_parent(
     if parent_id is not None and parent_name is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either parent_id or parent_name",
+            detail="Пожалуйста, выберите либо parent_id, либо parent_name.",
         )
 
     indicators = await indicators_service.get_indicators_by_parent(

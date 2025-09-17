@@ -4,7 +4,7 @@ Exceptions connected with image and Pillow library are defined here.
 
 from fastapi import status
 
-from idu_api.urban_api.exceptions import IduApiError
+from idu_api.common.exceptions import IduApiError
 
 
 class InvalidImageError(IduApiError):
@@ -20,7 +20,7 @@ class InvalidImageError(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"Invalid image for project with id = {self.project_id} was uploaded."
+        return f"Было загружено неверное изображение для проекта с идентификатором = {self.project_id}."
 
     def get_status_code(self) -> int:
         """
@@ -43,7 +43,7 @@ class FileNotFound(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"File `{self.filename}` was not found for project with id = {self.project_id}."
+        return f"Файл `{self.filename}` не найден для проекта с идентификатором = {self.project_id}."
 
     def get_status_code(self) -> int:
         """

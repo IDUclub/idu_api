@@ -6,7 +6,8 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from otteroad import KafkaProducerClient
 from otteroad.models import IndicatorValuesUpdated
-from sqlalchemy.sql import delete, insert, select, update
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.sql import delete, select, update
 
 from idu_api.common.db.entities import (
     indicators_dict,
@@ -18,8 +19,8 @@ from idu_api.common.db.entities import (
     territories_data,
     territory_indicators_data,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import IndicatorDTO, IndicatorsGroupDTO, IndicatorValueDTO, MeasurementUnitDTO
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.indicators import (
     add_indicator_to_db,
     add_indicator_value_to_db,
@@ -88,11 +89,7 @@ async def test_add_measurement_unit_to_db(mock_conn: MockConnection, measurement
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.indicators.check_existence") as mock_check_existence:
-        with pytest.raises(EntityAlreadyExists):
-            await add_measurement_unit_to_db(mock_conn, measurement_unit_post_req)
-        mock_check_existence.return_value = False
-        result = await add_measurement_unit_to_db(mock_conn, measurement_unit_post_req)
+    result = await add_measurement_unit_to_db(mock_conn, measurement_unit_post_req)
 
     # Assert
     assert isinstance(result, MeasurementUnitDTO), "Result should be a MeasurementUnitDTO."
@@ -181,11 +178,7 @@ async def test_add_indicators_group_to_db(mock_conn: MockConnection, indicators_
     )
 
     # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.indicators.check_existence") as mock_check_existence:
-        with pytest.raises(EntityAlreadyExists):
-            await add_indicators_group_to_db(mock_conn, indicators_group_post_req)
-        mock_check_existence.return_value = False
-        result = await add_indicators_group_to_db(mock_conn, indicators_group_post_req)
+    result = await add_indicators_group_to_db(mock_conn, indicators_group_post_req)
 
     # Assert
     assert isinstance(result, IndicatorsGroupDTO), "Result should be an IndicatorsGroupDTO."
@@ -400,67 +393,12 @@ async def test_add_indicator_to_db(mock_conn: MockConnection, indicators_post_re
     """Test the add_indicator_to_db function."""
 
     # Arrange
-    async def check_parent_indicator(conn, table, conditions):
-        if table == indicators_dict and conditions == {"indicator_id": indicators_post_req.parent_id}:
-            return False
-        return True
-
-    async def check_indicator_name(conn, table, conditions):
-        if table == indicators_dict and conditions == {"name_full": indicators_post_req.name_full}:
-            return False
-        return True
-
-    async def check_measurement_unit(conn, table, conditions):
-        if table == measurement_units_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_physical_object_type(conn, table, conditions):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
     statement = (
         insert(indicators_dict).values(**indicators_post_req.model_dump()).returning(indicators_dict.c.indicator_id)
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_indicator_to_db(mock_conn, indicators_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_parent_indicator),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_to_db(mock_conn, indicators_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_measurement_unit),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_to_db(mock_conn, indicators_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_to_db(mock_conn, indicators_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_to_db(mock_conn, indicators_post_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator_name),
-    ):
-        result = await add_indicator_to_db(mock_conn, indicators_post_req)
+    result = await add_indicator_to_db(mock_conn, indicators_post_req)
 
     # Assert
     assert isinstance(result, IndicatorDTO), "Result should be an IndicatorDTO."
@@ -474,79 +412,21 @@ async def test_put_indicator_to_db(mock_conn: MockConnection, indicators_put_req
     """Test the put_indicator_to_db function."""
 
     # Arrange
-    async def check_parent_indicator(conn, table, conditions):
-        if table == indicators_dict and conditions == {"indicator_id": indicators_put_req.parent_id}:
-            return False
-        return True
-
-    async def check_indicator_name(conn, table, conditions):
-        if table == indicators_dict and conditions == {"name_full": indicators_put_req.name_full}:
-            return False
-        return True
-
-    async def check_measurement_unit(conn, table, conditions):
-        if table == measurement_units_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_physical_object_type(conn, table, conditions):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
-    statement_insert = (
-        insert(indicators_dict).values(**indicators_put_req.model_dump()).returning(indicators_dict.c.indicator_id)
-    )
-    statement_update = (
-        update(indicators_dict)
-        .where(indicators_dict.c.name_full == indicators_put_req.name_full)
-        .values(**indicators_put_req.model_dump(), updated_at=datetime.now(timezone.utc))
+    statement = (
+        insert(indicators_dict)
+        .values(**indicators_put_req.model_dump())
+        .on_conflict_do_update(index_elements=["name_full"], set_=indicators_put_req.model_dump())
         .returning(indicators_dict.c.indicator_id)
     )
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_parent_indicator),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_indicator_to_db(mock_conn, indicators_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_measurement_unit),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_indicator_to_db(mock_conn, indicators_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_indicator_to_db(mock_conn, indicators_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_indicator_to_db(mock_conn, indicators_put_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator_name),
-    ):
-        await put_indicator_to_db(mock_conn, indicators_put_req)
     result = await put_indicator_to_db(mock_conn, indicators_put_req)
 
     # Assert
     assert isinstance(result, IndicatorDTO), "Result should be an IndicatorDTO."
     assert isinstance(Indicator.from_dto(result), Indicator), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_insert))
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.commit_mock.assert_called_once()
 
 
 @pytest.mark.asyncio
@@ -555,37 +435,6 @@ async def test_patch_indicator_to_db(mock_conn: MockConnection, indicators_patch
 
     # Arrange
     indicator_id = 1
-
-    async def check_indicator(conn, table, conditions, not_conditions=None):
-        if table == indicators_dict and conditions == {"indicator_id": indicator_id}:
-            return False
-        return True
-
-    async def check_parent_indicator(conn, table, conditions, not_conditions=None):
-        if table == indicators_dict and conditions == {"indicator_id": indicators_patch_req.parent_id}:
-            return False
-        return True
-
-    async def check_indicator_name(conn, table, conditions, not_conditions=None):
-        if table == indicators_dict and conditions == {"name_full": indicators_patch_req.name_full}:
-            return False
-        return True
-
-    async def check_measurement_unit(conn, table, conditions, not_conditions=None):
-        if table == measurement_units_dict:
-            return False
-        return True
-
-    async def check_service_type(conn, table, conditions):
-        if table == service_types_dict:
-            return False
-        return True
-
-    async def check_physical_object_type(conn, table, conditions):
-        if table == physical_object_types_dict:
-            return False
-        return True
-
     statement = (
         update(indicators_dict)
         .where(indicators_dict.c.indicator_id == indicator_id)
@@ -593,43 +442,7 @@ async def test_patch_indicator_to_db(mock_conn: MockConnection, indicators_patch
     )
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_parent_indicator),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_measurement_unit),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_service_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_physical_object_type),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator_name),
-    ):
-        result = await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
+    result = await patch_indicator_to_db(mock_conn, indicator_id, indicators_patch_req)
 
     # Assert
     assert isinstance(result, IndicatorDTO), "Result should be an IndicatorDTO."
@@ -775,21 +588,6 @@ async def test_add_indicator_value_to_db(mock_conn: MockConnection, indicator_va
     """Test the add_indicator_value_to_db function."""
 
     # Arrange
-    async def check_indicator(conn, table, conditions):
-        if table == indicators_dict:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_indicator_value(conn, table, conditions):
-        if table == territory_indicators_data:
-            return False
-        return True
-
     statement = (
         insert(territory_indicators_data)
         .values(**indicator_value_post_req.model_dump())
@@ -799,25 +597,7 @@ async def test_add_indicator_value_to_db(mock_conn: MockConnection, indicator_va
     event = IndicatorValuesUpdated(territory_id=1, indicator_id=1, indicator_value_id=1)
 
     # Act
-    with pytest.raises(EntityAlreadyExists):
-        await add_indicator_value_to_db(mock_conn, indicator_value_post_req, kafka_producer)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_value_to_db(mock_conn, indicator_value_post_req, kafka_producer)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_value_to_db(mock_conn, indicator_value_post_req, kafka_producer)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator_value),
-    ):
-        result = await add_indicator_value_to_db(mock_conn, indicator_value_post_req, kafka_producer)
+    result = await add_indicator_value_to_db(mock_conn, indicator_value_post_req, kafka_producer)
 
     # Assert
     assert isinstance(result, IndicatorValueDTO), "Result should be an IndicatorValueDTO."
@@ -832,32 +612,19 @@ async def test_put_indicator_value_to_db(mock_conn: MockConnection, indicator_va
     """Test the put_indicator_value_to_db function."""
 
     # Arrange
-    async def check_indicator(conn, table, conditions):
-        if table == indicators_dict:
-            return False
-        return True
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data:
-            return False
-        return True
-
-    async def check_indicator_value(conn, table, conditions):
-        if table == territory_indicators_data:
-            return False
-        return True
-
-    statement_insert = insert(territory_indicators_data).values(**indicator_value_put_req.model_dump())
-    statement_update = (
-        update(territory_indicators_data)
-        .values(value=indicator_value_put_req.value, updated_at=datetime.now(timezone.utc))
-        .where(
-            territory_indicators_data.c.indicator_id == indicator_value_put_req.indicator_id,
-            territory_indicators_data.c.territory_id == indicator_value_put_req.territory_id,
-            territory_indicators_data.c.date_type == indicator_value_put_req.date_type,
-            territory_indicators_data.c.date_value == indicator_value_put_req.date_value,
-            territory_indicators_data.c.value_type == indicator_value_put_req.value_type,
-            territory_indicators_data.c.information_source == indicator_value_put_req.information_source,
+    statement = (
+        insert(territory_indicators_data)
+        .values(**indicator_value_put_req.model_dump())
+        .on_conflict_do_update(
+            index_elements=[
+                "indicator_id",
+                "territory_id",
+                "date_type",
+                "date_value",
+                "value_type",
+                "information_source",
+            ],
+            set_={"value": indicator_value_put_req.value},
         )
         .returning(territory_indicators_data.c.indicator_value_id)
     )
@@ -865,31 +632,13 @@ async def test_put_indicator_value_to_db(mock_conn: MockConnection, indicator_va
     event = IndicatorValuesUpdated(territory_id=1, indicator_id=1, indicator_value_id=1)
 
     # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_value_to_db(mock_conn, indicator_value_put_req, kafka_producer)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await add_indicator_value_to_db(mock_conn, indicator_value_put_req, kafka_producer)
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.indicators.check_existence",
-        new=AsyncMock(side_effect=check_indicator_value),
-    ):
-        await put_indicator_value_to_db(mock_conn, indicator_value_put_req, kafka_producer)
     result = await put_indicator_value_to_db(mock_conn, indicator_value_put_req, kafka_producer)
 
     # Assert
     assert isinstance(result, IndicatorValueDTO), "Result should be an IndicatorValueDTO."
     assert isinstance(IndicatorValue.from_dto(result), IndicatorValue), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_insert))
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.commit_mock.assert_called_once()
     kafka_producer.send.assert_any_call(event)
 
 

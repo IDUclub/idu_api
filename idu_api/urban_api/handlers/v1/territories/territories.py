@@ -197,7 +197,7 @@ async def get_territories_by_parent_id(
     if not get_all_levels and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including all levels",
+            detail="Вы можете использовать параметр cities_only только при включении всех уровней.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -267,7 +267,7 @@ async def get_all_territories_by_parent_id(
     if not get_all_levels and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including all levels",
+            detail="Вы можете использовать параметр cities_only только при включении всех уровней.",
         )
 
     territories = await territories_service.get_territories_by_parent_id(
@@ -339,7 +339,7 @@ async def get_territories_without_geometry_by_parent_id(
     if not get_all_levels and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including all levels",
+            detail="Вы можете использовать параметр cities_only только при включении всех уровней.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -415,7 +415,7 @@ async def get_all_territories_without_geometry_by_parent_id(
     if not get_all_levels and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including all levels",
+            detail="Вы можете использовать параметр cities_only только при включении всех уровней.",
         )
 
     order_by_value = order_by.value if order_by is not None else None
@@ -511,7 +511,7 @@ async def get_common_territory(
     territory = await territories_service.get_common_territory_for_geometry(shapely_geom)
 
     if territory is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No common territory exists in the database")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="В базе данных нет общей территории.")
 
     return Territory.from_dto(territory)
 
@@ -581,7 +581,10 @@ async def get_territories_by_ids(
     try:
         ids = list({int(tid.strip()) for tid in territories_ids.split(",")})
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Пожалуйста, укажите идентификаторы в правильном формате, разделив их запятой.",
+        ) from e
 
     territories = await territories_service.get_territories_by_ids(ids)
 

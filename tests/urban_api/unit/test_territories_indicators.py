@@ -1,7 +1,7 @@
 """Unit tests for territory-related indicators objects are defined here."""
 
 from datetime import date
-from unittest.mock import patch
+from unittest.mock import patch, AsyncMock
 
 import pytest
 from geoalchemy2.functions import ST_AsEWKB
@@ -14,17 +14,17 @@ from idu_api.common.db.entities import (
     physical_object_types_dict,
     service_types_dict,
     territories_data,
-    territory_indicators_data,
+    territory_indicators_data, soc_value_indicators_data, soc_values_dict,
 )
-from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, TerritoryWithIndicatorsDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
+from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, TerritoryWithIndicatorsDTO, SocValueIndicatorValueDTO
 from idu_api.urban_api.logic.impl.helpers.territories_indicators import (
     get_indicator_values_by_parent_id_from_db,
     get_indicator_values_by_territory_id_from_db,
-    get_indicators_by_territory_id_from_db,
+    get_indicators_by_territory_id_from_db, get_soc_values_indicator_values_by_territory_id_from_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import include_child_territories_cte
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators
+from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators, SocValueIndicatorValue
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
@@ -353,3 +353,94 @@ async def test_get_indicator_values_by_parent_id_from_db(mock_conn: MockConnecti
     ), "Couldn't create pydantic model from geojson properties."
     mock_conn.execute_mock.assert_any_call(str(statement))
     mock_conn.execute_mock.assert_any_call(str(last_only_statement))
+
+
+@pytest.mark.asyncio
+async def test_get_soc_values_indicator_values_by_territory_id_from_db(mock_conn: MockConnection):
+    """Test the get_indicator_values_by_territory_id_from_db function."""
+
+    # Arrange
+    territory_id = 1
+
+    async def check_territory(conn, table, conditions):
+        if table == territories_data:
+            return False
+        return True
+
+    select_from = soc_value_indicators_data.join(
+        soc_values_dict,
+        soc_values_dict.c.soc_value_id == soc_value_indicators_data.c.soc_value_id,
+    ).join(territories_data, territories_data.c.territory_id == soc_value_indicators_data.c.territory_id)
+    subquery = (
+        select(
+            soc_value_indicators_data.c.soc_value_id,
+            soc_value_indicators_data.c.territory_id,
+            func.max(soc_value_indicators_data.c.year).label("max_date"),
+        )
+        .group_by(
+            soc_value_indicators_data.c.soc_value_id,
+            soc_value_indicators_data.c.territory_id,
+        )
+        .subquery()
+    )
+    last_only_select_from = select_from.join(
+        subquery,
+        (soc_value_indicators_data.c.soc_value_id == subquery.c.soc_value_id)
+        & (soc_value_indicators_data.c.territory_id == subquery.c.territory_id)
+        & (soc_value_indicators_data.c.year == subquery.c.max_date),
+    )
+    statement = (
+        select(
+            soc_value_indicators_data,
+            soc_values_dict.c.name.label("soc_value_name"),
+            territories_data.c.name.label("territory_name"),
+        )
+        .select_from(select_from)
+        .where(soc_value_indicators_data.c.territory_id == territory_id)
+    )
+    last_only_statement = (
+        select(
+            soc_value_indicators_data,
+            soc_values_dict.c.name.label("soc_value_name"),
+            territories_data.c.name.label("territory_name"),
+        )
+        .select_from(last_only_select_from)
+        .where(soc_value_indicators_data.c.territory_id == territory_id)
+    )
+    params = {"year": date.today().year, "include_child_territories": True, "cities_only": True}
+    territories_cte = include_child_territories_cte(territory_id, cities_only=True)
+    statement_with_filters = (
+        select(
+            soc_value_indicators_data,
+            soc_values_dict.c.name.label("soc_value_name"),
+            territories_data.c.name.label("territory_name"),
+        )
+        .select_from(select_from)
+        .where(
+            soc_value_indicators_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
+            soc_value_indicators_data.c.year == params["year"],
+        )
+    )
+
+    # Act
+    with patch(
+        "idu_api.urban_api.logic.impl.helpers.territories_indicators.check_existence",
+        new=AsyncMock(side_effect=check_territory),
+    ):
+        with pytest.raises(EntityNotFoundById):
+            await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, **params, last_only=False)
+    await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, None, last_only=False, include_child_territories=False, cities_only=False)
+    await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, None, last_only=True, include_child_territories=False, cities_only=False)
+    result = await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, last_only=False, **params)
+
+    # Assert
+    assert isinstance(result, list), "Result should be a list."
+    assert all(
+        isinstance(item, SocValueIndicatorValueDTO) for item in result
+    ), "Each item should be a SocValueIndicatorValueDTO."
+    assert isinstance(
+        SocValueIndicatorValue.from_dto(result[0]), SocValueIndicatorValue
+    ), "Couldn't create pydantic model from DTO."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+    mock_conn.execute_mock.assert_any_call(str(last_only_statement))
+    mock_conn.execute_mock.assert_any_call(str(statement_with_filters))

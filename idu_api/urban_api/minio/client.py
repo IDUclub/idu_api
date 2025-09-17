@@ -9,8 +9,8 @@ import structlog
 from botocore.config import Config
 from botocore.exceptions import EndpointConnectionError
 
+from idu_api.common.exceptions.services.external import ExternalServiceUnavailable
 from idu_api.urban_api.config import UrbanAPIConfig
-from idu_api.urban_api.exceptions.utils.external import ExternalServiceUnavailable
 
 
 class AsyncMinioClient:

@@ -5,7 +5,7 @@ from typing import Any
 import pytest
 
 from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPost, ObjectGeometryPut
-from idu_api.urban_api.schemas.geometries import Geometry
+from idu_api.urban_api.schemas.geometries import Geometry, Point
 
 __all__ = [
     "object_geometry",
@@ -64,7 +64,7 @@ def object_geometries_put_req() -> ObjectGeometryPut:
             type="Polygon",
             coordinates=[[[30.22, 59.86], [30.22, 59.85], [30.25, 59.85], [30.25, 59.86], [30.22, 59.86]]],
         ),
-        centre_point=Geometry(type="Point", coordinates=[40.7128, -74.0060]),
+        centre_point=Point(coordinates=[40.7128, -74.0060]),
         address="Updated Test Address",
         osm_id="1",
     )

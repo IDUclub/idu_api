@@ -45,7 +45,7 @@ async def test_get_buffer_types(urban_api_host: str, buffer_type: dict[str, Any]
     "expected_status, error_message",
     [
         (201, None),
-        (409, "already exists"),
+        (409, "уже существует"),
     ],
     ids=["success", "conflict"],
 )
@@ -90,8 +90,8 @@ async def test_get_all_default_buffer_values(urban_api_host: str, default_buffer
     "expected_status, error_message, type_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "отсутствует в таблице", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
@@ -125,7 +125,7 @@ async def test_add_default_buffer_values(
     "expected_status, error_message, type_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "отсутствует в таблице", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -160,7 +160,7 @@ async def test_put_default_buffer_values(
     [
         (200, None, Geometry(type="Point", coordinates=[30.22, 59.86]), None),
         (200, None, None, None),
-        (404, "not found", None, 1e9),
+        (400, "не удалось найти дефолтный радиус буфера", None, 1e9),
     ],
     ids=["custom_success", "default_success", "not_found"],
 )
@@ -199,7 +199,7 @@ async def test_put_buffer(
     "expected_status, error_message, buffer_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )

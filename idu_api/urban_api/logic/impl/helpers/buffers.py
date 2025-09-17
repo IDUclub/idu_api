@@ -4,7 +4,8 @@ from collections.abc import Callable
 
 from geoalchemy2.functions import ST_AsEWKB
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
-from sqlalchemy import delete, insert, select, update
+from sqlalchemy import delete, select, update
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -19,20 +20,13 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityNotFoundByParams
 from idu_api.urban_api.dto import (
     BufferDTO,
     BufferTypeDTO,
     DefaultBufferValueDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import (
-    EntityAlreadyExists,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-)
-from idu_api.urban_api.logic.impl.helpers.utils import (
-    check_existence,
-    extract_values_from_model,
-)
+from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
     BufferPut,
     BufferTypePost,
@@ -54,9 +48,6 @@ async def get_buffer_types_from_db(conn: AsyncConnection) -> list[BufferTypeDTO]
 
 async def add_buffer_type_to_db(conn: AsyncConnection, buffer_type: BufferTypePost) -> BufferTypeDTO:
     """Create a new buffer type object."""
-
-    if await check_existence(conn, buffer_types_dict, conditions={"name": buffer_type.name}):
-        raise EntityAlreadyExists("buffer type", buffer_type.name)
 
     statement = insert(buffer_types_dict).values(**buffer_type.model_dump()).returning(buffer_types_dict)
     result = (await conn.execute(statement)).mappings().one()
@@ -142,41 +133,6 @@ async def add_default_buffer_value_to_db(
 ) -> DefaultBufferValueDTO:
     """Add a new default buffer value."""
 
-    if not await check_existence(conn, buffer_types_dict, conditions={"buffer_type_id": buffer_value.buffer_type_id}):
-        raise EntityNotFoundById(buffer_value.buffer_type_id, "buffer type")
-
-    if buffer_value.physical_object_type_id is not None:
-        if not await check_existence(
-            conn,
-            physical_object_types_dict,
-            conditions={"physical_object_type_id": buffer_value.physical_object_type_id},
-        ):
-            raise EntityNotFoundById(buffer_value.physical_object_type_id, "physical object type")
-
-    if buffer_value.service_type_id is not None:
-        if not await check_existence(
-            conn,
-            service_types_dict,
-            conditions={"service_type_id": buffer_value.service_type_id},
-        ):
-            raise EntityNotFoundById(buffer_value.service_type_id, "service type")
-
-    if await check_existence(
-        conn,
-        default_buffer_values_dict,
-        conditions={
-            "buffer_type_id": buffer_value.buffer_type_id,
-            "physical_object_type_id": buffer_value.physical_object_type_id,
-            "service_type_id": buffer_value.service_type_id,
-        },
-    ):
-        raise EntityAlreadyExists(
-            "default buffer value",
-            buffer_value.buffer_type_id,
-            buffer_value.physical_object_type_id,
-            buffer_value.service_type_id,
-        )
-
     statement = (
         insert(default_buffer_values_dict)
         .values(**buffer_value.model_dump())
@@ -192,25 +148,6 @@ async def put_default_buffer_value_to_db(
     conn: AsyncConnection, buffer_value: DefaultBufferValuePut
 ) -> DefaultBufferValueDTO:
     """Add or update a default buffer value."""
-
-    if not await check_existence(conn, buffer_types_dict, conditions={"buffer_type_id": buffer_value.buffer_type_id}):
-        raise EntityNotFoundById(buffer_value.buffer_type_id, "buffer type")
-
-    if buffer_value.physical_object_type_id is not None:
-        if not await check_existence(
-            conn,
-            physical_object_types_dict,
-            conditions={"physical_object_type_id": buffer_value.physical_object_type_id},
-        ):
-            raise EntityNotFoundById(buffer_value.physical_object_type_id, "physical object type")
-
-    if buffer_value.service_type_id is not None:
-        if not await check_existence(
-            conn,
-            service_types_dict,
-            conditions={"service_type_id": buffer_value.service_type_id},
-        ):
-            raise EntityNotFoundById(buffer_value.service_type_id, "service type")
 
     if await check_existence(
         conn,
@@ -304,29 +241,24 @@ async def get_buffer_from_db(conn: AsyncConnection, buffer_type_id: int, urban_o
 async def put_buffer_to_db(conn: AsyncConnection, buffer: BufferPut) -> BufferDTO:
     """Create or update a new buffer object."""
 
-    if not await check_existence(conn, buffer_types_dict, conditions={"buffer_type_id": buffer.buffer_type_id}):
-        raise EntityNotFoundById(buffer.buffer_type_id, "buffer type")
-
-    if not await check_existence(conn, urban_objects_data, conditions={"urban_object_id": buffer.urban_object_id}):
-        raise EntityNotFoundById(buffer.urban_object_id, "urban object")
-
     values = extract_values_from_model(buffer, exclude_unset=True, allow_null_geometry=True)
 
-    if await check_existence(
-        conn,
-        buffers_data,
-        conditions={"buffer_type_id": buffer.buffer_type_id, "urban_object_id": buffer.urban_object_id},
-    ):
-        statement = (
-            update(buffers_data)
-            .where(
-                buffers_data.c.buffer_type_id == buffer.buffer_type_id,
-                buffers_data.c.urban_object_id == buffer.urban_object_id,
-            )
-            .values(**values, is_custom=buffer.geometry is not None)
+    statement = (
+        insert(buffers_data)
+        .values(
+            buffer_type_id=values["buffer_type_id"],
+            urban_object_id=values["urban_object_id"],
+            geometry=values["geometry"],
+            is_custom=buffer.geometry is not None,
         )
-    else:
-        statement = insert(buffers_data).values(**values, is_custom=buffer.geometry is not None)
+        .on_conflict_do_update(
+            index_elements=["urban_object_id", "buffer_type_id"],
+            set_={
+                "geometry": values["geometry"],
+                "is_custom": buffer.geometry is not None,
+            },
+        )
+    )
 
     await conn.execute(statement)
     await conn.commit()

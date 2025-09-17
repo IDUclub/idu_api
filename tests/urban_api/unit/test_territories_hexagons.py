@@ -7,13 +7,13 @@ from geoalchemy2.functions import ST_AsEWKB, ST_GeomFromWKB
 from sqlalchemy import delete, insert, select, text
 
 from idu_api.common.db.entities import hexagons_data, territories_data
-from idu_api.urban_api.dto import HexagonDTO
-from idu_api.urban_api.exceptions.logic.common import (
+from idu_api.common.exceptions.logic.common import (
     EntitiesNotFoundByIds,
     EntityAlreadyExists,
     EntityNotFoundById,
     TooManyObjectsError,
 )
+from idu_api.urban_api.dto import HexagonDTO
 from idu_api.urban_api.logic.impl.helpers.territories_hexagons import (
     add_hexagons_by_territory_id_to_db,
     delete_hexagons_by_territory_id_from_db,

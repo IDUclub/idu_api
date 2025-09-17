@@ -680,7 +680,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
     async def patch_scenario_indicator_value(
         self,
         indicator_value: ScenarioIndicatorValuePatch,
-        scenario_id: int | None,
+        scenario_id: int,
         indicator_value_id: int,
         user: UserDTO,
         kafka_producer: KafkaProducerClient,
@@ -695,7 +695,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
             return await delete_scenario_indicators_values_by_scenario_id_from_db(conn, scenario_id, user)
 
     async def delete_scenario_indicator_value_by_id(
-        self, scenario_id: int | None, indicator_value_id: int, user: UserDTO
+        self, scenario_id: int, indicator_value_id: int, user: UserDTO
     ) -> dict:
         async with self._connection_manager.get_connection() as conn:
             return await delete_scenario_indicator_value_by_id_from_db(conn, scenario_id, indicator_value_id, user)

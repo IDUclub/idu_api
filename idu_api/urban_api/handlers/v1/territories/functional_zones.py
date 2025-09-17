@@ -45,7 +45,7 @@ async def get_functional_zone_sources_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     sources = await territories_service.get_functional_zones_sources_by_territory_id(
@@ -97,7 +97,7 @@ async def get_functional_zones_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     zones = await territories_service.get_functional_zones_by_territory_id(
@@ -149,7 +149,7 @@ async def get_functional_zones_geojson_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     zones = await territories_service.get_functional_zones_by_territory_id(
@@ -192,7 +192,7 @@ async def delete_all_functional_zones_by_territory_id(
     if not include_child_territories and cities_only:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="You can use cities_only parameter only with including child territories",
+            detail="Параметр cities_only можно использовать только при включении дочерних территорий.",
         )
 
     await territories_service.delete_all_functional_zones_for_territory(

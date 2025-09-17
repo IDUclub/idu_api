@@ -4,7 +4,7 @@ Exceptions connected with user's logic are defined here.
 
 from fastapi import status
 
-from idu_api.urban_api.exceptions import IduApiError
+from idu_api.common.exceptions import IduApiError
 
 
 class AccessDeniedError(IduApiError):
@@ -21,7 +21,7 @@ class AccessDeniedError(IduApiError):
         super().__init__()
 
     def __str__(self) -> str:
-        return f"Access for entity '{self.entity}' with id={self.requested_id} is denied"
+        return f"Доступ к '{self.entity}' с (id)={self.requested_id} запрещён."
 
     def get_status_code(self) -> int:
         """

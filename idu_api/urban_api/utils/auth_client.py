@@ -10,12 +10,12 @@ from cachetools import TTLCache
 from fastapi import Request
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from idu_api.urban_api.dto.users import UserDTO
-from idu_api.urban_api.exceptions.utils.auth import (
+from idu_api.common.exceptions.services.auth import (
     ExpiredToken,
     InvalidTokenSignature,
     JWTDecodeError,
 )
+from idu_api.urban_api.dto.users import UserDTO
 
 
 class AuthenticationClient:

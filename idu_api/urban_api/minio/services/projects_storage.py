@@ -9,8 +9,8 @@ import aioboto3
 from PIL import Image
 from structlog.stdlib import BoundLogger
 
+from idu_api.common.exceptions.services.minio import FileNotFound, InvalidImageError
 from idu_api.urban_api.config import UrbanAPIConfig
-from idu_api.urban_api.exceptions.utils.minio import FileNotFound, InvalidImageError
 from idu_api.urban_api.minio.client import AsyncMinioClient, get_minio_client_from_config
 from idu_api.urban_api.schemas.enums import ProjectPhase
 

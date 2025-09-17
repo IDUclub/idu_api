@@ -24,8 +24,8 @@ from tests.urban_api.helpers.utils import assert_response
     [
         (200, None, None, False),
         (200, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -62,8 +62,8 @@ async def test_get_scenario_by_id(
     [
         (201, None, None, False),
         (201, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -104,8 +104,8 @@ async def test_add_scenario(
     [
         (201, None, None, False),
         (201, None, None, True),
-        (403, "denied", None, False),
-        (404, "not found", 1e9, False),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
     ],
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
@@ -147,9 +147,9 @@ async def test_copy_scenario(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (400, "change the one that should become the base, not the current one", None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (400, "измените тот, который должен стать базовым, а не текущий", None),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
@@ -186,9 +186,9 @@ async def test_put_scenario(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (400, "change the one that should become the base, not the current one", None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (400, "измените тот, который должен стать базовым, а не текущий", None),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
@@ -225,8 +225,8 @@ async def test_patch_scenario(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (403, "denied", None),
-        (404, "not found", 1e9),
+        (403, "запрещён", None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_authenticated", "not_found"],
 )

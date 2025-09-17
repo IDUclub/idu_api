@@ -14,14 +14,14 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
+from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
+from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.dto import (
     FunctionalZoneDTO,
     FunctionalZoneSourceDTO,
     ScenarioFunctionalZoneDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
-from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.logic.impl.helpers.projects_functional_zones import (
     add_scenario_functional_zones_to_db,
     delete_functional_zones_by_scenario_id_from_db,
@@ -45,7 +45,7 @@ from idu_api.urban_api.schemas import (
     ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePut,
 )
-from tests.urban_api.helpers.connection import MockConnection, MockRow
+from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################
 #                           Default use-case tests                                 #
@@ -371,11 +371,6 @@ async def test_put_scenario_functional_zone_to_db(
             return False
         return True
 
-    async def check_functional_zone_type(conn, table, conditions):
-        if table == functional_zone_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     functional_zone_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
@@ -399,14 +394,6 @@ async def test_put_scenario_functional_zone_to_db(
     with patch(
         "idu_api.urban_api.logic.impl.helpers.projects_functional_zones.check_existence",
         new=AsyncMock(side_effect=check_functional_zone),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_scenario_functional_zone_to_db(
-                mock_conn, scenario_functional_zone_put_req, scenario_id, functional_zone_id, user
-            )
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_functional_zone_type),
     ):
         with pytest.raises(EntityNotFoundById):
             await put_scenario_functional_zone_to_db(
@@ -439,11 +426,6 @@ async def test_patch_scenario_functional_zone_to_db(
             return False
         return True
 
-    async def check_functional_zone_type(conn, table, conditions):
-        if table == functional_zone_types_dict:
-            return False
-        return True
-
     scenario_id = 1
     functional_zone_id = 1
     user = "test_user"
@@ -459,14 +441,6 @@ async def test_patch_scenario_functional_zone_to_db(
     with patch(
         "idu_api.urban_api.logic.impl.helpers.projects_functional_zones.check_existence",
         new=AsyncMock(side_effect=check_functional_zone),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await patch_scenario_functional_zone_to_db(
-                mock_conn, scenario_functional_zone_patch_req, scenario_id, functional_zone_id, user
-            )
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_functional_zone_type),
     ):
         with pytest.raises(EntityNotFoundById):
             await patch_scenario_functional_zone_to_db(

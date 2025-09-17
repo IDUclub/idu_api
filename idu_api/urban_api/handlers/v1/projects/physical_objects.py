@@ -64,7 +64,7 @@ async def get_physical_objects_by_scenario_id(
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id",
         )
 
     physical_objects = await user_project_service.get_physical_objects_by_scenario_id(
@@ -116,7 +116,7 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id",
         )
 
     physical_objects = await user_project_service.get_physical_objects_with_geometry_by_scenario_id(
@@ -167,7 +167,7 @@ async def get_context_physical_objects(
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id",
         )
 
     physical_objects = await user_project_service.get_context_physical_objects(
@@ -216,7 +216,7 @@ async def get_context_physical_objects_with_geometry(
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Please, choose either physical_object_type_id or physical_object_function_id",
+            detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id",
         )
 
     physical_objects = await user_project_service.get_context_physical_objects_with_geometry(

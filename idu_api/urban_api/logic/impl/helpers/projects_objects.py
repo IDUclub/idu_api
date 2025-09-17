@@ -3,7 +3,7 @@
 import asyncio
 import os
 from collections.abc import Callable
-from datetime import date, datetime, timezone
+from datetime import date
 from typing import Any, Literal
 
 import aiohttp
@@ -62,6 +62,9 @@ from idu_api.common.db.entities import (
     territory_types_dict,
     urban_objects_data,
 )
+from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
+from idu_api.common.exceptions.logic.projects import NotAllowedInProjectScenario, NotAllowedInRegionalProject
+from idu_api.common.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import (
     PageDTO,
@@ -72,9 +75,6 @@ from idu_api.urban_api.dto import (
     ScenarioDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
-from idu_api.urban_api.exceptions.logic.projects import NotAllowedInProjectScenario, NotAllowedInRegionalProject
-from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, check_existence, extract_values_from_model
 from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
@@ -467,6 +467,7 @@ async def add_project_to_db(
     logger: structlog.stdlib.BoundLogger,
 ) -> ProjectDTO:
     """Create project object."""
+
     if project.is_regional:
         project_id = await insert_project(conn, project, user)
         await conn.commit()
@@ -493,14 +494,14 @@ async def add_project_to_db(
 
     await insert_functional_zones(conn, scenario_id, given_geometry)
 
-    await save_indicators(project_id, scenario_id, logger)
+    await save_indicators(project_id, scenario_id, logger)  # TODO: remove this call
 
     new_project = await get_project_by_id_from_db(conn, project_id, user)
 
+    await project_storage_manager.init_project(project_id, logger)
+
     event = ProjectCreated(project_id=project_id, base_scenario_id=scenario_id, territory_id=project.territory_id)
     await kafka_producer.send(event)
-
-    await project_storage_manager.init_project(project_id, logger)
 
     await conn.commit()
 
@@ -630,7 +631,7 @@ async def patch_project_to_db(
     statement_for_project = (
         update(projects_data)
         .where(projects_data.c.project_id == project_id)
-        .values(**project.model_dump(exclude_unset=True), updated_at=datetime.now(timezone.utc))
+        .values(**extract_values_from_model(project, exclude_unset=True, to_update=True))
         .returning(projects_data)
     )
 
@@ -1201,6 +1202,9 @@ async def insert_urban_objects(conn: AsyncConnection, scenario_id: int, id_mappi
         conn (AsyncConnection): Asynchronous database connection.
         scenario_id (int): The scenario to which the urban objects should be linked.
         id_mapping (dict[int, int]): Mapping from original object_geometry_id to newly inserted project-specific geometry_id.
+
+    Returns:
+        dict[int, int]: A mapping of public urban object IDs to inserted project urban object IDs.
     """
 
     if not id_mapping:
@@ -1251,7 +1255,6 @@ async def insert_urban_objects(conn: AsyncConnection, scenario_id: int, id_mappi
         .returning(projects_urban_objects_data.c.urban_object_id)
     )
 
-    # Execute inserts
     public_ids = (await conn.execute(insert_public)).scalars().all()
     scenario_ids = (await conn.execute(insert_detailed)).scalars().all()
 

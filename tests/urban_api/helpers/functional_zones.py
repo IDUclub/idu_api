@@ -53,7 +53,7 @@ __all__ = [
 def functional_zone_type(urban_api_host) -> dict[str, Any]:
     """Returns created functional zone type."""
     functional_zone_type_post_req = FunctionalZoneTypePost(
-        name="Test functional zone type name",
+        name="basic",
         zone_nickname="Test functional zone type nickname",
         description="Test functional zone type description",
     )

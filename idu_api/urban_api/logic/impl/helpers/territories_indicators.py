@@ -15,10 +15,10 @@ from idu_api.common.db.entities import (
     physical_object_types_dict,
     service_types_dict,
     territories_data,
-    territory_indicators_data,
+    territory_indicators_data, soc_value_indicators_data, soc_values_dict,
 )
-from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, TerritoryWithIndicatorsDTO
-from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
+from idu_api.common.exceptions.logic.common import EntityNotFoundById
+from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, TerritoryWithIndicatorsDTO, SocValueIndicatorValueDTO
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
     include_child_territories_cte,
@@ -313,3 +313,73 @@ async def get_indicator_values_by_parent_id_from_db(
         )
         for territory_id, rows in territories.items()
     ]
+
+
+async def get_soc_values_indicator_values_by_territory_id_from_db(
+    conn: AsyncConnection,
+    territory_id: int,
+    year: int | None,
+    last_only: bool,
+    include_child_territories: bool,
+    cities_only: bool,
+) -> list[SocValueIndicatorValueDTO]:
+    """Get social value indicator values by territory identifier.
+
+    Could be specified by last_only to get only last indicator values.
+    """
+
+    if not await check_existence(conn, territories_data, conditions={"territory_id": territory_id}):
+        raise EntityNotFoundById(territory_id, "territory")
+
+    select_from = soc_value_indicators_data.join(
+        soc_values_dict,
+        soc_values_dict.c.soc_value_id == soc_value_indicators_data.c.soc_value_id,
+    ).join(territories_data, territories_data.c.territory_id == soc_value_indicators_data.c.territory_id)
+
+    if last_only:
+        subquery = (
+            select(
+                soc_value_indicators_data.c.soc_value_id,
+                soc_value_indicators_data.c.territory_id,
+                func.max(soc_value_indicators_data.c.year).label("max_date"),
+            )
+            .group_by(
+                soc_value_indicators_data.c.soc_value_id,
+                soc_value_indicators_data.c.territory_id,
+            )
+            .subquery()
+        )
+
+        select_from = select_from.join(
+            subquery,
+            (soc_value_indicators_data.c.soc_value_id == subquery.c.soc_value_id)
+            & (soc_value_indicators_data.c.territory_id == subquery.c.territory_id)
+            & (soc_value_indicators_data.c.year == subquery.c.max_date),
+        )
+
+    statement = (
+        select(
+            soc_value_indicators_data,
+            soc_values_dict.c.name.label("soc_value_name"),
+            territories_data.c.name.label("territory_name"),
+        )
+        .select_from(select_from)
+    )
+
+    if include_child_territories:
+        territories_cte = include_child_territories_cte(territory_id, cities_only)
+        territory_filter = CustomFilter(
+            lambda q: q.where(soc_value_indicators_data.c.territory_id.in_(select(territories_cte.c.territory_id)))
+        )
+    else:
+        territory_filter = EqFilter(soc_value_indicators_data, "territory_id", territory_id)
+
+    statement = apply_filters(
+        statement,
+        territory_filter,
+        EqFilter(soc_value_indicators_data, "year", year),
+    )
+
+    result = (await conn.execute(statement)).mappings().all()
+
+    return [SocValueIndicatorValueDTO(**indicator_value) for indicator_value in result]

@@ -25,7 +25,7 @@ from tests.urban_api.helpers.utils import assert_response
     "expected_status, error_message, service_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -59,7 +59,7 @@ async def test_get_service_by_id(
     "expected_status, error_message, service_type_id_param, territory_type_id_param",
     [
         (201, None, None, None),
-        (404, "not found", 1e9, 1e9),
+        (404, "отсутствует в таблице", 1e9, 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -96,7 +96,7 @@ async def test_add_service(
     "expected_status, error_message, service_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -129,7 +129,7 @@ async def test_put_service(
     "expected_status, error_message, service_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -162,7 +162,7 @@ async def test_patch_service(
     "expected_status, error_message, service_id_param",
     [
         (200, None, None),
-        (404, "not found", 1e9),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
@@ -212,8 +212,8 @@ async def test_delete_service(
     "expected_status, error_message, service_id_param",
     [
         (201, None, None),
-        (404, "not found", 1e9),
-        (409, "already exists", None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
