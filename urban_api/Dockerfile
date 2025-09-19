@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgeos-dev \
     git \
     logrotate \
+    supervisor \
     curl && \
     pip install --no-cache-dir poetry && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -23,4 +24,7 @@ COPY idu_api /app/idu_api
 
 RUN pip install .
 
-CMD ["launch_urban_api"]
+COPY logrotate.conf /etc/logrotate.d/app
+COPY urban_api/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+CMD ["supervisord", "-n"]
