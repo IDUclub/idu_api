@@ -26,7 +26,6 @@ config.yaml
 .pylintrc
 
 *.log
-*.conf
 
 # Ignore coverage files
 htmlcov/

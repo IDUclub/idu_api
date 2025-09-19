@@ -157,12 +157,12 @@ async def fix_geojson_file(request: Request, file: UploadFile = File(...)):
     geoms = await system_service.fix_geojson(geoms)
     fixed_geojson = geojson.update_geometries(geoms)
 
-    fixed_content = json.dumps(fixed_geojson.model_dump_json(), ensure_ascii=False).encode("utf-8")
+    fixed_content = fixed_geojson.model_dump_json().encode("utf-8")
     file_name, file_ext = os.path.splitext(os.path.basename(file.filename))
 
     zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-        zip_file.writestr(f"{file_name}.{file_ext}", io.BytesIO(fixed_content).read())
+        zip_file.writestr(f"{file_name}{file_ext}", io.BytesIO(fixed_content).read())
     zip_buffer.seek(0)
 
     return StreamingResponse(
