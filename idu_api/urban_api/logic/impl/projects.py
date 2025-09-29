@@ -91,7 +91,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     patch_physical_object_to_db,
     put_building_to_db,
     put_physical_object_to_db,
-    update_physical_objects_by_function_id_to_db,
+    update_physical_objects_by_function_id_to_db, get_physical_objects_around_geometry_by_scenario_id_from_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import (
     add_new_scenario_to_db,
@@ -113,6 +113,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_services import (
     patch_service_to_db,
     put_service_to_db,
 )
+from idu_api.urban_api.logic.impl.physical_objects import Geom
 from idu_api.urban_api.logic.projects import UserProjectService
 from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
@@ -313,6 +314,24 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 user,
                 physical_object_type_id,
                 physical_object_function_id,
+            )
+    
+    async def get_physical_objects_around_by_scenario_id(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        geometry: Geom,
+        physical_object_type_id: int | None,
+        buffer_meters: int
+    ) -> list[ScenarioPhysicalObjectWithGeometryDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            return await get_physical_objects_around_geometry_by_scenario_id_from_db(
+                conn,
+                scenario_id,
+                user,
+                geometry,
+                physical_object_type_id,
+                buffer_meters
             )
 
     async def get_context_physical_objects(
