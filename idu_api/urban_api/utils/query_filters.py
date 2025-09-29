@@ -19,6 +19,7 @@ import abc
 from collections.abc import Callable
 from typing import Any
 
+from geoalchemy2.functions import ST_Intersects
 from sqlalchemy import CTE, select
 from sqlalchemy.sql import Select
 from sqlalchemy.sql.schema import Table
@@ -68,6 +69,18 @@ class EqFilter(BaseFilter):
     def apply(self, query: Select) -> Select:
         if self.value is not None:
             return query.where(getattr(self.table.c, self.field_name) == self.value)
+        return query
+
+
+class IntersectsFilter(BaseFilter):
+    """
+    A basic intersects filter: ST_Intersects(`table.field`, geometry).
+
+    If `value` is None, this filter has no effect.
+    """
+    def apply(self, query: Select) -> Select:
+        if self.value is not None:
+            return query.where(ST_Intersects(getattr(self.table.c, self.field_name), self.value))
         return query
 
 

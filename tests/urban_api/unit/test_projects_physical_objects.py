@@ -13,6 +13,7 @@ from geoalchemy2.functions import (
     ST_IsEmpty,
     ST_Within,
 )
+from shapely.geometry.geo import shape
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -51,7 +52,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     patch_physical_object_to_db,
     put_building_to_db,
     put_physical_object_to_db,
-    update_physical_objects_by_function_id_to_db,
+    update_physical_objects_by_function_id_to_db, get_physical_objects_around_geometry_by_scenario_id_from_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_territories_cte
 from idu_api.urban_api.schemas import (
@@ -524,6 +525,28 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
         ScenarioPhysicalObjectWithGeometryAttributes,
     ), "Couldn't create pydantic model from geojson properties."
     mock_conn.execute_mock.assert_any_call(str(statement))
+
+
+@pytest.mark.asyncio
+async def test_get_physical_objects_around_geometry_by_scenario_id_from_db(mock_conn: MockConnection):
+    """Test the get_physical_objects_around_geometry_by_scenario_id_from_db function."""
+    
+    # Arrange
+    scenario_id = 1
+    user = UserDTO(id="mock_string", is_superuser=False)
+    physical_object_type_id = 1
+    geometry = shape({"type": "Point", "coordinates": [1, 2]})
+
+    # Act
+    result = await get_physical_objects_around_geometry_by_scenario_id_from_db(
+        mock_conn, scenario_id, user, geometry, physical_object_type_id, 50
+    )
+
+    # Assert
+    assert isinstance(result, list), "Result should be a list."
+    assert all(
+        isinstance(item, ScenarioPhysicalObjectWithGeometryDTO) for item in result
+    ), "Each item should be a ScenarioPhysicalObjectWithGeometryDTO."
 
 
 @pytest.mark.asyncio

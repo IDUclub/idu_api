@@ -22,7 +22,7 @@ from idu_api.urban_api.schemas import (
     ScenarioPhysicalObjectWithGeometryAttributes,
     ScenarioUrbanObject,
 )
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geometries import GeoJSONResponse, AllPossibleGeometry
 from idu_api.urban_api.utils.auth_client import get_user
 
 
@@ -127,6 +127,48 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     )
 
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in physical_objects], centers_only)
+
+
+@projects_router.post(
+    "/scenarios/{scenario_id}/physical_objects/around",
+    response_model=GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]],
+    status_code=status.HTTP_200_OK,
+)
+async def get_physical_objects_around_geometry_by_scenario_id(
+    request: Request,
+    geometry: AllPossibleGeometry,
+    scenario_id: int = Path(..., description="scenario identifier", gt=0),
+    physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
+    user: UserDTO = Depends(get_user)
+) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
+    """
+    ## Get physical objects within a specified area (+ buffer 50 meters).
+
+    ### Parameters:
+    - **scenario_id** (int, Path): Unique identifier of the scenario.
+    - **geometry** (AllPossibleGeometry, Body): Geometry defining the search area.
+      NOTE: The geometry must have **SRID=4326**.
+    - **physical_object_type_id** (int | None, Query): Filters results by physical object type.
+
+    ### Returns:
+    - **GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]**: A GeoJSON response containing the physical objects.
+
+    ## Errors:
+    - **400 Bad Request**: If an invalid geometry is specified.
+    - **403 Forbidden**: If the user does not have access rights.
+    - **404 Not Found**: If the scenario does not exist.
+    """
+    user_project_service: UserProjectService = request.state.user_project_service
+
+    try:
+        shapely_geom = geometry.as_shapely_geometry()
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) from e
+
+    physical_objects = await user_project_service.get_physical_objects_around_by_scenario_id(
+        scenario_id, user, shapely_geom, physical_object_type_id, 50
+    )
+    return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in physical_objects], False)
 
 
 @projects_router.get(
