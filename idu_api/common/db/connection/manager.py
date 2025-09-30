@@ -76,6 +76,7 @@ class PostgresConnectionManager:
             future=True,
             pool_size=max(1, self._master.pool_size - 5),
             max_overflow=5,
+            echo=self._master.debug,
             **self._engine_options,
         )
         try:
@@ -101,6 +102,7 @@ class PostgresConnectionManager:
                     future=True,
                     pool_size=max(1, self._master.pool_size - 5),
                     max_overflow=5,
+                    echo=replica.debug,
                     **self._engine_options,
                 )
                 try:

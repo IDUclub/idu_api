@@ -1,4 +1,4 @@
 """Version constants are defined here and should be updated on release."""
 
-VERSION = "0.53.0"
+VERSION = "0.53.1"
 LAST_UPDATE = "2025-09-19"

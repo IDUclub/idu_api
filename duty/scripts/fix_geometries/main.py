@@ -121,6 +121,7 @@ def main(config_path: str, geojson_path: str, output: str | None):
             user=config.db.master.user,
             password=config.db.master.password,
             pool_size=1,
+            debug=config.app.debug,
         ),
         replicas=config.db.replicas or [],
         logger=logger,

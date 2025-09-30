@@ -12,6 +12,7 @@ class DBConfig:
     user: str
     password: str
     pool_size: int
+    debug: bool
 
 
 @dataclass
