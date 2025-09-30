@@ -15,6 +15,7 @@ try:
             user=config.get("DB_USER"),
             password=config.get("DB_PASSWORD"),
             pool_size=10,
+            debug=config.get("DEBUG")
         ),
         replicas=[],
         logger=logger,

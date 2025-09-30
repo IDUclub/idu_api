@@ -148,7 +148,13 @@ class UrbanAPIConfig:
             app=AppConfig(host="0.0.0.0", port=8000, debug=False, name="urban_api"),
             db=MultipleDBsConfig(
                 master=DBConfig(
-                    host="localhost", port=5432, database="urban_db", user="postgres", password="postgres", pool_size=15
+                    host="localhost",
+                    port=5432,
+                    database="urban_db",
+                    user="postgres",
+                    password="postgres",
+                    pool_size=15,
+                    debug=True,
                 ),
                 replicas=[
                     DBConfig(
@@ -158,6 +164,7 @@ class UrbanAPIConfig:
                         password="readonly",
                         database="urban_db",
                         pool_size=8,
+                        debug=True,
                     )
                 ],
             ),
@@ -195,7 +202,10 @@ class UrbanAPIConfig:
                     data = yaml.safe_load(file_r)
             else:
                 data = yaml.safe_load(file)
-
+            
+        except Exception as exc:
+            raise ValueError(f"Could not read app config file: {file}") from exc
+        try:
             return cls(
                 app=AppConfig(**data.get("app", {})),
                 db=MultipleDBsConfig(**data.get("db", {})),
@@ -206,8 +216,8 @@ class UrbanAPIConfig:
                 prometheus=PrometheusConfig(**data.get("prometheus", {})),
                 broker=BrokerConfig(**data.get("broker", {})),
             )
-        except Exception as exc:
-            raise ValueError(f"Could not read app config file: {file}") from exc
+        except Exception as e:
+            raise RuntimeError(f"Could not initialize dependency configs: {e}") from e
 
     @classmethod
     def from_file_or_default(cls, config_path: str | None = os.getenv("CONFIG_PATH")) -> "UrbanAPIConfig":
