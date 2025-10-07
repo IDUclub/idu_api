@@ -23,13 +23,14 @@ from idu_api.urban_api.dto import (
     ServicesCountCapacityDTO,
     ServiceTypeDTO,
     ServiceWithGeometryDTO,
+    SocValueIndicatorValueDTO,
     TargetCityTypeDTO,
     TerritoryDTO,
     TerritoryTreeWithoutGeometryDTO,
     TerritoryTypeDTO,
     TerritoryWithIndicatorsDTO,
     TerritoryWithNormativesDTO,
-    TerritoryWithoutGeometryDTO, SocValueIndicatorValueDTO,
+    TerritoryWithoutGeometryDTO,
 )
 from idu_api.urban_api.schemas import (
     HexagonPost,

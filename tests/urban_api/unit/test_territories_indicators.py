@@ -1,7 +1,7 @@
 """Unit tests for territory-related indicators objects are defined here."""
 
 from datetime import date
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from geoalchemy2.functions import ST_AsEWKB
@@ -13,18 +13,21 @@ from idu_api.common.db.entities import (
     measurement_units_dict,
     physical_object_types_dict,
     service_types_dict,
+    soc_value_indicators_data,
+    soc_values_dict,
     territories_data,
-    territory_indicators_data, soc_value_indicators_data, soc_values_dict,
+    territory_indicators_data,
 )
 from idu_api.common.exceptions.logic.common import EntityNotFoundById
-from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, TerritoryWithIndicatorsDTO, SocValueIndicatorValueDTO
+from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
 from idu_api.urban_api.logic.impl.helpers.territories_indicators import (
     get_indicator_values_by_parent_id_from_db,
     get_indicator_values_by_territory_id_from_db,
-    get_indicators_by_territory_id_from_db, get_soc_values_indicator_values_by_territory_id_from_db,
+    get_indicators_by_territory_id_from_db,
+    get_soc_values_indicator_values_by_territory_id_from_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import include_child_territories_cte
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators, SocValueIndicatorValue
+from idu_api.urban_api.schemas import Indicator, IndicatorValue, SocValueIndicatorValue, TerritoryWithIndicators
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
@@ -428,10 +431,18 @@ async def test_get_soc_values_indicator_values_by_territory_id_from_db(mock_conn
         new=AsyncMock(side_effect=check_territory),
     ):
         with pytest.raises(EntityNotFoundById):
-            await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, **params, last_only=False)
-    await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, None, last_only=False, include_child_territories=False, cities_only=False)
-    await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, None, last_only=True, include_child_territories=False, cities_only=False)
-    result = await get_soc_values_indicator_values_by_territory_id_from_db(mock_conn, territory_id, last_only=False, **params)
+            await get_soc_values_indicator_values_by_territory_id_from_db(
+                mock_conn, territory_id, **params, last_only=False
+            )
+    await get_soc_values_indicator_values_by_territory_id_from_db(
+        mock_conn, territory_id, None, last_only=False, include_child_territories=False, cities_only=False
+    )
+    await get_soc_values_indicator_values_by_territory_id_from_db(
+        mock_conn, territory_id, None, last_only=True, include_child_territories=False, cities_only=False
+    )
+    result = await get_soc_values_indicator_values_by_territory_id_from_db(
+        mock_conn, territory_id, last_only=False, **params
+    )
 
     # Assert
     assert isinstance(result, list), "Result should be a list."

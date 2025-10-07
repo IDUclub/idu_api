@@ -98,7 +98,8 @@ class PostgresConnectionManager:
                     database=replica.database,
                 )
                 replica_engine = create_async_engine(
-                    f"postgresql+asyncpg://{replica.user}:{replica.password}@{replica.host}:{replica.port}/{replica.database}",
+                    f"postgresql+asyncpg://{replica.user}:{replica.password}"
+                    f"@{replica.host}:{replica.port}/{replica.database}",
                     future=True,
                     pool_size=max(1, self._master.pool_size - 5),
                     max_overflow=5,

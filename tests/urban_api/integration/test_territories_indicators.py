@@ -6,7 +6,7 @@ import httpx
 import pytest
 from pydantic import ValidationError
 
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators, SocValueIndicatorValue
+from idu_api.urban_api.schemas import Indicator, IndicatorValue, SocValueIndicatorValue, TerritoryWithIndicators
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from idu_api.urban_api.schemas.short_models import ShortIndicatorValueInfo
 from tests.urban_api.helpers.utils import assert_response

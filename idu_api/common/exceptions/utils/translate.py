@@ -1,14 +1,15 @@
-import re
-from typing import Any
+from typing import Any, Literal
 
 from asyncpg import exceptions as apg_exc
 from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from idu_api.common.exceptions import IduApiError
+from idu_api.common.exceptions.base import CityApiError, UrbanApiError
 from idu_api.common.exceptions.logic.db import (
+    CustomTriggerError,
     DependencyNotFound,
     InvalidValueError,
-    UniqueConstraintError, CustomTriggerError,
+    UniqueConstraintError,
 )
 
 # SQLSTATE codes
@@ -110,7 +111,7 @@ def _extract_info(exc: Exception) -> tuple[list[str], list[str], list[str], list
     return texts, sqlstates, details, statements
 
 
-def translate_db_error(exc: Exception) -> IduApiError:
+def translate_db_error(exc: Exception, api: Literal["urban", "city"] = "urban") -> IduApiError:
     """
     Translate SQLAlchemy/asyncpg/Postgres exceptions into domain-specific IduApiError.
     Strategy: type -> sqlstate -> keywords.
@@ -143,7 +144,7 @@ def translate_db_error(exc: Exception) -> IduApiError:
             return InvalidValueError("Значение выходит за диапазон INTEGER (int32).")
 
     # Default fallback
-    return IduApiError()
+    return UrbanApiError() if api == "urban" else CityApiError
 
 
 def extract_sql(exc: Exception, max_len: int = 500) -> str | None:
@@ -151,4 +152,4 @@ def extract_sql(exc: Exception, max_len: int = 500) -> str | None:
     _, _, _, statements = _extract_info(exc)
     statement = statements[0] if statements else None
 
-    return statement[:max_len] + "..."
+    return statement[:max_len] + "..." if statement is not None else None

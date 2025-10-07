@@ -8,7 +8,7 @@ from geojson_pydantic.geometries import Geometry
 from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, TerritoryWithIndicators, SocValueIndicatorValue
+from idu_api.urban_api.schemas import Indicator, IndicatorValue, SocValueIndicatorValue, TerritoryWithIndicators
 from idu_api.urban_api.schemas.enums import ValueType
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 

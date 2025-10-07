@@ -23,13 +23,14 @@ from idu_api.urban_api.dto import (
     ServicesCountCapacityDTO,
     ServiceTypeDTO,
     ServiceWithGeometryDTO,
+    SocValueIndicatorValueDTO,
     TargetCityTypeDTO,
     TerritoryDTO,
     TerritoryTreeWithoutGeometryDTO,
     TerritoryTypeDTO,
     TerritoryWithIndicatorsDTO,
     TerritoryWithNormativesDTO,
-    TerritoryWithoutGeometryDTO, SocValueIndicatorValueDTO,
+    TerritoryWithoutGeometryDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.territories_buffers import get_buffers_by_territory_id_from_db
 from idu_api.urban_api.logic.impl.helpers.territories_buildings import (
@@ -48,7 +49,8 @@ from idu_api.urban_api.logic.impl.helpers.territories_hexagons import (
 from idu_api.urban_api.logic.impl.helpers.territories_indicators import (
     get_indicator_values_by_parent_id_from_db,
     get_indicator_values_by_territory_id_from_db,
-    get_indicators_by_territory_id_from_db, get_soc_values_indicator_values_by_territory_id_from_db,
+    get_indicators_by_territory_id_from_db,
+    get_soc_values_indicator_values_by_territory_id_from_db,
 )
 from idu_api.urban_api.logic.impl.helpers.territories_normatives import (
     add_normatives_to_territory_to_db,

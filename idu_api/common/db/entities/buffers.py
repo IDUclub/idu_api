@@ -11,7 +11,6 @@ from sqlalchemy import (
     Sequence,
     String,
     Table,
-    UniqueConstraint,
     false,
 )
 

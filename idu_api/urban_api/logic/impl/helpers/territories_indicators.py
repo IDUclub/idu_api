@@ -14,11 +14,13 @@ from idu_api.common.db.entities import (
     measurement_units_dict,
     physical_object_types_dict,
     service_types_dict,
+    soc_value_indicators_data,
+    soc_values_dict,
     territories_data,
-    territory_indicators_data, soc_value_indicators_data, soc_values_dict,
+    territory_indicators_data,
 )
 from idu_api.common.exceptions.logic.common import EntityNotFoundById
-from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, TerritoryWithIndicatorsDTO, SocValueIndicatorValueDTO
+from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
     include_child_territories_cte,
@@ -357,14 +359,11 @@ async def get_soc_values_indicator_values_by_territory_id_from_db(
             & (soc_value_indicators_data.c.year == subquery.c.max_date),
         )
 
-    statement = (
-        select(
-            soc_value_indicators_data,
-            soc_values_dict.c.name.label("soc_value_name"),
-            territories_data.c.name.label("territory_name"),
-        )
-        .select_from(select_from)
-    )
+    statement = select(
+        soc_value_indicators_data,
+        soc_values_dict.c.name.label("soc_value_name"),
+        territories_data.c.name.label("territory_name"),
+    ).select_from(select_from)
 
     if include_child_territories:
         territories_cte = include_child_territories_cte(territory_id, cities_only)

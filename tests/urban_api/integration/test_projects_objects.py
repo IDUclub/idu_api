@@ -13,6 +13,7 @@ from pydantic import ValidationError
 
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.schemas import (
+    MinioFile,
     MinioImagesURL,
     MinioImageURL,
     OkResponse,
@@ -23,7 +24,7 @@ from idu_api.urban_api.schemas import (
     ProjectPost,
     ProjectPut,
     ProjectTerritory,
-    Scenario, MinioFile,
+    Scenario,
 )
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from tests.urban_api.helpers import valid_token
