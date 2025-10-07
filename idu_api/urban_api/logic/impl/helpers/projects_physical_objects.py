@@ -1915,12 +1915,12 @@ async def update_physical_objects_by_function_id_to_db(
     project_geometry = (
         select(projects_territory_data.c.geometry)
         .where(projects_territory_data.c.project_id == scenario.project_id)
-        .cte(name="project_geometry")
+        .scalar_subquery()
     )
 
     objects_intersecting = (
         select(object_geometries_data.c.object_geometry_id)
-        .where(ST_Intersects(object_geometries_data.c.geometry, project_geometry.c.geometry))
+        .where(ST_Intersects(object_geometries_data.c.geometry, project_geometry))
         .cte(name="objects_intersecting")
     )
 

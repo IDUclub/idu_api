@@ -3,6 +3,7 @@
 from fastapi import HTTPException, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
+from pydantic import conlist
 from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
@@ -76,7 +77,7 @@ async def get_territory_normatives(
 )
 async def post_territory_normatives(
     request: Request,
-    normatives: list[NormativePost],
+    normatives: conlist(NormativePost, min_length=1),
     territory_id: int = Path(..., description="territory identifier", gt=0),
 ) -> list[Normative]:
     """
@@ -108,7 +109,7 @@ async def post_territory_normatives(
 )
 async def put_territory_normatives(
     request: Request,
-    normatives: list[NormativePost],
+    normatives: conlist(NormativePost, min_length=1),
     territory_id: int = Path(..., description="territory identifier", gt=0),
 ) -> list[Normative]:
     """
@@ -141,7 +142,7 @@ async def put_territory_normatives(
 )
 async def patch_territory_normatives(
     request: Request,
-    normatives: list[NormativePatch],
+    normatives: conlist(NormativePatch, min_length=1),
     territory_id: int = Path(..., description="territory identifier", gt=0),
 ) -> list[Normative]:
     """
@@ -172,7 +173,7 @@ async def patch_territory_normatives(
 )
 async def delete_territory_normatives(
     request: Request,
-    normatives: list[NormativeDelete],
+    normatives: conlist(NormativeDelete, min_length=1),
     territory_id: int = Path(..., description="territory identifier", gt=0),
 ) -> OkResponse:
     """

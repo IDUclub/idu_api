@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, Path, Query, Request, Security
 from fastapi.security import HTTPBearer
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
+from pydantic import conlist
 from starlette import status
 
 from idu_api.urban_api.dto.users import UserDTO
@@ -316,7 +317,7 @@ async def add_physical_object_with_geometry(
 )
 async def update_physical_objects_by_function_id(
     request: Request,
-    physical_object: list[PhysicalObjectWithGeometryPost],
+    physical_object: conlist(PhysicalObjectWithGeometryPost, min_length=1),
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_function_id: int = Query(..., description="physical object function identifier", gt=0),
     user: UserDTO = Depends(get_user),

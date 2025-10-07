@@ -4,6 +4,7 @@ from fastapi import Depends, Path, Query, Request, Security
 from fastapi.security import HTTPBearer
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
+from pydantic import conlist
 from starlette import status
 
 from idu_api.urban_api.dto.users import UserDTO
@@ -179,7 +180,7 @@ async def get_context_functional_zones(
 )
 async def add_scenario_functional_zones(
     request: Request,
-    functional_zones: list[ScenarioFunctionalZonePost],
+    functional_zones: conlist(ScenarioFunctionalZonePost, min_length=1),
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     user: UserDTO = Depends(get_user),
 ) -> list[ScenarioFunctionalZone]:
