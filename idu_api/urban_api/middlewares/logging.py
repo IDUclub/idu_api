@@ -61,7 +61,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-m
             elif isinstance(exc, SQLAlchemyError):
                 translated = translate_db_error(exc)
                 sql = extract_sql(exc)
-                log_func = logger.aexception if type(exc) is UrbanApiError else logger.aerror
+                log_func = logger.aexception if type(translated) is UrbanApiError else logger.aerror
                 await log_func(
                     "failed to handle request",
                     time_consumed=round(duration_seconds, 3),
