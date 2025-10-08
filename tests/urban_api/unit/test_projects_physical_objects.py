@@ -45,6 +45,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     delete_physical_object_from_db,
     get_context_physical_objects_from_db,
     get_context_physical_objects_with_geometry_from_db,
+    get_physical_objects_around_geometry_by_scenario_id_from_db,
     get_physical_objects_by_scenario_id_from_db,
     get_physical_objects_with_geometry_by_scenario_id_from_db,
     get_scenario_physical_object_by_id_from_db,
@@ -52,7 +53,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     patch_physical_object_to_db,
     put_building_to_db,
     put_physical_object_to_db,
-    update_physical_objects_by_function_id_to_db, get_physical_objects_around_geometry_by_scenario_id_from_db,
+    update_physical_objects_by_function_id_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_territories_cte
 from idu_api.urban_api.schemas import (
@@ -530,7 +531,7 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
 @pytest.mark.asyncio
 async def test_get_physical_objects_around_geometry_by_scenario_id_from_db(mock_conn: MockConnection):
     """Test the get_physical_objects_around_geometry_by_scenario_id_from_db function."""
-    
+
     # Arrange
     scenario_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
@@ -1364,13 +1365,11 @@ async def test_update_physical_objects_by_function_id_to_db(
         )
     )
     project_geometry = (
-        select(projects_territory_data.c.geometry)
-        .where(projects_territory_data.c.project_id == 1)
-        .cte(name="project_geometry")
+        select(projects_territory_data.c.geometry).where(projects_territory_data.c.project_id == 1).scalar_subquery()
     )
     objects_intersecting = (
         select(object_geometries_data.c.object_geometry_id)
-        .where(ST_Intersects(object_geometries_data.c.geometry, project_geometry.c.geometry))
+        .where(ST_Intersects(object_geometries_data.c.geometry, project_geometry))
         .cte(name="objects_intersecting")
     )
     public_urban_object_ids = (

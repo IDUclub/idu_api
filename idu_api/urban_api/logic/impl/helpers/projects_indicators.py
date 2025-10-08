@@ -7,7 +7,7 @@ import aiohttp
 import structlog
 from geoalchemy2.functions import ST_AsEWKB
 from otteroad import KafkaProducerClient
-from otteroad.models import RegionalScenarioIndicatorsUpdated, ScenarioIndicatorsUpdated
+from otteroad.models import ScenarioIndicatorsUpdated
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
@@ -153,15 +153,7 @@ async def add_scenario_indicator_value_to_db(
 
     new_value = await get_scenario_indicator_value_by_id_from_db(conn, indicator_value_id)
 
-    if scenario.is_regional and indicator_value.hexagon_id is None:
-        event = RegionalScenarioIndicatorsUpdated(
-            scenario_id=scenario_id,
-            territory_id=scenario.territory_id,
-            indicator_id=indicator_value.indicator_id,
-            indicator_value_id=indicator_value_id,
-        )
-        await kafka_producer.send(event)
-    elif indicator_value.hexagon_id is None:
+    if not scenario.is_regional and indicator_value.hexagon_id is None:
         event = ScenarioIndicatorsUpdated(
             project_id=scenario.project_id,
             scenario_id=scenario_id,
@@ -226,15 +218,7 @@ async def put_scenario_indicator_value_to_db(
 
     new_value = await get_scenario_indicator_value_by_id_from_db(conn, indicator_value_id)
 
-    if scenario.is_regional and indicator_value.hexagon_id is None:
-        event = RegionalScenarioIndicatorsUpdated(
-            scenario_id=scenario_id,
-            territory_id=scenario.territory_id,
-            indicator_id=indicator_value.indicator_id,
-            indicator_value_id=indicator_value_id,
-        )
-        await kafka_producer.send(event)
-    elif indicator_value.hexagon_id is None:
+    if not scenario.is_regional and indicator_value.hexagon_id is None:
         event = ScenarioIndicatorsUpdated(
             project_id=scenario.project_id,
             scenario_id=scenario_id,
@@ -274,15 +258,7 @@ async def patch_scenario_indicator_value_to_db(
 
     new_value = await get_scenario_indicator_value_by_id_from_db(conn, indicator_value_id)
 
-    if scenario.is_regional and updated_indicator.hexagon_id is None:
-        event = RegionalScenarioIndicatorsUpdated(
-            scenario_id=scenario_id,
-            territory_id=scenario.territory_id,
-            indicator_id=updated_indicator.indicator_id,
-            indicator_value_id=indicator_value_id,
-        )
-        await kafka_producer.send(event)
-    elif updated_indicator.hexagon_id is None:
+    if not scenario.is_regional and updated_indicator.hexagon_id is None:
         event = ScenarioIndicatorsUpdated(
             project_id=scenario.project_id,
             scenario_id=scenario_id,

@@ -175,7 +175,6 @@ async def test_add_scenario_indicator_value_to_db(
         .returning(projects_indicators_data.c.indicator_value_id)
     )
     kafka_producer = AsyncMock(spec=KafkaProducerClient)
-    event = RegionalScenarioIndicatorsUpdated(scenario_id=1, territory_id=1, indicator_id=1, indicator_value_id=1)
     indicator = scenario_indicator_value_post_req
     indicator.hexagon_id = None
 
@@ -190,7 +189,6 @@ async def test_add_scenario_indicator_value_to_db(
     mock_conn.execute_mock.assert_any_call(str(insert_statement))
     mock_conn.commit_mock.assert_called_once()
     mock_check.assert_any_call(mock_conn, scenario_id, user, to_edit=True, return_value=True)
-    kafka_producer.send.assert_any_call(event)
 
 
 @pytest.mark.asyncio
@@ -229,7 +227,6 @@ async def test_put_scenario_indicator_value_to_db(
         .returning(projects_indicators_data.c.indicator_value_id)
     )
     kafka_producer = AsyncMock(spec=KafkaProducerClient)
-    event = RegionalScenarioIndicatorsUpdated(scenario_id=1, territory_id=1, indicator_id=1, indicator_value_id=1)
 
     # Act
     with patch(
@@ -252,7 +249,6 @@ async def test_put_scenario_indicator_value_to_db(
     mock_conn.execute_mock.assert_any_call(str(insert_statement))
     assert mock_conn.commit_mock.call_count == 2, "Commit mock count should be one for one method."
     mock_check.assert_any_call(mock_conn, scenario_id, user, to_edit=True, return_value=True)
-    kafka_producer.send.assert_any_call(event)
 
 
 @pytest.mark.asyncio
@@ -275,7 +271,6 @@ async def test_patch_scenario_indicator_value_to_db(
         .returning(projects_indicators_data)
     )
     kafka_producer = AsyncMock(spec=KafkaProducerClient)
-    event = RegionalScenarioIndicatorsUpdated(scenario_id=1, territory_id=1, indicator_id=1, indicator_value_id=1)
 
     # Act
     with patch("idu_api.urban_api.logic.impl.helpers.projects_indicators.check_existence") as mock_check_existence:
@@ -302,7 +297,6 @@ async def test_patch_scenario_indicator_value_to_db(
     mock_connection.execute_mock.assert_any_call(str(update_statement))
     mock_connection.commit_mock.assert_called_once()
     mock_check.assert_any_call(mock_conn, scenario_id, user, to_edit=True, return_value=True)
-    kafka_producer.send.assert_any_call(event)
 
 
 @pytest.mark.asyncio

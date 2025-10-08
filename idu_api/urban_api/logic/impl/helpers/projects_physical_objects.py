@@ -12,7 +12,7 @@ from geoalchemy2.functions import (
     ST_IsEmpty,
     ST_Within,
 )
-from sqlalchemy import delete, insert, literal, or_, select, text, union_all, update, cast
+from sqlalchemy import cast, delete, insert, literal, or_, select, text, union_all, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.functions import coalesce
 
@@ -60,7 +60,7 @@ from idu_api.urban_api.schemas import (
     ScenarioBuildingPost,
     ScenarioBuildingPut,
 )
-from idu_api.urban_api.utils.query_filters import EqFilter, RecursiveFilter, apply_filters, IntersectsFilter
+from idu_api.urban_api.utils.query_filters import EqFilter, IntersectsFilter, RecursiveFilter, apply_filters
 
 
 async def get_physical_objects_by_scenario_id_from_db(
@@ -601,7 +601,7 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
         ).scalar_subquery()
     else:
         territories_cte = include_child_territories_cte(scenario.territory_id)
-    
+
     buffered_geometry_cte = select(
         cast(
             func.ST_Buffer(cast(ST_GeomFromWKB(geometry.wkb, text(str(SRID))), Geography(srid=SRID)), buffer_meters),
@@ -831,11 +831,7 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
     # Apply optional filters
     statement = apply_filters(
         statement,
-        IntersectsFilter(
-            union_query,
-            "geometry",
-            select(buffered_geometry_cte.c.geometry).scalar_subquery()
-        ),
+        IntersectsFilter(union_query, "geometry", select(buffered_geometry_cte.c.geometry).scalar_subquery()),
         EqFilter(union_query, "physical_object_type_id", physical_object_type_id),
     )
 

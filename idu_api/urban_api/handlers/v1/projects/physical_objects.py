@@ -23,7 +23,7 @@ from idu_api.urban_api.schemas import (
     ScenarioPhysicalObjectWithGeometryAttributes,
     ScenarioUrbanObject,
 )
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse, AllPossibleGeometry
+from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, GeoJSONResponse
 from idu_api.urban_api.utils.auth_client import get_user
 
 
@@ -140,7 +140,7 @@ async def get_physical_objects_around_geometry_by_scenario_id(
     geometry: AllPossibleGeometry,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
-    user: UserDTO = Depends(get_user)
+    user: UserDTO = Depends(get_user),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get physical objects within a specified area (+ buffer 50 meters).

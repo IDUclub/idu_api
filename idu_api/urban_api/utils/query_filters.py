@@ -78,6 +78,7 @@ class IntersectsFilter(BaseFilter):
 
     If `value` is None, this filter has no effect.
     """
+
     def apply(self, query: Select) -> Select:
         if self.value is not None:
             return query.where(ST_Intersects(getattr(self.table.c, self.field_name), self.value))

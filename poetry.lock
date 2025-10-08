@@ -1961,14 +1961,14 @@ files = [
 
 [[package]]
 name = "otteroad"
-version = "0.1.7"
+version = "0.2.0"
 description = "Framework with scalable Kafka consumer/producer logic for IDU FastAPI services."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "otteroad-0.1.7-py3-none-any.whl", hash = "sha256:b66117123530e465f14e725adb468c3d5f4b622ee6412b52c23b6655a8291f99"},
-    {file = "otteroad-0.1.7.tar.gz", hash = "sha256:e025f417ebb8ab598e6df200885ba43bf40eb056a51c337225f6547c59440457"},
+    {file = "otteroad-0.2.0-py3-none-any.whl", hash = "sha256:eea631aeeaf8f7674c50d12ccf062c94273e8da413cf016b1d9a845cff5af18e"},
+    {file = "otteroad-0.2.0.tar.gz", hash = "sha256:60505cc02243b6cd4ad9abd2f7506e70bd79f8ab6bdbe16e0c0b5d769c35772a"},
 ]
 
 [package.dependencies]
@@ -3490,4 +3490,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "49af3bf508e12684020db85ac77ec0f4099d42ae3b82adc4684139c7f1acadb6"
+content-hash = "fd825f806e53f79111afa3ba39703f4ed30160b8b5c58fa3c947f266fd765924"

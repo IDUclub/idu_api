@@ -193,7 +193,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         physical_object_function_id: int | None,
     ) -> list[ScenarioPhysicalObjectWithGeometryDTO]:
         """Get list of physical objects with geometry by scenario identifier."""
-    
+
     @abc.abstractmethod
     async def get_physical_objects_around_by_scenario_id(
         self,
@@ -201,7 +201,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         user: UserDTO | None,
         geometry: Geom,
         physical_object_type_id: int | None,
-        buffer_meters: int
+        buffer_meters: int,
     ) -> list[ScenarioPhysicalObjectWithGeometryDTO]:
         """Get physical objects which are in buffer area of the given geometry."""
 

@@ -202,7 +202,7 @@ class UrbanAPIConfig:
                     data = yaml.safe_load(file_r)
             else:
                 data = yaml.safe_load(file)
-            
+
         except Exception as exc:
             raise ValueError(f"Could not read app config file: {file}") from exc
         try:
