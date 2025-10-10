@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Any, Type, TypeVar
+from typing import Any, TypeVar
 
 from geoalchemy2.functions import ST_GeomFromWKB, ST_Union
 from pydantic import BaseModel
@@ -269,7 +269,7 @@ async def get_context_territories_geometry(
 
 def build_hierarchy(
     input_dtos: list[InputDTOType],
-    output_model: Type[OutputDTOType],
+    output_model: type[OutputDTOType],
     id_attr: str = "id",
     parent_id_attr: str = "parent_id",
     children_attr: str = "children",

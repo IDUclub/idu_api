@@ -77,6 +77,10 @@ async def get_geometries_with_all_objects_by_scenario_id(
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
+    exclude_physical_object_function_id: int | None = Query(
+        None, description="exclude this physical object function", gt=0
+    ),
+    exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(get_user),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
@@ -106,13 +110,15 @@ async def get_geometries_with_all_objects_by_scenario_id(
     """
     user_project_service: UserProjectService = request.state.user_project_service
 
-    if physical_object_type_id is not None and physical_object_function_id is not None:
+    if physical_object_type_id is not None and (
+        physical_object_function_id is not None or exclude_physical_object_function_id is not None
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id.",
         )
 
-    if service_type_id is not None and urban_function_id is not None:
+    if service_type_id is not None and (urban_function_id is not None or exclude_urban_function_id is not None):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
@@ -125,6 +131,8 @@ async def get_geometries_with_all_objects_by_scenario_id(
         service_type_id,
         physical_object_function_id,
         urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
     )
 
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in geometries], centers_only)
@@ -186,6 +194,10 @@ async def get_context_geometries_with_all_objects(
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
+    exclude_physical_object_function_id: int | None = Query(
+        None, description="exclude this physical object function", gt=0
+    ),
+    exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(get_user),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
@@ -215,13 +227,15 @@ async def get_context_geometries_with_all_objects(
     """
     user_project_service: UserProjectService = request.state.user_project_service
 
-    if physical_object_type_id is not None and physical_object_function_id is not None:
+    if physical_object_type_id is not None and (
+        physical_object_function_id is not None or exclude_physical_object_function_id is not None
+    ):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пожалуйста, выберите либо physical_object_type_id, либо physical_object_function_id.",
         )
 
-    if service_type_id is not None and urban_function_id is not None:
+    if service_type_id is not None and (urban_function_id is not None or exclude_urban_function_id is not None):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Пожалуйста, выберите либо service_type_id, либо urban_function_id.",
@@ -234,6 +248,8 @@ async def get_context_geometries_with_all_objects(
         service_type_id,
         physical_object_function_id,
         urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
     )
 
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in geometries], centers_only)

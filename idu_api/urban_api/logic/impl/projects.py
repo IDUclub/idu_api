@@ -12,6 +12,7 @@ from idu_api.urban_api.dto import (
     FunctionalZoneSourceDTO,
     HexagonWithIndicatorsDTO,
     PageDTO,
+    PhysicalObjectTypeDTO,
     ProjectDTO,
     ProjectPhasesDTO,
     ProjectTerritoryDTO,
@@ -27,6 +28,7 @@ from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
     ScenarioServiceWithGeometryDTO,
     ScenarioUrbanObjectDTO,
+    ServiceTypeDTO,
     UserDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_buffers import (
@@ -83,8 +85,10 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     add_physical_object_with_geometry_to_db,
     delete_building_from_db,
     delete_physical_object_from_db,
+    get_context_physical_object_types_from_db,
     get_context_physical_objects_from_db,
     get_context_physical_objects_with_geometry_from_db,
+    get_physical_object_types_by_scenario_id_from_db,
     get_physical_objects_around_geometry_by_scenario_id_from_db,
     get_physical_objects_by_scenario_id_from_db,
     get_physical_objects_with_geometry_by_scenario_id_from_db,
@@ -107,8 +111,10 @@ from idu_api.urban_api.logic.impl.helpers.projects_scenarios import (
 from idu_api.urban_api.logic.impl.helpers.projects_services import (
     add_service_to_db,
     delete_service_from_db,
+    get_context_service_types_from_db,
     get_context_services_from_db,
     get_context_services_with_geometry_from_db,
+    get_service_types_by_scenario_id_from_db,
     get_services_by_scenario_id_from_db,
     get_services_with_geometry_by_scenario_id_from_db,
     patch_service_to_db,
@@ -285,6 +291,18 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_connection() as conn:
             return await delete_scenario_from_db(conn, scenario_id, user)
 
+    async def get_physical_object_types_by_scenario_id_from_db(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        for_context: bool,
+    ) -> list[PhysicalObjectTypeDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            if not for_context:
+                return await get_physical_object_types_by_scenario_id_from_db(conn, scenario_id, user)
+            else:
+                return await get_context_physical_object_types_from_db(conn, scenario_id, user)
+
     async def get_physical_objects_by_scenario_id(
         self,
         scenario_id: int,
@@ -458,6 +476,18 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_connection() as conn:
             return await delete_building_from_db(conn, scenario_id, building_id, is_scenario_object, user)
 
+    async def get_service_types_by_scenario_id_from_db(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        for_context: bool,
+    ) -> list[ServiceTypeDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            if not for_context:
+                return await get_service_types_by_scenario_id_from_db(conn, scenario_id, user)
+            else:
+                return await get_context_service_types_from_db(conn, scenario_id, user)
+
     async def get_services_by_scenario_id(
         self,
         scenario_id: int,
@@ -574,6 +604,8 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         service_type_id: int | None,
         physical_object_function_id: int | None,
         urban_function_id: int | None,
+        exclude_physical_object_function_id: int | None,
+        exclude_urban_function_id: int | None,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_geometries_with_all_objects_by_scenario_id_from_db(
@@ -584,6 +616,8 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 service_type_id,
                 physical_object_function_id,
                 urban_function_id,
+                exclude_physical_object_function_id,
+                exclude_urban_function_id,
             )
 
     async def get_context_geometries(
@@ -610,6 +644,8 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         service_type_id: int | None,
         physical_object_function_id: int | None,
         urban_function_id: int | None,
+        exclude_physical_object_function_id: int | None,
+        exclude_urban_function_id: int | None,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_context_geometries_with_all_objects_from_db(
@@ -620,6 +656,8 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 service_type_id,
                 physical_object_function_id,
                 urban_function_id,
+                exclude_physical_object_function_id,
+                exclude_urban_function_id,
             )
 
     async def put_object_geometry(

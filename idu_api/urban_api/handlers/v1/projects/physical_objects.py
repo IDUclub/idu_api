@@ -15,6 +15,7 @@ from idu_api.urban_api.schemas import (
     PhysicalObject,
     PhysicalObjectPatch,
     PhysicalObjectPut,
+    PhysicalObjectType,
     PhysicalObjectWithGeometryPost,
     ScenarioBuildingPatch,
     ScenarioBuildingPost,
@@ -25,6 +26,44 @@ from idu_api.urban_api.schemas import (
 )
 from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, GeoJSONResponse
 from idu_api.urban_api.utils.auth_client import get_user
+
+
+@projects_router.get(
+    "/scenarios/{scenario_id}/physical_object_types",
+    response_model=list[PhysicalObjectType],
+    status_code=status.HTTP_200_OK,
+)
+async def get_physical_object_types_by_scenario_id(
+    request: Request,
+    scenario_id: int = Path(..., description="scenario identifier", gt=0),
+    for_context: bool = Query(False, description="to get types for context or project territory"),
+    user: UserDTO = Depends(get_user),
+) -> list[PhysicalObjectType]:
+    """
+    ## Get a list of physical object types for a given scenario.
+
+    **NOTE:** You can get the physical object types for both the context of the given scenario (`for_context` = true)
+    and the project territory (`for_context` = false).
+
+    ### Parameters:
+    - **scenario_id** (int, Path): Unique identifier of the scenario.
+    - **for_context** (bool, Query): Filter to get types for context or project territory (default: false).
+
+    ### Returns:
+    - **list[PhysicalObjectType]**: A list of physical object types.
+
+    ### Errors:
+    - **403 Forbidden**: If the user does not have access rights.
+    - **404 Not Found**: If the scenario does not exist.
+
+    ### Constraints:
+    - The user must be the owner of the relevant project or the project must be publicly available.
+    """
+    user_project_service: UserProjectService = request.state.user_project_service
+
+    types = await user_project_service.get_physical_object_types_by_scenario_id_from_db(scenario_id, user, for_context)
+
+    return [PhysicalObjectType.from_dto(phys_type) for phys_type in types]
 
 
 @projects_router.get(

@@ -129,6 +129,7 @@ class RecursiveFilter(BaseFilter):
         id_field: str | None = None,
         parent_field: str = "parent_id",
         allow_null_value: bool = False,
+        negate: bool = False,
     ):
         """
         Initialize the recursive filter.
@@ -141,12 +142,14 @@ class RecursiveFilter(BaseFilter):
             id_field: The primary key or unique ID field in the recursive table. The default value is field_name.
             parent_field: The foreign key referring to the parent in the recursive table.
             allow_null_value: If it is true, then the filter will build a hierarchy from the top level.
+            negate: If True, applies a NOT IN filter instead of IN.
         """
         super().__init__(table, field_name, value)
         self.recursive_table = recursive_table
         self.id_field = id_field or field_name
         self.parent_field = parent_field
         self.allow_null_value = allow_null_value
+        self.negate = negate
 
     def apply(self, query: Select) -> Select:
         if self.value is None and not self.allow_null_value:
@@ -177,8 +180,14 @@ class RecursiveFilter(BaseFilter):
             )
         )
 
+        # Build base filter
+        condition = getattr(self.table.c, self.field_name).in_(select(cte.c[self.id_field]))
+
+        if self.negate:
+            condition = ~condition  # Converts to NOT IN
+
         # Apply filter to main query
-        return query.where(getattr(self.table.c, self.field_name).in_(select(cte.c[self.id_field])))
+        return query.where(condition)
 
 
 class CustomFilter(BaseFilter):

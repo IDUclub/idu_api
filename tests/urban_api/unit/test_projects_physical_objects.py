@@ -33,6 +33,7 @@ from idu_api.common.db.entities import (
 )
 from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import (
+    PhysicalObjectTypeDTO,
     ScenarioPhysicalObjectDTO,
     ScenarioPhysicalObjectWithGeometryDTO,
     ScenarioUrbanObjectDTO,
@@ -43,8 +44,10 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     add_physical_object_with_geometry_to_db,
     delete_building_from_db,
     delete_physical_object_from_db,
+    get_context_physical_object_types_from_db,
     get_context_physical_objects_from_db,
     get_context_physical_objects_with_geometry_from_db,
+    get_physical_object_types_by_scenario_id_from_db,
     get_physical_objects_around_geometry_by_scenario_id_from_db,
     get_physical_objects_by_scenario_id_from_db,
     get_physical_objects_with_geometry_by_scenario_id_from_db,
@@ -59,6 +62,7 @@ from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_terri
 from idu_api.urban_api.schemas import (
     PhysicalObjectPatch,
     PhysicalObjectPut,
+    PhysicalObjectType,
     PhysicalObjectWithGeometryPost,
     ScenarioBuildingPatch,
     ScenarioBuildingPost,
@@ -73,6 +77,212 @@ from tests.urban_api.helpers.connection import MockConnection
 ####################################################################################
 #                           Default use-case tests                                 #
 ####################################################################################
+
+
+@pytest.mark.asyncio
+async def test_get_physical_object_types_by_scenario_id_from_db(mock_conn: MockConnection):
+    """Test the get_physical_object_types_by_scenario_id_from_db function."""
+
+    # Arrange
+    scenario_id = 1
+    user = UserDTO(id="mock_string", is_superuser=False)
+
+    territories_cte = include_child_territories_cte(1)
+    public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == scenario_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="public_urban_object_ids")
+
+    public_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            urban_objects_data.join(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
+            )
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+            )
+            .join(
+                physical_object_types_dict,
+                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
+            )
+            .join(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .where(
+            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            True,
+            object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
+        )
+        .distinct()
+    )
+
+    scenario_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_physical_objects_data,
+                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
+            )
+            .outerjoin(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
+            )
+            .outerjoin(
+                physical_object_types_dict,
+                or_(
+                    physical_object_types_dict.c.physical_object_type_id
+                    == projects_physical_objects_data.c.physical_object_type_id,
+                    physical_object_types_dict.c.physical_object_type_id
+                    == physical_objects_data.c.physical_object_type_id,
+                ),
+            )
+            .outerjoin(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == scenario_id,
+            projects_urban_objects_data.c.public_urban_object_id.is_(None),
+        )
+        .distinct()
+    )
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query)
+
+    # Act
+    result = await get_physical_object_types_by_scenario_id_from_db(mock_conn, scenario_id, user)
+
+    # Assert
+    assert isinstance(result, list), "Result should be a list."
+    assert all(
+        isinstance(item, PhysicalObjectTypeDTO) for item in result
+    ), "Each item should be a PhysicalObjectTypeDTO."
+    assert isinstance(
+        PhysicalObjectType.from_dto(result[0]), PhysicalObjectType
+    ), "Couldn't create pydantic model from DTO."
+    mock_conn.execute_mock.assert_any_call(str(statement))
+
+
+@pytest.mark.asyncio
+async def test_get_context_physical_object_types_from_db(mock_conn: MockConnection):
+    """Test the get_context_physical_object_types_from_db function."""
+
+    # Arrange
+    scenario_id = 1
+    user = UserDTO(id="mock_string", is_superuser=False)
+    mock_geom = str(MagicMock(spec=ScalarSelect))
+
+    public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == 1)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="public_urban_object_ids")
+
+    objects_intersecting = (
+        select(object_geometries_data.c.object_geometry_id)
+        .select_from(
+            object_geometries_data.join(
+                urban_objects_data,
+                urban_objects_data.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+            )
+        )
+        .where(
+            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            object_geometries_data.c.territory_id.in_([1])
+            | ST_Intersects(object_geometries_data.c.geometry, mock_geom),
+        )
+        .cte(name="objects_intersecting")
+    )
+
+    public_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            urban_objects_data.join(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
+            )
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+            )
+            .join(
+                objects_intersecting,
+                objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+            )
+            .join(
+                physical_object_types_dict,
+                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
+            )
+            .join(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .distinct()
+    )
+
+    scenario_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_physical_objects_data,
+                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
+            )
+            .outerjoin(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
+            )
+            .outerjoin(
+                physical_object_types_dict,
+                or_(
+                    physical_object_types_dict.c.physical_object_type_id
+                    == projects_physical_objects_data.c.physical_object_type_id,
+                    physical_object_types_dict.c.physical_object_type_id
+                    == physical_objects_data.c.physical_object_type_id,
+                ),
+            )
+            .outerjoin(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == 1,
+            projects_urban_objects_data.c.public_urban_object_id.is_(None),
+        )
+        .distinct()
+    )
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query)
+
+    # Act
+    with patch(
+        "idu_api.urban_api.logic.impl.helpers.projects_physical_objects.get_context_territories_geometry",
+        new_callable=AsyncMock,
+    ) as mock_get_context:
+        mock_get_context.return_value = 1, mock_geom, [1]
+        result = await get_context_physical_object_types_from_db(mock_conn, scenario_id, user)
+
+    # Assert
+    assert isinstance(result, list), "Result should be a list."
+    assert all(
+        isinstance(item, PhysicalObjectTypeDTO) for item in result
+    ), "Each item should be a PhysicalObjectTypeDTO."
+    assert isinstance(
+        PhysicalObjectType.from_dto(result[0]), PhysicalObjectType
+    ), "Couldn't create pydantic model from DTO."
+    mock_conn.execute_mock.assert_any_call(str(statement))
 
 
 @pytest.mark.asyncio

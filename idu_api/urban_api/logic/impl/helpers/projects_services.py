@@ -29,6 +29,7 @@ from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
     ScenarioServiceWithGeometryDTO,
     ScenarioUrbanObjectDTO,
+    ServiceTypeDTO,
     UserDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
@@ -41,6 +42,203 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
 )
 from idu_api.urban_api.schemas import ScenarioServicePost, ServicePatch, ServicePut
 from idu_api.urban_api.utils.query_filters import EqFilter, RecursiveFilter, apply_filters
+
+
+async def get_service_types_by_scenario_id_from_db(
+    conn: AsyncConnection,
+    scenario_id: int,
+    user: UserDTO | None,
+) -> list[ServiceTypeDTO]:
+    """Get all service types for a given scenario."""
+
+    scenario = await check_scenario(conn, scenario_id, user, return_value=True)
+
+    project_geometry = None
+    territories_cte = None
+    if not scenario.is_regional:
+        project_geometry = (
+            select(projects_territory_data.c.geometry).where(
+                projects_territory_data.c.project_id == scenario.project_id
+            )
+        ).scalar_subquery()
+    else:
+        territories_cte = include_child_territories_cte(scenario.territory_id)
+
+    # Step 1: Get all the public_urban_object_id for a given scenario_id
+    public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == scenario_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="public_urban_object_ids")
+
+    # Step 2: Collect all services from `public.urban_objects_data`
+    public_services_query = (
+        select(service_types_dict, urban_functions_dict.c.name.label("urban_function_name"))
+        .select_from(
+            urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+            )
+            .join(
+                service_types_dict,
+                service_types_dict.c.service_type_id == services_data.c.service_type_id,
+            )
+            .join(
+                urban_functions_dict,
+                urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
+            )
+        )
+        .where(
+            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            (
+                ST_Within(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
+                if not scenario.is_regional
+                else True
+            ),
+            (
+                object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id))
+                if scenario.is_regional
+                else True
+            ),
+        )
+        .distinct()
+    )
+
+    # Step 3: Collect all services from `user_projects.urban_objects_data`
+    scenario_services_query = (
+        select(service_types_dict, urban_functions_dict.c.name.label("urban_function_name"))
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_services_data, projects_services_data.c.service_id == projects_urban_objects_data.c.service_id
+            )
+            .outerjoin(services_data, services_data.c.service_id == projects_urban_objects_data.c.public_service_id)
+            .outerjoin(
+                service_types_dict,
+                or_(
+                    service_types_dict.c.service_type_id == projects_services_data.c.service_type_id,
+                    service_types_dict.c.service_type_id == services_data.c.service_type_id,
+                ),
+            )
+            .outerjoin(
+                urban_functions_dict,
+                urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == scenario_id,
+            projects_urban_objects_data.c.public_urban_object_id.is_(None),
+            (
+                projects_urban_objects_data.c.service_id.isnot(None)
+                | projects_urban_objects_data.c.public_service_id.isnot(None)
+            ),
+        )
+        .distinct()
+    )
+
+    union_query = union_all(public_services_query, scenario_services_query).cte(name="union_query")
+    statement = select(union_query)
+
+    service_types = (await conn.execute(statement)).mappings().all()
+
+    return [ServiceTypeDTO(**s) for s in service_types]
+
+
+async def get_context_service_types_from_db(
+    conn: AsyncConnection,
+    scenario_id: int,
+    user: UserDTO | None,
+) -> list[ServiceTypeDTO]:
+    """Get list of service types for 'context' of the project territory."""
+
+    parent_id, context_geom, context_ids = await get_context_territories_geometry(conn, scenario_id, user)
+
+    # Step 1: Get all the public_urban_object_id for a given scenario_id
+    public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == parent_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="public_urban_object_ids")
+
+    # Step 2: Find all intersecting object geometries from public (except object from previous step)
+    objects_intersecting = (
+        select(object_geometries_data.c.object_geometry_id)
+        .select_from(
+            object_geometries_data.join(
+                urban_objects_data,
+                urban_objects_data.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+            )
+        )
+        .where(
+            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            object_geometries_data.c.territory_id.in_(context_ids)
+            | ST_Intersects(object_geometries_data.c.geometry, context_geom),
+        )
+        .cte(name="objects_intersecting")
+    )
+
+    # Step 3: Collect all services from `public` intersecting context geometry
+    public_services_query = (
+        select(service_types_dict, urban_functions_dict.c.name.label("urban_function_name"))
+        .select_from(
+            urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+            )
+            .join(
+                objects_intersecting,
+                objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+            )
+            .join(
+                service_types_dict,
+                service_types_dict.c.service_type_id == services_data.c.service_type_id,
+            )
+            .join(
+                urban_functions_dict,
+                urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
+            )
+        )
+        .distinct()
+    )
+
+    # Step 4: Collect all services from parent regional scenario intersecting context geometry
+    scenario_services_query = (
+        select(service_types_dict, urban_functions_dict.c.name.label("urban_function_name"))
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_services_data, projects_services_data.c.service_id == projects_urban_objects_data.c.service_id
+            )
+            .outerjoin(services_data, services_data.c.service_id == projects_urban_objects_data.c.public_service_id)
+            .outerjoin(
+                service_types_dict,
+                or_(
+                    service_types_dict.c.service_type_id == projects_services_data.c.service_type_id,
+                    service_types_dict.c.service_type_id == services_data.c.service_type_id,
+                ),
+            )
+            .outerjoin(
+                urban_functions_dict,
+                urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == parent_id,
+            projects_urban_objects_data.c.public_urban_object_id.is_(None),
+            (
+                projects_urban_objects_data.c.service_id.isnot(None)
+                | projects_urban_objects_data.c.public_service_id.isnot(None)
+            ),
+        )
+        .distinct()
+    )
+
+    union_query = union_all(public_services_query, scenario_services_query).cte(name="union_query")
+    statement = select(union_query)
+
+    service_types = (await conn.execute(statement)).mappings().all()
+
+    return [ServiceTypeDTO(**s) for s in service_types]
 
 
 async def get_services_by_scenario_id_from_db(
