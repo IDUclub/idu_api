@@ -483,7 +483,7 @@ class ProjectStorageManager:
             await self._client.upload_file(session, file_data, object_name, logger)
 
             url = (await self._client.generate_presigned_urls(session, [object_name], logger))[0]
-            return {"url": url, "filename": object_name.split("/")[-1]}
+            return {"url": url, "filename": object_name.rsplit("/", maxsplit=1)[-1]}
 
     async def get_phase_document_urls(
         self,

@@ -399,7 +399,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
 
     # Act
     result = await get_geometries_with_all_objects_by_scenario_id_from_db(
-        mock_conn, scenario_id, user, physical_object_type_id, service_type_id, None, None
+        mock_conn, scenario_id, user, physical_object_type_id, service_type_id, None, None, None, None
     )
 
     # Assert
@@ -791,7 +791,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
     ) as mock_get_context:
         mock_get_context.return_value = 1, mock_geom, [1]
         result = await get_context_geometries_with_all_objects_from_db(
-            mock_conn, project_id, user, physical_object_type_id, service_type_id, None, None
+            mock_conn, project_id, user, physical_object_type_id, service_type_id, None, None, None, None
         )
 
     # Assert

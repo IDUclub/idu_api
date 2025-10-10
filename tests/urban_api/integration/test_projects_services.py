@@ -14,6 +14,7 @@ from idu_api.urban_api.schemas import (
     ScenarioUrbanObject,
     Service,
     ServicePut,
+    ServiceType,
 )
 from idu_api.urban_api.schemas.geometries import GeoJSONResponse
 from tests.urban_api.helpers.utils import assert_response
@@ -21,6 +22,50 @@ from tests.urban_api.helpers.utils import assert_response
 ####################################################################################
 #                           Default use-case tests                                 #
 ####################################################################################
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "expected_status, error_message, for_context_param, scenario_id_param",
+    [
+        (200, None, False, None),
+        (200, None, True, None),
+        (403, "запрещён", False, None),
+        (404, "не найден", False, 1e9),
+    ],
+    ids=["success_common", "success_context", "forbidden", "not_found"],
+)
+async def test_get_service_types_by_scenario_id(
+    urban_api_host: str,
+    scenario: dict[str, Any],
+    scenario_service: dict[str, Any],
+    valid_token: str,
+    superuser_token: str,
+    expected_status: int,
+    error_message: str | None,
+    for_context_param: bool,
+    scenario_id_param: int | None,
+):
+    """Test GET /scenarios/{scenario_id}/service_types method."""
+
+    # Arrange
+    scenario_id = scenario_id_param or scenario["scenario_id"]
+    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
+    params = {"for_context": for_context_param}
+
+    # Act
+    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
+        response = await client.get(f"/scenarios/{scenario_id}/service_types", headers=headers, params=params)
+        result = response.json()
+
+    # Assert
+    if expected_status == 200:
+        assert_response(response, expected_status, ServiceType, error_message, result_type="list")
+        assert any(
+            scenario_service["service_type"]["service_type_id"] == item["service_type_id"] for item in result
+        ), "Response should contain at least one service type."
+    else:
+        assert_response(response, expected_status, ServiceType, error_message)
 
 
 @pytest.mark.asyncio

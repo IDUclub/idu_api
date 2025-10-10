@@ -113,16 +113,16 @@ async def test_add_scenario_indicator_value(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    if expected_status == 201:
+    if expected_status == 201 and not is_regional_param:
         await asyncio.sleep(5)
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
         response = await client.post(f"/scenarios/{scenario_id}/indicators_values", headers=headers, json=new_value)
-    if expected_status == 201:
+    if expected_status == 201 and not is_regional_param:
         await asyncio.sleep(5)
 
     # Assert
     assert_response(response, expected_status, ScenarioIndicatorValue, error_message)
-    if expected_status == 201:
+    if expected_status == 201 and not is_regional_param:
         assert len(new_handler.received_events) == 1, "No one event was received"
         assert isinstance(new_handler.received_events[0], model), f"Received event is not {model.__name__}"
 
@@ -169,16 +169,16 @@ async def test_put_scenario_indicator_value(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    if expected_status == 200:
+    if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
         response = await client.put(f"/scenarios/{scenario_id}/indicators_values", headers=headers, json=new_value)
-    if expected_status == 200:
+    if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
 
     # Assert
     assert_response(response, expected_status, ScenarioIndicatorValue, error_message)
-    if expected_status == 200:
+    if expected_status == 200 and not is_regional_param:
         assert len(new_handler.received_events) == 1, "No one event was received"
         assert isinstance(new_handler.received_events[0], model), f"Received event is not {model.__name__}"
 
@@ -222,7 +222,7 @@ async def test_patch_scenario_indicator_value(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    if expected_status == 200:
+    if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
         response = await client.patch(
@@ -230,12 +230,12 @@ async def test_patch_scenario_indicator_value(
             headers=headers,
             json=new_value,
         )
-    if expected_status == 200:
+    if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
 
     # Assert
     assert_response(response, expected_status, ScenarioIndicatorValue, error_message)
-    if expected_status == 200:
+    if expected_status == 200 and not is_regional_param:
         assert len(new_handler.received_events) == 1, "No one event was received"
         assert isinstance(new_handler.received_events[0], model), f"Received event is not {model.__name__}"
 

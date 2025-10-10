@@ -37,6 +37,7 @@ from idu_api.common.exceptions.logic.common import (
     EntityNotFoundById,
 )
 from idu_api.urban_api.dto import (
+    PhysicalObjectTypeDTO,
     ScenarioPhysicalObjectDTO,
     ScenarioPhysicalObjectWithGeometryDTO,
     ScenarioUrbanObjectDTO,
@@ -61,6 +62,213 @@ from idu_api.urban_api.schemas import (
     ScenarioBuildingPut,
 )
 from idu_api.urban_api.utils.query_filters import EqFilter, IntersectsFilter, RecursiveFilter, apply_filters
+
+
+async def get_physical_object_types_by_scenario_id_from_db(
+    conn: AsyncConnection,
+    scenario_id: int,
+    user: UserDTO | None,
+) -> list[PhysicalObjectTypeDTO]:
+    """Get all physical object types for given scenario."""
+
+    scenario = await check_scenario(conn, scenario_id, user, return_value=True)
+
+    project_geometry = None
+    territories_cte = None
+    if not scenario.is_regional:
+        project_geometry = (
+            select(projects_territory_data.c.geometry).where(
+                projects_territory_data.c.project_id == scenario.project_id
+            )
+        ).scalar_subquery()
+    else:
+        territories_cte = include_child_territories_cte(scenario.territory_id)
+
+    # Step 1: Get all the public_urban_object_id for a given scenario_id
+    public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == scenario_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="public_urban_object_ids")
+
+    # Step 2: Collect all physical objects from `public.urban_objects_data`
+    public_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            urban_objects_data.join(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
+            )
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+            )
+            .join(
+                physical_object_types_dict,
+                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
+            )
+            .join(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .where(
+            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            ST_Within(object_geometries_data.c.geometry, project_geometry) if not scenario.is_regional else True,
+            (
+                object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id))
+                if scenario.is_regional
+                else True
+            ),
+        )
+        .distinct()
+    )
+
+    # Step 3: Collect all physical objects from `user_projects.urban_objects_data`
+    scenario_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_physical_objects_data,
+                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
+            )
+            .outerjoin(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
+            )
+            .outerjoin(
+                physical_object_types_dict,
+                or_(
+                    physical_object_types_dict.c.physical_object_type_id
+                    == projects_physical_objects_data.c.physical_object_type_id,
+                    physical_object_types_dict.c.physical_object_type_id
+                    == physical_objects_data.c.physical_object_type_id,
+                ),
+            )
+            .outerjoin(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == scenario_id,
+            projects_urban_objects_data.c.public_urban_object_id.is_(None),
+        )
+        .distinct()
+    )
+
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query)
+
+    physical_object_types = (await conn.execute(statement)).mappings().all()
+
+    return [PhysicalObjectTypeDTO(**pot) for pot in physical_object_types]
+
+
+async def get_context_physical_object_types_from_db(
+    conn: AsyncConnection,
+    scenario_id: int,
+    user: UserDTO | None,
+) -> list[PhysicalObjectTypeDTO]:
+    """Get all physical object types for 'context' of the project territory."""
+
+    parent_id, context_geom, context_ids = await get_context_territories_geometry(conn, scenario_id, user)
+
+    # Step 1: Get all the public_urban_object_id for a given scenario_id
+    public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == parent_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="public_urban_object_ids")
+
+    # Step 2: Find all intersecting object geometries from public (except object from previous step)
+    objects_intersecting = (
+        select(object_geometries_data.c.object_geometry_id)
+        .select_from(
+            object_geometries_data.join(
+                urban_objects_data,
+                urban_objects_data.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+            )
+        )
+        .where(
+            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            object_geometries_data.c.territory_id.in_(context_ids)
+            | ST_Intersects(object_geometries_data.c.geometry, context_geom),
+        )
+        .cte(name="objects_intersecting")
+    )
+
+    # Step 3: Collect all physical objects from `public` intersecting context geometry
+    public_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            urban_objects_data.join(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
+            )
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
+            )
+            .join(
+                objects_intersecting,
+                objects_intersecting.c.object_geometry_id == object_geometries_data.c.object_geometry_id,
+            )
+            .join(
+                physical_object_types_dict,
+                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
+            )
+            .join(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .distinct()
+    )
+
+    # Step 4: Collect all physical objects from parent regional scenario intersecting context geometry
+    scenario_urban_objects_query = (
+        select(physical_object_types_dict, physical_object_functions_dict.c.name.label("physical_object_function_name"))
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_physical_objects_data,
+                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
+            )
+            .outerjoin(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
+            )
+            .outerjoin(
+                physical_object_types_dict,
+                or_(
+                    physical_object_types_dict.c.physical_object_type_id
+                    == projects_physical_objects_data.c.physical_object_type_id,
+                    physical_object_types_dict.c.physical_object_type_id
+                    == physical_objects_data.c.physical_object_type_id,
+                ),
+            )
+            .outerjoin(
+                physical_object_functions_dict,
+                physical_object_functions_dict.c.physical_object_function_id
+                == physical_object_types_dict.c.physical_object_function_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == parent_id,
+            projects_urban_objects_data.c.public_urban_object_id.is_(None),
+        )
+        .distinct()
+    )
+
+    union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
+    statement = select(union_query)
+
+    physical_object_types = (await conn.execute(statement)).mappings().all()
+
+    return [PhysicalObjectTypeDTO(**pot) for pot in physical_object_types]
 
 
 async def get_physical_objects_by_scenario_id_from_db(
@@ -1096,14 +1304,14 @@ async def get_context_physical_objects_from_db(
 
 async def get_context_physical_objects_with_geometry_from_db(
     conn: AsyncConnection,
-    project_id: int,
+    scenario_id: int,
     user: UserDTO | None,
     physical_object_type_id: int | None,
     physical_object_function_id: int | None,
 ) -> list[ScenarioPhysicalObjectWithGeometryDTO]:
     """Get list of physical objects with geometry for 'context' of the project territory."""
 
-    parent_id, context_geom, context_ids = await get_context_territories_geometry(conn, project_id, user)
+    parent_id, context_geom, context_ids = await get_context_territories_geometry(conn, scenario_id, user)
 
     # Step 1: Get all the public_urban_object_id for a given scenario_id
     public_urban_object_ids = (

@@ -9,6 +9,7 @@ from idu_api.urban_api.dto import (
     FunctionalZoneSourceDTO,
     HexagonWithIndicatorsDTO,
     PageDTO,
+    PhysicalObjectTypeDTO,
     ProjectDTO,
     ProjectPhasesDTO,
     ProjectTerritoryDTO,
@@ -24,6 +25,7 @@ from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
     ScenarioServiceWithGeometryDTO,
     ScenarioUrbanObjectDTO,
+    ServiceTypeDTO,
     UserDTO,
 )
 from idu_api.urban_api.logic.physical_objects import Geom
@@ -175,6 +177,18 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Delete scenario object."""
 
     @abc.abstractmethod
+    async def get_physical_object_types_by_scenario_id_from_db(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        for_context: bool,
+    ) -> list[PhysicalObjectTypeDTO]:
+        """Get all physical object types for given scenario identifier.
+
+        You can get the types of physical objects for both the context of the given scenario and the project territory.
+        """
+
+    @abc.abstractmethod
     async def get_physical_objects_by_scenario_id(
         self,
         scenario_id: int,
@@ -317,6 +331,18 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Delete scenario building."""
 
     @abc.abstractmethod
+    async def get_service_types_by_scenario_id_from_db(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        for_context: bool,
+    ) -> list[ServiceTypeDTO]:
+        """Get all service types for given scenario identifier.
+
+        You can get the types of services for both the context of the given scenario and the project territory.
+        """
+
+    @abc.abstractmethod
     async def get_services_by_scenario_id(
         self,
         scenario_id: int,
@@ -413,6 +439,8 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         service_type_id: int | None,
         physical_object_function_id: int | None,
         urban_function_id: int | None,
+        exclude_physical_object_function_id: int | None,
+        exclude_urban_function_id: int | None,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         """Get geometries with lists of physical objects and services by scenario identifier."""
 
@@ -435,6 +463,8 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         service_type_id: int | None,
         physical_object_function_id: int | None,
         urban_function_id: int | None,
+        exclude_physical_object_function_id: int | None,
+        exclude_urban_function_id: int | None,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         """Get geometries with lists of physical objects and services for 'context' of the project territory."""
 

@@ -271,6 +271,8 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
     service_type_id: int | None,
     physical_object_function_id: int | None,
     urban_function_id: int | None,
+    exclude_physical_object_function_id: int | None,
+    exclude_urban_function_id: int | None,
 ) -> list[ScenarioGeometryWithAllObjectsDTO]:
     """Get geometries with list of physical objects and services by scenario identifier."""
 
@@ -501,8 +503,16 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
             physical_object_function_id,
             physical_object_functions_dict,
         ),
+        RecursiveFilter(
+            union_query,
+            "physical_object_function_id",
+            exclude_physical_object_function_id,
+            physical_object_functions_dict,
+            negate=True,
+        ),
         EqFilter(union_query, "service_type_id", service_type_id),
         RecursiveFilter(union_query, "urban_function_id", urban_function_id, urban_functions_dict),
+        RecursiveFilter(union_query, "urban_function_id", exclude_urban_function_id, urban_functions_dict, negate=True),
     )
 
     result = (await conn.execute(statement)).mappings().all()
@@ -763,6 +773,8 @@ async def get_context_geometries_with_all_objects_from_db(
     service_type_id: int | None,
     physical_object_function_id: int | None,
     urban_function_id: int | None,
+    exclude_physical_object_function_id: int | None,
+    exclude_urban_function_id: int | None,
 ) -> list[ScenarioGeometryWithAllObjectsDTO]:
     """Get geometries with lists of physical objects and services for 'context' of the project territory."""
 
@@ -999,8 +1011,16 @@ async def get_context_geometries_with_all_objects_from_db(
             physical_object_function_id,
             physical_object_functions_dict,
         ),
+        RecursiveFilter(
+            union_query,
+            "physical_object_function_id",
+            exclude_physical_object_function_id,
+            physical_object_functions_dict,
+            negate=True,
+        ),
         EqFilter(union_query, "service_type_id", service_type_id),
         RecursiveFilter(union_query, "urban_function_id", urban_function_id, urban_functions_dict),
+        RecursiveFilter(union_query, "urban_function_id", exclude_urban_function_id, urban_functions_dict, negate=True),
     )
 
     result = (await conn.execute(statement)).mappings().all()
