@@ -11,12 +11,14 @@ from shapely.wkb import loads as wkb_loads
 class BufferTypeDTO:
     buffer_type_id: int
     name: str
+    description: str | None
 
 
 @dataclass(frozen=True)
 class DefaultBufferValueDTO:
     buffer_type_id: int
     buffer_type_name: str
+    buffer_type_description: str | None
     physical_object_type_id: int | None
     physical_object_type_name: str | None
     service_type_id: int | None
@@ -28,6 +30,7 @@ class DefaultBufferValueDTO:
 class BufferDTO:
     buffer_type_id: int
     buffer_type_name: str
+    buffer_type_description: str | None
     urban_object_id: int
     physical_object_id: int
     physical_object_name: str
@@ -53,6 +56,7 @@ class BufferDTO:
         buffer["buffer_type"] = {
             "id": buffer.pop("buffer_type_id"),
             "name": buffer.pop("buffer_type_name"),
+            "description": buffer.pop("buffer_type_description"),
         }
         buffer["urban_object"] = {
             "id": buffer.pop("urban_object_id"),

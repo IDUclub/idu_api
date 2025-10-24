@@ -26,12 +26,14 @@ buffer_types_dict = Table(
     metadata,
     Column("buffer_type_id", Integer, primary_key=True, server_default=buffer_types_dict_id_seq.next_value()),
     Column("name", String(length=100), nullable=False, unique=True),
+    Column("description", String(length=4096), nullable=True),
 )
 
 """
 Buffer Types Dictionary:
 - buffer_type_id int (Primary Key)
 - name string(100) (Unique)
+- description string(4096)
 """
 
 default_buffer_values_dict_id_seq = Sequence("default_buffer_values_dict_id_seq")

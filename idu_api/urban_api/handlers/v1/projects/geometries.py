@@ -95,6 +95,8 @@ async def get_geometries_with_all_objects_by_scenario_id(
     - **service_type_id** (int | None, Query): Optional filter by service type identifier.
     - **physical_object_function_id** (int | None, Query): Optional filter by physical object function identifier.
     - **urban_function_id** (int | None, Query): Optional filter by urban function identifier.
+    - **exclude_physical_object_function_id** (int | None, Query): Exclude objects with this physical function.
+    - **exclude_urban_function_id** (int | None, Query): Exclude objects with this urban function.
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
@@ -212,6 +214,8 @@ async def get_context_geometries_with_all_objects(
     - **service_type_id** (int | None, Query): Optional filter by service type identifier.
     - **physical_object_function_id** (int | None, Query): Optional filter by physical object function identifier.
     - **urban_function_id** (int | None, Query): Optional filter by urban function identifier.
+    - **exclude_physical_object_function_id** (int | None, Query): Exclude objects with this physical function.
+    - **exclude_urban_function_id** (int | None, Query): Exclude objects with this urban function.
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
