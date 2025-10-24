@@ -421,6 +421,7 @@ class BufferTypeBasic(BaseModel):
 
     id: int
     name: str
+    description: str | None
 
 
 class PhysicalObjectBasic(BaseModel):

@@ -55,7 +55,7 @@ __all__ = [
 @pytest.fixture(scope="session")
 def buffer_type(urban_api_host) -> dict[str, Any]:
     """Returns created buffer type."""
-    buffer_type_post_req = BufferTypePost(name="Test buffer type name")
+    buffer_type_post_req = BufferTypePost(name="Test buffer type name", description="Test buffer type description")
 
     with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
         response = client.post("/buffer_types", json=buffer_type_post_req.model_dump())
@@ -142,6 +142,7 @@ def buffer_type_req() -> BufferType:
     return BufferType(
         buffer_type_id=1,
         name="Test buffer type name",
+        description="Test buffer type description",
     )
 
 
@@ -149,7 +150,7 @@ def buffer_type_req() -> BufferType:
 def buffer_type_post_req() -> BufferTypePost:
     """POST request template for buffer type data."""
 
-    return BufferTypePost(name="Test buffer type name")
+    return BufferTypePost(name="Test buffer type name", description="Test buffer type description")
 
 
 @pytest.fixture
@@ -157,10 +158,7 @@ def buffer_req() -> Buffer:
     """GET request template for buffer data."""
 
     return Buffer(
-        buffer_type=BufferTypeBasic(
-            id=1,
-            name="Test buffer type name",
-        ),
+        buffer_type=BufferTypeBasic(id=1, name="Test buffer type name", description="Test buffer type description"),
         urban_object=ShortUrbanObject(
             id=1,
             physical_object=PhysicalObjectBasic(
@@ -235,6 +233,7 @@ def scenario_buffer_req() -> ScenarioBuffer:
         buffer_type=BufferTypeBasic(
             id=1,
             name="Test buffer type name",
+            description="Test buffer type description",
         ),
         urban_object=ShortUrbanObject(
             id=1,

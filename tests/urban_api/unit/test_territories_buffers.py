@@ -38,6 +38,7 @@ async def test_get_buffers_by_territory_id_from_db(mock_conn: MockConnection):
         select(
             buffer_types_dict.c.buffer_type_id,
             buffer_types_dict.c.name.label("buffer_type_name"),
+            buffer_types_dict.c.description.label("buffer_type_description"),
             urban_objects_data.c.urban_object_id,
             physical_objects_data.c.physical_object_id,
             physical_objects_data.c.name.label("physical_object_name"),

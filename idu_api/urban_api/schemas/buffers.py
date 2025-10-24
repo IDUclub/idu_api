@@ -21,16 +21,18 @@ class BufferType(BaseModel):
 
     buffer_type_id: int = Field(..., description="buffer type identifier", examples=[1])
     name: str = Field(..., description="buffer type name", examples=["--"])
+    description: str | None = Field(..., description="buffer type description", examples=["desc"])
 
     @classmethod
     def from_dto(cls, dto: BufferTypeDTO) -> "BufferType":
-        return cls(buffer_type_id=dto.buffer_type_id, name=dto.name)
+        return cls(buffer_type_id=dto.buffer_type_id, name=dto.name, description=dto.description)
 
 
 class BufferTypePost(BaseModel):
     """Buffer type schema for POST request."""
 
     name: str = Field(..., description="buffer type name", examples=["--"])
+    description: str | None = Field(None, description="buffer type description", examples=["desc"])
 
 
 class DefaultBufferValue(BaseModel):
@@ -44,7 +46,9 @@ class DefaultBufferValue(BaseModel):
     @classmethod
     def from_dto(cls, dto: DefaultBufferValueDTO) -> "DefaultBufferValue":
         return cls(
-            buffer_type=BufferTypeBasic(id=dto.buffer_type_id, name=dto.buffer_type_name),
+            buffer_type=BufferTypeBasic(
+                id=dto.buffer_type_id, name=dto.buffer_type_name, description=dto.buffer_type_description
+            ),
             physical_object_type=(
                 PhysicalObjectTypeBasic(
                     id=dto.physical_object_type_id,
@@ -110,7 +114,9 @@ class Buffer(BaseModel):
     @classmethod
     def from_dto(cls, dto: BufferDTO) -> "Buffer":
         return cls(
-            buffer_type=BufferTypeBasic(id=dto.buffer_type_id, name=dto.buffer_type_name),
+            buffer_type=BufferTypeBasic(
+                id=dto.buffer_type_id, name=dto.buffer_type_name, description=dto.buffer_type_description
+            ),
             urban_object=ShortUrbanObject(
                 id=dto.urban_object_id,
                 physical_object=PhysicalObjectBasic(
@@ -173,7 +179,9 @@ class ScenarioBuffer(BaseModel):
     @classmethod
     def from_dto(cls, dto: ScenarioBufferDTO) -> "ScenarioBuffer":
         return cls(
-            buffer_type=BufferTypeBasic(id=dto.buffer_type_id, name=dto.buffer_type_name),
+            buffer_type=BufferTypeBasic(
+                id=dto.buffer_type_id, name=dto.buffer_type_name, description=dto.buffer_type_description
+            ),
             urban_object=ShortUrbanObject(
                 id=dto.urban_object_id,
                 physical_object=PhysicalObjectBasic(
