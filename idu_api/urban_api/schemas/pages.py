@@ -9,7 +9,6 @@ from fastapi_pagination.default import Params as DefaultParams
 from fastapi_pagination.links.bases import create_links
 from fastapi_pagination.types import Cursor
 from pydantic import BaseModel
-from typing_extensions import Self
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -41,7 +40,7 @@ class Page(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public-metho
         *,
         total: int | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> "Page":
 
         assert isinstance(params, BaseParams)
         assert total is not None
@@ -94,7 +93,7 @@ class CursorPage(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public
         previous: Cursor | None = None,
         next_: Cursor | None = None,
         **kwargs: Any,
-    ) -> Self:
+    ) -> "CursorPage":
 
         assert isinstance(params, CursorParams)
         assert total is not None

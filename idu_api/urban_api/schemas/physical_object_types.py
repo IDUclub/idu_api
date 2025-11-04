@@ -1,6 +1,6 @@
 """Physical object type schemas are defined here."""
 
-from typing import Self
+from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -118,7 +118,7 @@ class PhysicalObjectsTypesHierarchy(BaseModel):
     level: int = Field(..., description="number of physical object functions above in a tree + [1]", examples=[1])
     list_label: str = Field(..., description="physical object function list label", examples=["1.1.1"])
     code: str = Field(..., description="physical object function code", examples=["1"])
-    children: list[Self | PhysicalObjectType]
+    children: list[Any]
 
     @classmethod
     def from_dto(cls, dto: PhysicalObjectTypesHierarchyDTO) -> "PhysicalObjectsTypesHierarchy":

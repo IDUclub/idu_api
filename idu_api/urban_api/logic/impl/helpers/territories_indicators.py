@@ -18,6 +18,7 @@ from idu_api.common.db.entities import (
     soc_values_dict,
     territories_data,
     territory_indicators_data,
+    territory_types_dict,
 )
 from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
@@ -210,6 +211,9 @@ async def get_indicator_values_by_parent_id_from_db(
     statement = (
         select(
             territories_data.c.name.label("territory_name"),
+            territory_types_dict.c.territory_type_id,
+            territory_types_dict.c.name.label("territory_type_name"),
+            territories_data.c.is_city,
             ST_AsEWKB(territories_data.c.geometry).label("geometry"),
             ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
             territory_indicators_data,
@@ -265,6 +269,9 @@ async def get_indicator_values_by_parent_id_from_db(
                 indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
             )
             .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
+            .join(
+                territory_types_dict, territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id
+            )
         )
     else:
         statement = statement.select_from(
@@ -281,6 +288,9 @@ async def get_indicator_values_by_parent_id_from_db(
                 indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
             )
             .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
+            .join(
+                territory_types_dict, territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id
+            )
         )
 
     statement = apply_filters(
@@ -307,6 +317,9 @@ async def get_indicator_values_by_parent_id_from_db(
         TerritoryWithIndicatorsDTO(
             territory_id=territory_id,
             name=rows[0].territory_name,
+            territory_type_id=rows[0].territory_type_id,
+            territory_type_name=rows[0].territory_type_name,
+            is_city=rows[0].is_city,
             geometry=rows[0].geometry,
             centre_point=rows[0].centre_point,
             indicators=[

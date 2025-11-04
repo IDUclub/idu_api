@@ -2,7 +2,7 @@
 
 import json
 from collections.abc import Iterable
-from typing import Any, Literal, Self, TypeVar
+from typing import Any, Literal, TypeVar
 
 import shapely
 import shapely.geometry as geom
@@ -51,7 +51,7 @@ class AllPossibleGeometry(BaseModel):
     _shapely_geom: _BaseGeomTypes | geom.GeometryCollection | None = None
 
     @model_validator(mode="after")
-    def validate_geometry(self) -> Self:
+    def validate_geometry(self) -> "AllPossibleGeometry":
         if self.type == "GeometryCollection":
             if self.geometries is None:
                 raise ValueError("GeometryCollection must have 'geometries'.")
@@ -76,7 +76,7 @@ class AllPossibleGeometry(BaseModel):
         return self._shapely_geom
 
     @classmethod
-    def from_shapely_geometry(cls, geometry: _BaseGeomTypes | geom.GeometryCollection | None) -> Self | None:
+    def from_shapely_geometry(cls, geometry: _BaseGeomTypes | geom.GeometryCollection | None) -> "AllPossibleGeometry":
         if geometry is None:
             return None
         return cls(**geom.mapping(geometry))
@@ -115,7 +115,7 @@ class Geometry(BaseModel):
         return self._shapely_geom
 
     @classmethod
-    def from_shapely_geometry(cls, geometry: _BaseGeomTypes | None) -> Self | None:
+    def from_shapely_geometry(cls, geometry: _BaseGeomTypes | None) -> "Geometry":
         """
         Construct Geometry model from shapely geometry.
         """
@@ -170,12 +170,11 @@ class GeometryValidationModel(BaseModel):
         return centre_point
 
     @model_validator(mode="after")
-    @classmethod
-    def validate_centre_point_from_geometry(cls: type[T], model: T) -> T:
+    def validate_centre_point_from_geometry(self) -> T:
         """Use the geometry's centroid for centre_point if it is missing."""
-        if model.centre_point is None and model.geometry:
-            model.centre_point = Geometry.from_shapely_geometry(model.geometry.as_shapely_geometry().centroid)
-        return model
+        if self.centre_point is None and self.geometry:
+            self.centre_point = Geometry.from_shapely_geometry(self.geometry.as_shapely_geometry().centroid)
+        return self
 
 
 class NotPointGeometryValidationModel(BaseModel):
@@ -204,16 +203,18 @@ class GeoJSONResponse(FeatureCollection):
         cls,
         features: Iterable[dict[str, Any]],
         centers_only: bool = False,
+        save_centers: bool = False,
     ) -> "GeoJSONResponse":
         """
         Construct GeoJSON model from list of dictionaries,
         with one field in each containing GeoJSON geometries.
         """
+        geom_columns = ("geometry", "centre_point") if not save_centers else "geometry"
         feature_collection = [
             Feature(
                 type="Feature",
                 geometry=feature["centre_point" if centers_only else "geometry"],
-                properties={k: v for k, v in feature.items() if k not in ("geometry", "centre_point")},
+                properties={k: v for k, v in feature.items() if k not in geom_columns},
             )
             for feature in features
         ]

@@ -1,4 +1,4 @@
-FROM python:3.11-slim
+FROM python:3.13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -14,8 +14,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 COPY pyproject.toml README.md /app/
-
-RUN sed -i '0,/version = .*/ s//version = "0.1.0"/' pyproject.toml
 
 RUN poetry config virtualenvs.create false && \
     poetry install --with dev --no-root

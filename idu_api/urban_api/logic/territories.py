@@ -134,6 +134,20 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         """Get indicators for a given territory."""
 
     @abc.abstractmethod
+    async def get_indicator_values_with_geometry_by_territory_id(
+        self,
+        territory_id: int,
+        indicator_ids: set[int] | None,
+        indicators_group_id: int | None,
+        start_date: date | None,
+        end_date: date | None,
+        value_type: Literal["real", "target", "forecast"] | None,
+        information_source: str | None,
+        last_only: bool,
+    ) -> TerritoryWithIndicatorsDTO:
+        """Get indicator values for only one territory with geometry."""
+
+    @abc.abstractmethod
     async def get_indicator_values_by_territory_id(
         self,
         territory_id: int,

@@ -135,12 +135,12 @@ class TerritoryWithIndicatorDTO:
     measurement_unit_name: str | None
 
     def __post_init__(self) -> None:
-        if isinstance(self.centre_point, dict):
-            self.centre_point = geom.shape(self.centre_point)
+        if isinstance(self.centre_point, bytes):
+            self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
             self.geometry = self.centre_point
-        if isinstance(self.geometry, dict):
-            self.geometry = geom.shape(self.geometry)
+        if isinstance(self.geometry, bytes):
+            self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -152,6 +152,9 @@ class TerritoryWithIndicatorsDTO:
 
     territory_id: int
     name: str
+    territory_type_id: int
+    territory_type_name: str
+    is_city: bool
     geometry: geom.Polygon | geom.MultiPolygon | geom.Point
     centre_point: geom.Point
     indicators: list[IndicatorValueDTO]
@@ -166,14 +169,24 @@ class TerritoryWithIndicatorsDTO:
 
     def to_geojson_dict(self) -> dict[str, Any]:
         territory = asdict(self)
-        for indicator in territory["indicators"]:
-            del indicator["indicator_id"]
-            del indicator["measurement_unit_id"]
-            del indicator["date_type"]
-            del indicator["territory_id"]
-            del indicator["territory_name"]
-            del indicator["created_at"]
-            del indicator["updated_at"]
+        territory["territory_type"] = {
+            "id": territory.pop("territory_type_id"),
+            "name": territory.pop("territory_type_name"),
+        }
+        territory["centre_point"] = geom.mapping(self.centre_point)
+        territory["indicators"] = [
+            {
+                "name_full": ind.name_full,
+                "measurement_unit_name": ind.measurement_unit_name,
+                "level": ind.level,
+                "list_label": ind.list_label,
+                "date_value": ind.date_value,
+                "value": ind.value,
+                "value_type": ind.value_type,
+                "information_source": ind.information_source,
+            }
+            for ind in self.indicators
+        ]
         return territory
 
 
@@ -183,6 +196,9 @@ class TerritoryWithNormativesDTO:
 
     territory_id: int
     name: str
+    territory_type_id: int
+    territory_type_name: str
+    is_city: bool
     geometry: geom.Polygon | geom.MultiPolygon | geom.Point
     centre_point: geom.Point
     normatives: list[NormativeDTO]
@@ -197,18 +213,22 @@ class TerritoryWithNormativesDTO:
 
     def to_geojson_dict(self) -> dict[str, Any]:
         territory = asdict(self)
-        for normative in territory["normatives"]:
-            del normative["territory_id"]
-            del normative["territory_name"]
-            del normative["service_type_id"]
-            del normative["urban_function_id"]
-            del normative["created_at"]
-            del normative["updated_at"]
-            if normative["service_type_name"] is not None:
-                normative["name"] = normative.pop("service_type_name")
-                del normative["urban_function_name"]
-            else:
-                normative["name"] = normative.pop("urban_function_name")
-                del normative["service_type_name"]
-
+        territory["territory_type"] = {
+            "id": territory.pop("territory_type_id"),
+            "name": territory.pop("territory_type_name"),
+        }
+        territory["centre_point"] = geom.mapping(self.centre_point)
+        territory["normatives"] = [
+            {
+                "name": norm.urban_function_name if norm.service_type_name is None else norm.service_type_name,
+                "year": norm.year,
+                "normative_type": norm.normative_type,
+                "radius_availability_meters": norm.radius_availability_meters,
+                "time_availability_minutes": norm.time_availability_minutes,
+                "services_per_1000_normative": norm.services_per_1000_normative,
+                "services_capacity_per_1000_normative": norm.services_capacity_per_1000_normative,
+                "is_regulated": norm.is_regulated,
+            }
+            for norm in self.normatives
+        ]
         return territory

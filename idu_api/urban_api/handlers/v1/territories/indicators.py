@@ -44,6 +44,71 @@ async def get_indicators_by_territory_id(
 
 
 @territories_router.get(
+    "/territory/{territory_id}/indicator_values/geojson",
+    response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]],
+    status_code=status.HTTP_200_OK,
+)
+async def get_indicator_values_with_geometry_by_territory_id(
+    request: Request,
+    territory_id: int = Path(..., description="territory identifier", gt=0),
+    indicator_ids: str | None = Query(None, description="list of identifiers separated by comma"),
+    indicators_group_id: int | None = Query(None, description="to filter by indicator group (identifier)", gt=0),
+    start_date: date | None = Query(None, description="lowest date included"),
+    end_date: date | None = Query(None, description="highest date included"),
+    value_type: ValueType = Query(None, description="to filter by value type"),
+    information_source: str | None = Query(None, description="to filter by source"),
+    last_only: bool = Query(True, description="to get last indicators"),
+    centers_only: bool = Query(False, description="display only centers"),
+) -> GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]:
+    """
+    ## Get indicator values for a given territory (for only one) in GeoJSON format.
+
+    ### Parameters:
+    - **territory_id** (int, Path): Unique identifier of the territory.
+    - **indicator_ids** (str | None, Query): Comma-separated list of indicator IDs to filter results.
+    - **indicators_group_id** (int | None, Query): Filters results by indicator group.
+    - **start_date** (date | None, Query): Filters results by the earliest date included.
+    - **end_date** (date | None, Query): Filters results by the latest date included.
+    - **value_type** (ValueType, Query): Filters results by value type.
+    - **information_source** (str | None, Query): Filters results by information source.
+    - **last_only** (bool, Query): If True, retrieves only the most recent indicator values (default: true).
+    - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
+
+    ### Returns:
+    - **list[IndicatorValue]**: A list of indicator values matching the filters.
+
+    ### Errors:
+    - **400 Bad Request**: If `indicator_ids` is specified in the wrong form.
+    - **404 Not Found**: If the territory does not exist.
+    """
+    territories_service: TerritoriesService = request.state.territories_service
+
+    if indicator_ids is not None:
+        try:
+            indicator_ids = {int(ind_id.strip()) for ind_id in indicator_ids.split(",")}
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пожалуйста, укажите идентификаторы индикаторов в правильном формате, разделив их запятой.",
+            ) from exc
+
+    value_type_field = value_type.value if value_type is not None else None
+
+    territory = await territories_service.get_indicator_values_with_geometry_by_territory_id(
+        territory_id,
+        indicator_ids,
+        indicators_group_id,
+        start_date,
+        end_date,
+        value_type_field,
+        information_source,
+        last_only,
+    )
+
+    return await GeoJSONResponse.from_list([territory.to_geojson_dict()], centers_only, save_centers=True)
+
+
+@territories_router.get(
     "/territory/{territory_id}/indicator_values",
     response_model=list[IndicatorValue],
     status_code=status.HTTP_200_OK,
@@ -185,7 +250,9 @@ async def get_indicator_values_by_parent_id(
         last_only,
     )
 
-    return await GeoJSONResponse.from_list([territory.to_geojson_dict() for territory in territories], centers_only)
+    return await GeoJSONResponse.from_list(
+        [territory.to_geojson_dict() for territory in territories], centers_only, save_centers=True
+    )
 
 
 @territories_router.get(

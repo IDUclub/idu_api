@@ -308,6 +308,8 @@ class TerritoryWithIndicator(BaseModel):
     territory_id: int = Field(..., examples=[1])
     name: str = Field(..., description="territory name", examples=["--"])
     is_city: bool = Field(..., description="boolean parameter to determine cities")
+    centre_point: Point
+    territory_type: TerritoryTypeBasic
     indicator_name: str = Field(
         ...,
         description="indicator unit full name",
@@ -322,7 +324,25 @@ class TerritoryWithIndicators(BaseModel):
 
     territory_id: int = Field(..., examples=[1])
     name: str = Field(..., description="territory name", examples=["--"])
+    is_city: bool = Field(..., description="boolean parameter to determine cities")
+    centre_point: Point
+    territory_type: TerritoryTypeBasic
     indicators: list[ShortIndicatorValueInfo]
+
+
+class TerritoryWithGeometryIndicator(BaseModel):
+    """Short territory info with geometry and requested indicator."""
+
+    territory_id: int = Field(..., examples=[1])
+    name: str = Field(..., description="territory name", examples=["--"])
+    is_city: bool = Field(..., description="boolean parameter to determine cities")
+    indicator_name: str = Field(
+        ...,
+        description="indicator unit full name",
+        examples=["Общее количество людей, постоянно проживающих на территории"],
+    )
+    indicator_value: float = Field(..., description="indicator value for territory at time", examples=[23])
+    measurement_unit_name: str = Field(..., description="measurement unit name", examples=["Количество людей"])
 
 
 class TerritoryWithNormatives(BaseModel):
@@ -330,4 +350,7 @@ class TerritoryWithNormatives(BaseModel):
 
     territory_id: int = Field(..., examples=[1])
     name: str = Field(..., description="territory name", examples=["--"])
+    is_city: bool = Field(..., description="boolean parameter to determine cities")
+    centre_point: Point
+    territory_type: TerritoryTypeBasic
     normatives: list[ShortNormativeInfo]

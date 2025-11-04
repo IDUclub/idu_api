@@ -1,60 +1,59 @@
-[tool.poetry]
+[project]
 name = "idu-api"
-version = "1.47.0"
+version = "1.48.0"
 description = "This is a Digital Territories Platform API in two versions to access and manipulate basic territories data."
-authors = ["Babayev Ruslan <rus.babaef@yandex.ru>"]
+authors = [
+    {name = "Babayev Ruslan",email = "rus.babaef@yandex.ru"}
+]
+license = {text = "Apache-2.0"}
 readme = "README.md"
+requires-python = ">=3.11,<4.0"
+dependencies = [
+    "fastapi (>=0.120.0,<0.121.0)",
+    "uvicorn (>=0.38.0,<0.39.0)",
+    "gunicorn (>=23.0.0,<24.0.0)",
+    "asyncio (>=4.0.0,<5.0.0)",
+    "sqlalchemy[asyncio] (>=2.0.44,<3.0.0)",
+    "alembic[asyncio] (>=1.17.0,<2.0.0)",
+    "geoalchemy2 (==0.15.0)",
+    "asyncpg (>=0.30.0,<0.31.0)",
+    "numpy (>=2.3.4,<3.0.0)",
+    "shapely (>=2.1.2,<3.0.0)",
+    "pydantic (>=2.12.3,<3.0.0)",
+    "geojson-pydantic (>=2.1.0,<3.0.0)",
+    "fastapi-pagination (>=0.14.3,<0.15.0)",
+    "sqlakeyset (>=2.0.1746777265,<3.0.0)",
+    "pyyaml (>=6.0.3,<7.0.0)",
+    "aioboto3 (>=15.4.0,<16.0.0)",
+    "pillow (>=12.0.0,<13.0.0)",
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "tenacity (>=9.1.2,<10.0.0)",
+    "prometheus-client (>=0.23.1,<0.24.0)",
+    "otteroad (>=0.2.0,<0.3.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)",
+    "structlog (>=25.5.0,<26.0.0)",
+]
 
-[tool.poetry.dependencies]
-python = "^3.10"
-fastapi = "0.112.0"
-asyncio = "^3.4.3"
-asyncpg = "^0.30.0"
-pydantic = "^2.7.1"
-alembic = "^1.13.1"
-sqlalchemy = { version = "^2.0.29", extras = ["asyncio"] }
-cachetools = "^5.3.3"
-geoalchemy2 = "^0.15.0"
-pandas = "^2.2.2"
-exceptiongroup = "^1.2.1"
-fastapi-pagination = "^0.12.26"
-python-dotenv = "^1.0.1"
-geojson = "^3.1.0"
-gunicorn = "^22.0.0"
-geojson-pydantic = "^1.1.0"
-httpx = "^0.27.0"
-pytest-asyncio = "^0.23.8"
-numpy = "2.0.1"
-sqlakeyset = "^2.0.1721705501"
-certifi = "^2024.7.4"
-pillow = "^11.0.0"
-python-multipart = "^0.0.12"
-pyyaml = "^6.0.2"
-uvicorn = "0.19.0"
-shapely = "^2.0.6"
-structlog = "^24.4.0"
-prometheus-client = "^0.21.1"
-loguru = "^0.7.3"
-otteroad = "^0.2.0"
-tenacity = "^9.1.2"
-aioboto3 = "^15.0.0"
+[dependency-groups]
+dev = [
+    "black (>=25.9.0,<26.0.0)",
+    "isort (>=7.0.0,<8.0.0)",
+    "pylint (>=4.0.2,<5.0.0)",
+    "pytest[asyncio,coverage] (>=8.4.2,<9.0.0)",
+    "tqdm[asyncio] (>=4.67.1,<5.0.0)",
+    "aioresponses (>=0.7.8,<0.8.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 
 [tool.poetry.scripts]
 launch_urban_api = "idu_api.urban_api.__main__:main"
 # launch_city_api = "idu_api.city_api.__main__:main" # TODO: add launch option here
 
-[tool.poetry.group.dev.dependencies]
-black = "^24.4.2"
-pylint = "^3.3.4"
-isort = "^5.13.2"
-tqdm = {version = "^4.67.1", extras = ["asyncio"]}
-pytest = {version = "^8.3.5", extras = ["asyncio"]}
-pytest-cov = "^6.1.1"
-aioresponses = "^0.7.8"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
 
 [tool.black]
 line-length = 120
