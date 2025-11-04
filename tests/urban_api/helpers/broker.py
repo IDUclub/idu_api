@@ -1,6 +1,7 @@
 """All fixtures for broker integration tests are defined here."""
 
 import uuid
+from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock
 
 import pytest_asyncio
@@ -32,7 +33,7 @@ def mock_handler(event_type: type[BaseModel]):
 
 
 @pytest_asyncio.fixture
-async def kafka_consumer(config: UrbanAPIConfig) -> KafkaConsumerService:
+async def kafka_consumer(config: UrbanAPIConfig) -> AsyncGenerator[KafkaConsumerService, Any]:
     """Fixture for Kafka consumer service."""
     settings = KafkaConsumerSettings(
         bootstrap_servers=config.broker.bootstrap_servers,

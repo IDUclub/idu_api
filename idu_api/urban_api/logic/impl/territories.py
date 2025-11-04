@@ -221,6 +221,43 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_indicators_by_territory_id_from_db(conn, territory_id)
 
+    async def get_indicator_values_with_geometry_by_territory_id(
+        self,
+        territory_id: int,
+        indicator_ids: set[int] | None,
+        indicators_group_id: int | None,
+        start_date: date | None,
+        end_date: date | None,
+        value_type: Literal["real", "target", "forecast"] | None,
+        information_source: str | None,
+        last_only: bool,
+    ) -> TerritoryWithIndicatorsDTO:
+        async with self._connection_manager.get_ro_connection() as conn:
+            territory = await get_territory_by_id(conn, territory_id)
+            indicators = await get_indicator_values_by_territory_id_from_db(
+                conn,
+                territory_id,
+                indicator_ids,
+                indicators_group_id,
+                start_date,
+                end_date,
+                value_type,
+                information_source,
+                last_only,
+                include_child_territories=False,
+                cities_only=False,
+            )
+            return TerritoryWithIndicatorsDTO(
+                territory_id=territory.territory_id,
+                name=territory.name,
+                territory_type_id=territory.territory_type_id,
+                territory_type_name=territory.territory_type_name,
+                is_city=territory.is_city,
+                geometry=territory.geometry,
+                centre_point=territory.centre_point,
+                indicators=indicators,
+            )
+
     async def get_indicator_values_by_territory_id(
         self,
         territory_id: int,

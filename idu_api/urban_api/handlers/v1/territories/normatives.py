@@ -239,4 +239,6 @@ async def get_normatives_values_by_parent_id(
 
     territories = await territories_service.get_normatives_values_by_parent_id(parent_id, year, last_only)
 
-    return await GeoJSONResponse.from_list([territory.to_geojson_dict() for territory in territories], centers_only)
+    return await GeoJSONResponse.from_list(
+        [territory.to_geojson_dict() for territory in territories], centers_only, save_centers=True
+    )

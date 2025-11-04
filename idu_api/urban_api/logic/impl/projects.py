@@ -300,8 +300,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_ro_connection() as conn:
             if not for_context:
                 return await get_physical_object_types_by_scenario_id_from_db(conn, scenario_id, user)
-            else:
-                return await get_context_physical_object_types_from_db(conn, scenario_id, user)
+            return await get_context_physical_object_types_from_db(conn, scenario_id, user)
 
     async def get_physical_objects_by_scenario_id(
         self,
@@ -485,8 +484,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_ro_connection() as conn:
             if not for_context:
                 return await get_service_types_by_scenario_id_from_db(conn, scenario_id, user)
-            else:
-                return await get_context_service_types_from_db(conn, scenario_id, user)
+            return await get_context_service_types_from_db(conn, scenario_id, user)
 
     async def get_services_by_scenario_id(
         self,

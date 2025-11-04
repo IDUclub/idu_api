@@ -1,7 +1,7 @@
 """Service types and urban function schemas are defined here."""
 
 from enum import Enum
-from typing import Any, Literal, Self
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
@@ -170,7 +170,7 @@ class ServiceTypesHierarchy(BaseModel):
     level: int = Field(..., description="number of urban functions above in a tree + [1]", examples=[1])
     list_label: str = Field(..., description="urban function list label", examples=["1.1.1"])
     code: str = Field(..., description="urban function code", examples=["1"])
-    children: list[Self | ServiceType]
+    children: list[Any]
 
     @classmethod
     def from_dto(cls, dto: ServiceTypesHierarchyDTO) -> "ServiceTypesHierarchy":

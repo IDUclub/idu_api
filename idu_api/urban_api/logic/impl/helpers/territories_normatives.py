@@ -11,6 +11,7 @@ from idu_api.common.db.entities import (
     service_types_dict,
     service_types_normatives_data,
     territories_data,
+    territory_types_dict,
     urban_functions_dict,
 )
 from idu_api.common.exceptions.logic.common import (
@@ -422,13 +423,25 @@ async def get_normatives_values_by_parent_id_from_db(
         if not await check_existence(conn, territories_data, conditions={"territory_id": parent_id}):
             raise EntityNotFoundById(parent_id, "territory")
 
-    statement = select(
-        territories_data.c.territory_id,
-        territories_data.c.name,
-        territories_data.c.parent_id,
-        ST_AsEWKB(territories_data.c.geometry).label("geometry"),
-        ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
-    ).where(territories_data.c.parent_id == parent_id)
+    statement = (
+        select(
+            territories_data.c.territory_id,
+            territories_data.c.name,
+            territories_data.c.parent_id,
+            territory_types_dict.c.territory_type_id,
+            territory_types_dict.c.name.label("territory_type_name"),
+            territories_data.c.is_city,
+            ST_AsEWKB(territories_data.c.geometry).label("geometry"),
+            ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
+        )
+        .select_from(
+            territories_data.join(
+                territory_types_dict,
+                territory_types_dict.c.territory_type_id == territories_data.c.territory_id,
+            )
+        )
+        .where(territories_data.c.parent_id == parent_id)
+    )
 
     child_territories = list((await conn.execute(statement)).mappings().all())
     ancestors = list(await _get_ancestors(conn, child_territories[0].territory_id))

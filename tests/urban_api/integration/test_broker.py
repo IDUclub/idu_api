@@ -33,7 +33,7 @@ async def test_urban_objects_update(urban_api_host: str, kafka_consumer: KafkaCo
     await asyncio.sleep(5)
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
         response = await client.post("/broker/urban_events/urban_objects_updated", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(15)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -53,10 +53,10 @@ async def test_functional_zones_update(urban_api_host: str, kafka_consumer: Kafk
     event = FunctionalZonesUpdated(territory_id=1)
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(10)
     async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
         response = await client.post("/broker/urban_events/zones_updated", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(10)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
