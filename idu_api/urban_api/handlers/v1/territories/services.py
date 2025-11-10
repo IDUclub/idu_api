@@ -8,7 +8,7 @@ from starlette import status
 from idu_api.urban_api.logic.territories import TerritoriesService
 from idu_api.urban_api.schemas import Service, ServicesCountCapacity, ServiceType, ServiceWithGeometry
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.schemas.pages import Page
 from idu_api.urban_api.utils.pagination import paginate
 

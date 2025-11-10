@@ -277,14 +277,15 @@ def build_hierarchy(
     """
     Creates trees hierarchy for entities based on the list of DTOs.
 
-    Parameters:
-    - input_dtos: A list of DTO entities with the id and parent_id attributes.
-    - output_model: The class used to create tree nodes (must contain the children attribute).
-    - id_attr: The name of the attribute of the entity identifier.
-    - parent_id_attr: The name of the attribute of the parent ID.
-    - children_attr: The name of the attribute for the list of children.
+    Args:
+        input_dtos: A list of DTO entities with the id and parent_id attributes.
+        output_model: The class used to create tree nodes (must contain the children attribute).
+        id_attr: The name of the attribute of the entity identifier.
+        parent_id_attr: The name of the attribute of the parent ID.
+        children_attr: The name of the attribute for the list of children.
 
-    Retrieves the list of root nodes of the trees.
+    Returns:
+        The list of root nodes of the trees.
     """
 
     # Initialization of data structures
@@ -315,3 +316,46 @@ def build_hierarchy(
             root_nodes.append(node)
 
     return root_nodes
+
+
+async def get_parent_region_id(conn: AsyncConnection, territory_id: int) -> int | None:
+    """
+    Retrieve the identifier of the parent region (with level = 2) for the given territory.
+
+    This function climbs up the hierarchical structure of the `territories_data`
+    table using a recursive CTE (Common Table Expression).
+
+    Args:
+        conn (AsyncConnection): The active SQLAlchemy async database connection.
+        territory_id (int): Starting territory identifier (usually a district, or any lower-level administrative unit).
+
+    Returns:
+        int | None: The `territory_id` of the parent region at level = 2, or `None` if no such region is found.
+    """
+
+    # Define base CTE starting from the current territory
+    base_cte = (
+        select(
+            territories_data.c.territory_id,
+            territories_data.c.parent_id,
+            territories_data.c.level,
+        )
+        .where(territories_data.c.territory_id == territory_id)
+        .cte(name="territory_hierarchy", recursive=True)
+    )
+
+    # Recursive part: move one level up via parent_id
+    recursive_cte = base_cte.union_all(
+        select(
+            territories_data.c.territory_id,
+            territories_data.c.parent_id,
+            territories_data.c.level,
+        ).where(territories_data.c.territory_id == base_cte.c.parent_id)
+    )
+
+    # Select the first territory in the chain with level = 2
+    stmt = select(recursive_cte.c.territory_id).where(recursive_cte.c.level == 2).limit(1)
+
+    result = (await conn.execute(stmt)).scalar_one_or_none()
+
+    return result

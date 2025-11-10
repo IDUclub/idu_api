@@ -59,7 +59,7 @@ from idu_api.urban_api.schemas import (
     ProjectTerritory,
     Scenario,
 )
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection, MockResult, MockRow
 from tests.urban_api.helpers.minio_client import MockAsyncMinioClient
 

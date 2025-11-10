@@ -14,6 +14,7 @@ from idu_api.urban_api.dto import (
 )
 from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.short_models import (
+    ShortBinnedIndicatorValue,
     ShortIndicatorValueInfo,
     ShortNormativeInfo,
     ShortTerritory,
@@ -330,19 +331,10 @@ class TerritoryWithIndicators(BaseModel):
     indicators: list[ShortIndicatorValueInfo]
 
 
-class TerritoryWithGeometryIndicator(BaseModel):
-    """Short territory info with geometry and requested indicator."""
+class TerritoryWithBinnedIndicators(TerritoryWithIndicators):
+    """Short territory info with geometry and all indicators + binned values."""
 
-    territory_id: int = Field(..., examples=[1])
-    name: str = Field(..., description="territory name", examples=["--"])
-    is_city: bool = Field(..., description="boolean parameter to determine cities")
-    indicator_name: str = Field(
-        ...,
-        description="indicator unit full name",
-        examples=["Общее количество людей, постоянно проживающих на территории"],
-    )
-    indicator_value: float = Field(..., description="indicator value for territory at time", examples=[23])
-    measurement_unit_name: str = Field(..., description="measurement unit name", examples=["Количество людей"])
+    indicators: list[ShortBinnedIndicatorValue]
 
 
 class TerritoryWithNormatives(BaseModel):

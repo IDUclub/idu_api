@@ -30,7 +30,7 @@ from idu_api.urban_api.schemas import (
     Scenario,
 )
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering, ProjectPhase, ProjectType
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.auth_client import get_user
 from idu_api.urban_api.utils.broker import get_kafka_producer
 from idu_api.urban_api.utils.pagination import paginate

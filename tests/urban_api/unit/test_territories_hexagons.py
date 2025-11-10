@@ -25,7 +25,7 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
     SRID,
 )
 from idu_api.urban_api.schemas import Hexagon, HexagonAttributes, HexagonPost
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################

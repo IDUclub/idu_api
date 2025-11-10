@@ -14,7 +14,7 @@ from idu_api.urban_api.schemas import (
     ScenarioBufferDelete,
     ScenarioBufferPut,
 )
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.utils import assert_response
 
 ####################################################################################

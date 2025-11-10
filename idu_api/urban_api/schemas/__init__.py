@@ -1,6 +1,7 @@
 """Response and request schemas are defined here."""
 
 from .basic_responses import OkResponse
+from .binds import ShortTerritoryIndicatorBind, TerritoryIndicatorBind, TerritoryIndicatorBindPut
 from .buffers import (
     Buffer,
     BufferAttributes,
@@ -43,6 +44,7 @@ from .functional_zones import (
 from .health_check import PingResponse
 from .hexagons import Hexagon, HexagonAttributes, HexagonPost, HexagonWithIndicators
 from .indicators import (
+    BinnedIndicatorValue,
     Indicator,
     IndicatorPost,
     IndicatorPut,
@@ -155,6 +157,7 @@ from .territories import (
     TerritoryTreeWithoutGeometry,
     TerritoryType,
     TerritoryTypePost,
+    TerritoryWithBinnedIndicators,
     TerritoryWithIndicator,
     TerritoryWithIndicators,
     TerritoryWithNormatives,
@@ -310,4 +313,9 @@ __all__ = [
     "ScenarioBufferDelete",
     "ScenarioBufferAttributes",
     "MinioFile",
+    "TerritoryIndicatorBind",
+    "ShortTerritoryIndicatorBind",
+    "TerritoryIndicatorBindPut",
+    "BinnedIndicatorValue",
+    "TerritoryWithBinnedIndicators",
 ]

@@ -7,7 +7,7 @@ from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
 from idu_api.urban_api.schemas import FunctionalZone, FunctionalZoneSource, FunctionalZoneWithoutGeometry, OkResponse
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 
 from .routers import territories_router
 

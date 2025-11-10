@@ -54,6 +54,16 @@ class IndicatorValueDTO:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass(frozen=True)
+class BinnedIndicatorValueDTO(IndicatorValueDTO):
+    binned_min_value: float | None
+    binned_max_value: float | None
+
+    @classmethod
+    def fields(cls) -> Iterable[str]:
+        return cls.__annotations__.keys() | super().__annotations__.keys()
+
+
+@dataclass(frozen=True)
 class MeasurementUnitDTO:
     measurement_unit_id: int
     name: str

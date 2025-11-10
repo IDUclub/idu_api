@@ -24,7 +24,8 @@ from idu_api.urban_api.schemas import (
     ScenarioPhysicalObjectWithGeometryAttributes,
     ScenarioUrbanObject,
 )
-from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
+from idu_api.urban_api.schemas.geometries import AllPossibleGeometry
 from idu_api.urban_api.utils.auth_client import get_user
 
 

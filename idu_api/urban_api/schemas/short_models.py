@@ -56,6 +56,7 @@ class MeasurementUnitBasic(BaseModel):
 class ShortIndicatorValueInfo(BaseModel):
     """Indicator value without territory."""
 
+    indicator_id: int = Field(..., description="indicator identifier", examples=[1])
     name_full: str = Field(
         ...,
         description="indicator unit full name",
@@ -454,3 +455,10 @@ class ShortUrbanObject(BaseModel):
     physical_object: PhysicalObjectBasic
     object_geometry: ObjectGeometryBasic
     service: ServiceBasic | None
+
+
+class ShortBinnedIndicatorValue(ShortIndicatorValueInfo):
+    """Basic indicator value model with binned min/max value to encapsulate in other models."""
+
+    binned_min_value: float | None
+    binned_max_value: float | None

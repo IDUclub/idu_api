@@ -12,7 +12,7 @@ from idu_api.common.db.entities import (
     service_types_dict,
     service_types_normatives_data,
     territories_data,
-    urban_functions_dict,
+    urban_functions_dict, territory_types_dict,
 )
 from idu_api.common.exceptions.logic.common import (
     EntitiesNotFoundByIds,
@@ -33,7 +33,7 @@ from idu_api.urban_api.logic.impl.helpers.territories_normatives import (
 )
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT
 from idu_api.urban_api.schemas import Normative, NormativeDelete, NormativePatch, NormativePost, TerritoryWithNormatives
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################
@@ -397,13 +397,25 @@ async def test_get_normatives_values_by_parent_id_from_db(mock_conn: MockConnect
     # Arrange
     parent_id = 1
     year = date.today().year
-    child_territories_statement = select(
-        territories_data.c.territory_id,
-        territories_data.c.name,
-        territories_data.c.parent_id,
-        ST_AsEWKB(territories_data.c.geometry).label("geometry"),
-        ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
-    ).where(territories_data.c.parent_id == parent_id)
+    child_territories_statement = (
+        select(
+            territories_data.c.territory_id,
+            territories_data.c.name,
+            territories_data.c.parent_id,
+            territory_types_dict.c.territory_type_id,
+            territory_types_dict.c.name.label("territory_type_name"),
+            territories_data.c.is_city,
+            ST_AsEWKB(territories_data.c.geometry).label("geometry"),
+            ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
+        )
+        .select_from(
+            territories_data.join(
+                territory_types_dict,
+                territory_types_dict.c.territory_type_id == territories_data.c.territory_id,
+            )
+        )
+        .where(territories_data.c.parent_id == parent_id)
+    )
     cte_statement = (
         select(
             territories_data.c.territory_id,
@@ -467,7 +479,7 @@ async def test_get_normatives_values_by_parent_id_from_db(mock_conn: MockConnect
     result = await get_normatives_values_by_parent_id_from_db(mock_conn, parent_id, year, last_only=False)
     for item in result:
         item.normatives = process_normatives(item.normatives)
-    geojson_result = await GeoJSONResponse.from_list([r.to_geojson_dict() for r in result])
+    geojson_result = await GeoJSONResponse.from_list([r.to_geojson_dict() for r in result], save_centers=True)
 
     # Assert
     assert isinstance(result, list), "Result should be a list."

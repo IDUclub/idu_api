@@ -71,7 +71,7 @@ from idu_api.urban_api.schemas import (
     ScenarioPhysicalObjectWithGeometryAttributes,
     ScenarioUrbanObject,
 )
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################

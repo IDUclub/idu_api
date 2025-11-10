@@ -14,7 +14,7 @@ from idu_api.common.db.config import DBConfig
 from idu_api.common.db.connection import PostgresConnectionManager
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.logic.impl.system import SystemServiceImpl
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 
 Geom = (
     geom.Point

@@ -1,5 +1,6 @@
 """Data Transfer Objects (much like entities from database) are defined in this module."""
 
+from .binds import ShortTerritoryIndicatorBindDTO, TerritoryIndicatorBindDTO
 from .buffers import BufferDTO, BufferTypeDTO, DefaultBufferValueDTO, ScenarioBufferDTO
 from .buildings import BuildingDTO, BuildingWithGeometryDTO
 from .functional_zones import (
@@ -10,6 +11,7 @@ from .functional_zones import (
 )
 from .hexagons import HexagonDTO, HexagonWithIndicatorsDTO
 from .indicators import (
+    BinnedIndicatorValueDTO,
     IndicatorDTO,
     IndicatorsGroupDTO,
     IndicatorValueDTO,
@@ -58,7 +60,7 @@ from .territories import (
     TerritoryDTO,
     TerritoryTreeWithoutGeometryDTO,
     TerritoryTypeDTO,
-    TerritoryWithIndicatorDTO,
+    TerritoryWithBinnedIndicatorsDTO,
     TerritoryWithIndicatorsDTO,
     TerritoryWithNormativesDTO,
     TerritoryWithoutGeometryDTO,
@@ -93,7 +95,6 @@ __all__ = [
     "BuildingWithGeometryDTO",
     "FunctionalZoneDTO",
     "FunctionalZoneTypeDTO",
-    "TerritoryWithIndicatorDTO",
     "TerritoryWithIndicatorsDTO",
     "TerritoryWithNormativesDTO",
     "TerritoryWithoutGeometryDTO",
@@ -132,4 +133,8 @@ __all__ = [
     "BufferTypeDTO",
     "DefaultBufferValueDTO",
     "ScenarioBufferDTO",
+    "ShortTerritoryIndicatorBindDTO",
+    "TerritoryIndicatorBindDTO",
+    "BinnedIndicatorValueDTO",
+    "TerritoryWithBinnedIndicatorsDTO",
 ]

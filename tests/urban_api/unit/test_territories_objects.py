@@ -29,7 +29,7 @@ from idu_api.urban_api.logic.impl.helpers.territories_objects import (
 )
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT, SRID, build_recursive_query
 from idu_api.urban_api.schemas import Territory, TerritoryPatch, TerritoryPost, TerritoryPut, TerritoryWithoutGeometry
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
 func: Callable

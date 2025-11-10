@@ -16,8 +16,9 @@ from starlette import status
 from idu_api.common.exceptions import IduApiError
 from idu_api.urban_api.logic.system import SystemService
 from idu_api.urban_api.schemas import PingResponse
-from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, GeoJSONResponse
+from idu_api.urban_api.schemas.geometries import AllPossibleGeometry
 
+from ..schemas.geojson import GeoJSONResponse
 from .routers import system_router
 
 
