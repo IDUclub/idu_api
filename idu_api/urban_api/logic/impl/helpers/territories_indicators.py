@@ -17,13 +17,22 @@ from idu_api.common.db.entities import (
     soc_value_indicators_data,
     soc_values_dict,
     territories_data,
+    territory_indicators_binds_data,
     territory_indicators_data,
     territory_types_dict,
 )
 from idu_api.common.exceptions.logic.common import EntityNotFoundById
-from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
+from idu_api.urban_api.dto import (
+    BinnedIndicatorValueDTO,
+    IndicatorDTO,
+    IndicatorValueDTO,
+    ShortTerritoryIndicatorBindDTO,
+    SocValueIndicatorValueDTO,
+    TerritoryWithIndicatorsDTO,
+)
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
+    get_parent_region_id,
     include_child_territories_cte,
 )
 from idu_api.urban_api.utils.query_filters import CustomFilter, EqFilter, ILikeFilter, InFilter, apply_filters
@@ -79,7 +88,7 @@ async def get_indicator_values_by_territory_id_from_db(
     last_only: bool,
     include_child_territories: bool,
     cities_only: bool,
-) -> list[IndicatorValueDTO]:
+) -> list[BinnedIndicatorValueDTO]:
     """Get indicator values by territory id, optional indicator_ids, value_type, source and time period.
 
     Could be specified by last_only to get only last indicator values.
@@ -97,7 +106,33 @@ async def get_indicator_values_by_territory_id_from_db(
         measurement_units_dict.c.measurement_unit_id,
         measurement_units_dict.c.name.label("measurement_unit_name"),
         territories_data.c.name.label("territory_name"),
+        territory_indicators_binds_data.c.min_value.label("binned_min_value"),
+        territory_indicators_binds_data.c.max_value.label("binned_max_value"),
     ).distinct()
+
+    select_from = (
+        territory_indicators_data.join(
+            indicators_dict,
+            indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id,
+        )
+        .outerjoin(
+            measurement_units_dict,
+            measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
+        )
+        .outerjoin(
+            indicators_groups_data,
+            indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
+        )
+        .join(
+            territories_data,
+            territories_data.c.territory_id == territory_indicators_data.c.territory_id,
+        )
+        .outerjoin(
+            territory_indicators_binds_data,
+            (territory_indicators_binds_data.c.indicator_id == indicators_dict.c.indicator_id)
+            & (territory_indicators_binds_data.c.level == territories_data.c.level),
+        )
+    )
 
     if last_only:
         subquery = (
@@ -115,50 +150,23 @@ async def get_indicator_values_by_territory_id_from_db(
             .subquery()
         )
 
-        statement = statement.select_from(
-            territory_indicators_data.join(
-                subquery,
-                (territory_indicators_data.c.indicator_id == subquery.c.indicator_id)
-                & (territory_indicators_data.c.value_type == subquery.c.value_type)
-                & (territory_indicators_data.c.date_value == subquery.c.max_date)
-                & (territory_indicators_data.c.territory_id == subquery.c.territory_id),
-            )
-            .join(
-                indicators_dict,
-                indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id,
-            )
-            .outerjoin(
-                measurement_units_dict,
-                measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
-            )
-            .outerjoin(
-                indicators_groups_data,
-                indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
-            )
-            .join(
-                territories_data,
-                territories_data.c.territory_id == territory_indicators_data.c.territory_id,
-            )
+        select_from = select_from.join(
+            subquery,
+            (territory_indicators_data.c.indicator_id == subquery.c.indicator_id)
+            & (territory_indicators_data.c.value_type == subquery.c.value_type)
+            & (territory_indicators_data.c.date_value == subquery.c.max_date)
+            & (territory_indicators_data.c.territory_id == subquery.c.territory_id),
         )
-    else:
-        statement = statement.select_from(
-            territory_indicators_data.join(
-                indicators_dict,
-                indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id,
-            )
-            .outerjoin(
-                measurement_units_dict,
-                measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
-            )
-            .outerjoin(
-                indicators_groups_data,
-                indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
-            )
-            .join(
-                territories_data,
-                territories_data.c.territory_id == territory_indicators_data.c.territory_id,
-            )
+
+    parent_region_id = await get_parent_region_id(conn, territory_id)
+    statement = statement.select_from(select_from).where(
+        (
+            (territory_indicators_binds_data.c.territory_id == parent_region_id)
+            & territory_indicators_binds_data.c.min_value.isnot(None)
+            & territory_indicators_binds_data.c.max_value.isnot(None)
         )
+        | True
+    )
 
     if include_child_territories:
         territories_cte = include_child_territories_cte(territory_id, cities_only)
@@ -185,7 +193,7 @@ async def get_indicator_values_by_territory_id_from_db(
 
     result = (await conn.execute(statement)).mappings().all()
 
-    return [IndicatorValueDTO(**indicator_value) for indicator_value in result]
+    return [BinnedIndicatorValueDTO(**indicator_value) for indicator_value in result]
 
 
 async def get_indicator_values_by_parent_id_from_db(
@@ -198,22 +206,24 @@ async def get_indicator_values_by_parent_id_from_db(
     value_type: str | None,
     information_source: str | None,
     last_only: bool,
-) -> list[TerritoryWithIndicatorsDTO]:
-    """Get indicator values for child territories by parent id, optional indicator_ids, value_type, source and date.
-
-    Could be specified by last_only to get only last indicator values.
+    with_binned: bool,
+) -> tuple[list[TerritoryWithIndicatorsDTO], list[ShortTerritoryIndicatorBindDTO]]:
     """
-
+    Get indicator values for child territories by parent id,
+    with optional filters, and collect bindings.
+    """
     if parent_id is not None:
         if not await check_existence(conn, territories_data, conditions={"territory_id": parent_id}):
             raise EntityNotFoundById(parent_id, "territory")
 
     statement = (
         select(
+            territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             territory_types_dict.c.territory_type_id,
             territory_types_dict.c.name.label("territory_type_name"),
             territories_data.c.is_city,
+            territories_data.c.level.label("territory_level"),
             ST_AsEWKB(territories_data.c.geometry).label("geometry"),
             ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
             territory_indicators_data,
@@ -248,50 +258,32 @@ async def get_indicator_values_by_parent_id_from_db(
             .subquery()
         )
 
-        statement = statement.select_from(
-            territory_indicators_data.join(
-                subquery,
-                (territory_indicators_data.c.indicator_id == subquery.c.indicator_id)
-                & (territory_indicators_data.c.value_type == subquery.c.value_type)
-                & (territory_indicators_data.c.date_value == subquery.c.max_date)
-                & (territory_indicators_data.c.territory_id == subquery.c.territory_id),
-            )
-            .join(
-                indicators_dict,
-                indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id,
-            )
-            .outerjoin(
-                measurement_units_dict,
-                measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
-            )
-            .outerjoin(
-                indicators_groups_data,
-                indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
-            )
-            .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
-            .join(
-                territory_types_dict, territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id
-            )
+        join_expr = territory_indicators_data.join(
+            subquery,
+            (territory_indicators_data.c.indicator_id == subquery.c.indicator_id)
+            & (territory_indicators_data.c.value_type == subquery.c.value_type)
+            & (territory_indicators_data.c.date_value == subquery.c.max_date)
+            & (territory_indicators_data.c.territory_id == subquery.c.territory_id),
         )
     else:
-        statement = statement.select_from(
-            territory_indicators_data.join(
-                indicators_dict,
-                indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id,
-            )
-            .outerjoin(
-                measurement_units_dict,
-                measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
-            )
-            .outerjoin(
-                indicators_groups_data,
-                indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
-            )
-            .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
-            .join(
-                territory_types_dict, territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id
-            )
+        join_expr = territory_indicators_data
+
+    statement = statement.select_from(
+        join_expr.join(indicators_dict, indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id)
+        .outerjoin(
+            measurement_units_dict,
+            measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
         )
+        .outerjoin(
+            indicators_groups_data,
+            indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
+        )
+        .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
+        .join(
+            territory_types_dict,
+            territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id,
+        )
+    )
 
     statement = apply_filters(
         statement,
@@ -309,11 +301,14 @@ async def get_indicator_values_by_parent_id_from_db(
 
     result = (await conn.execute(statement)).mappings().all()
 
+    if not result:
+        return [], []
+
     territories = defaultdict(list)
     for row in result:
         territories[row.territory_id].append(row)
 
-    return [
+    territories_with_indicators = [
         TerritoryWithIndicatorsDTO(
             territory_id=territory_id,
             name=rows[0].territory_name,
@@ -328,6 +323,40 @@ async def get_indicator_values_by_parent_id_from_db(
         )
         for territory_id, rows in territories.items()
     ]
+
+    binned = []
+    if parent_id is not None and with_binned:
+        all_indicator_ids = {r.indicator_id for r in result}
+        common_level = result[0].territory_level
+        parent_region_id = await get_parent_region_id(conn, parent_id)
+
+        statement = (
+            select(
+                territory_indicators_binds_data.c.min_value,
+                territory_indicators_binds_data.c.max_value,
+                indicators_dict.c.indicator_id,
+                indicators_dict.c.name_full.label("indicator_name"),
+                measurement_units_dict.c.name.label("measurement_unit_name"),
+            )
+            .select_from(
+                territory_indicators_binds_data.join(
+                    indicators_dict, indicators_dict.c.indicator_id == territory_indicators_binds_data.c.indicator_id
+                ).join(
+                    measurement_units_dict,
+                    measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
+                )
+            )
+            .where(
+                territory_indicators_binds_data.c.territory_id == parent_region_id,
+                territory_indicators_binds_data.c.level == common_level,
+                territory_indicators_binds_data.c.indicator_id.in_(all_indicator_ids),
+            )
+        )
+        binned = (await conn.execute(statement)).mappings().all()
+
+    binned = [ShortTerritoryIndicatorBindDTO(**b) for b in binned]
+
+    return territories_with_indicators, binned
 
 
 async def get_soc_values_indicator_values_by_territory_id_from_db(

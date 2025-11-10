@@ -14,7 +14,8 @@ from idu_api.urban_api.schemas import (
     TerritoryTreeWithoutGeometry,
     TerritoryWithoutGeometry,
 )
-from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
+from idu_api.urban_api.schemas.geometries import AllPossibleGeometry
 from tests.urban_api.helpers.utils import assert_response
 
 ####################################################################################

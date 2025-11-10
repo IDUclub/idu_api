@@ -7,13 +7,13 @@ from typing import Literal, Protocol
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from idu_api.urban_api.dto import (
+    BinnedIndicatorValueDTO,
     BufferDTO,
     BuildingWithGeometryDTO,
     FunctionalZoneDTO,
     FunctionalZoneSourceDTO,
     HexagonDTO,
     IndicatorDTO,
-    IndicatorValueDTO,
     NormativeDTO,
     PageDTO,
     PhysicalObjectDTO,
@@ -23,6 +23,7 @@ from idu_api.urban_api.dto import (
     ServicesCountCapacityDTO,
     ServiceTypeDTO,
     ServiceWithGeometryDTO,
+    ShortTerritoryIndicatorBindDTO,
     SocValueIndicatorValueDTO,
     TargetCityTypeDTO,
     TerritoryDTO,
@@ -160,7 +161,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         last_only: bool,
         include_child_territories: bool,
         cities_only: bool,
-    ) -> list[IndicatorValueDTO]:
+    ) -> list[BinnedIndicatorValueDTO]:
         """Get indicator values by territory id, optional indicator_ids, indicators_group_id,
         value_type, source and time period.
 
@@ -178,7 +179,8 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         value_type: Literal["real", "target", "forecast"] | None,
         information_source: str | None,
         last_only: bool,
-    ) -> list[TerritoryWithIndicatorsDTO]:
+        with_binned: bool,
+    ) -> tuple[list[TerritoryWithIndicatorsDTO], list[ShortTerritoryIndicatorBindDTO]]:
         """Get indicator values for child territories by parent id, optional indicator_ids, indicators_group_id,
         value_type, source and time period.
 

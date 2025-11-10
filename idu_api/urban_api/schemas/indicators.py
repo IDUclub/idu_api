@@ -7,6 +7,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from idu_api.urban_api.dto import (
+    BinnedIndicatorValueDTO,
     IndicatorDTO,
     IndicatorsGroupDTO,
     IndicatorValueDTO,
@@ -278,6 +279,47 @@ class IndicatorValue(BaseModel):
             information_source=dto.information_source,
             created_at=dto.created_at,
             updated_at=dto.updated_at,
+        )
+
+
+class BinnedIndicatorValue(IndicatorValue):
+    """Indicator value with all its attributes + binned min/max value."""
+
+    binned_min_value: float | None = Field(..., description="binned minimum value")
+    binned_max_value: float | None = Field(..., description="binned maximum value")
+
+    @classmethod
+    def from_dto(cls, dto: BinnedIndicatorValueDTO) -> "BinnedIndicatorValue":
+        """
+        Construct from DTO.
+        """
+        return cls(
+            indicator_value_id=dto.indicator_value_id,
+            indicator=ShortIndicatorInfo(
+                indicator_id=dto.indicator_id,
+                parent_id=dto.parent_id,
+                name_full=dto.name_full,
+                level=dto.level,
+                list_label=dto.list_label,
+                measurement_unit=(
+                    MeasurementUnitBasic(
+                        id=dto.measurement_unit_id,
+                        name=dto.measurement_unit_name,
+                    )
+                    if dto.measurement_unit_id is not None
+                    else None
+                ),
+            ),
+            territory=ShortTerritory(id=dto.territory_id, name=dto.territory_name),
+            date_type=dto.date_type,
+            date_value=dto.date_value,
+            value=dto.value,
+            value_type=dto.value_type,
+            information_source=dto.information_source,
+            created_at=dto.created_at,
+            updated_at=dto.updated_at,
+            binned_min_value=dto.binned_min_value,
+            binned_max_value=dto.binned_max_value,
         )
 
 

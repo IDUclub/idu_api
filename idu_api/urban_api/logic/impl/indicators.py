@@ -10,6 +10,7 @@ from idu_api.urban_api.dto import (
     IndicatorsGroupDTO,
     IndicatorValueDTO,
     MeasurementUnitDTO,
+    TerritoryIndicatorBindDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.indicators import (
     add_indicator_to_db,
@@ -25,9 +26,11 @@ from idu_api.urban_api.logic.impl.helpers.indicators import (
     get_indicators_by_parent_from_db,
     get_indicators_groups_from_db,
     get_measurement_units_from_db,
+    get_territory_indicators_binds_from_db,
     patch_indicator_to_db,
     put_indicator_to_db,
     put_indicator_value_to_db,
+    put_territory_indicator_bind_to_db,
     update_indicators_group_from_db,
 )
 from idu_api.urban_api.logic.indicators import IndicatorsService
@@ -39,6 +42,7 @@ from idu_api.urban_api.schemas import (
     IndicatorValuePost,
     IndicatorValuePut,
     MeasurementUnitPost,
+    TerritoryIndicatorBindPut,
 )
 
 
@@ -154,3 +158,19 @@ class IndicatorsServiceImpl(IndicatorsService):
             return await get_indicator_values_by_id_from_db(
                 conn, indicator_id, territory_id, date_type, date_value, value_type, information_source
             )
+
+    async def get_territory_indicators_binds(
+        self,
+        territory_id: int | None,
+        level: int | None,
+        indicator_ids: set[int] | None,
+        indicators_group_id: int | None,
+    ) -> list[TerritoryIndicatorBindDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            return await get_territory_indicators_binds_from_db(
+                conn, territory_id, level, indicator_ids, indicators_group_id
+            )
+
+    async def put_territory_indicator_bind(self, bind: TerritoryIndicatorBindPut) -> TerritoryIndicatorBindDTO:
+        async with self._connection_manager.get_connection() as conn:
+            return await put_territory_indicator_bind_to_db(conn, bind)

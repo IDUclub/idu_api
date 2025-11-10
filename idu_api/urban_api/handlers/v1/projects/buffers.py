@@ -17,7 +17,7 @@ from idu_api.urban_api.schemas import (
     ScenarioBufferDelete,
     ScenarioBufferPut,
 )
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.auth_client import get_user
 
 

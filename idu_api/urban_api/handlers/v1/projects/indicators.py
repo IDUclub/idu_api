@@ -2,6 +2,7 @@
 
 from fastapi import Depends, HTTPException, Path, Query, Request, Security
 from fastapi.security import HTTPBearer
+from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from otteroad import KafkaProducerClient
 from starlette import status
@@ -17,7 +18,7 @@ from idu_api.urban_api.schemas import (
     ScenarioIndicatorValuePost,
     ScenarioIndicatorValuePut,
 )
-from idu_api.urban_api.schemas.geometries import Feature, GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.auth_client import get_user
 from idu_api.urban_api.utils.broker import get_kafka_producer
 

@@ -1,12 +1,13 @@
 """Hexagons territories-related handlers are defined here."""
 
 from fastapi import Path, Query, Request
+from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
 from idu_api.urban_api.schemas import Hexagon, HexagonAttributes, HexagonPost, OkResponse
-from idu_api.urban_api.schemas.geometries import Feature, GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 
 from .routers import territories_router
 

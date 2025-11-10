@@ -3,6 +3,7 @@
 from datetime import date
 
 from fastapi import HTTPException, Path, Query, Request
+from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry as FeatureGeometry
 from starlette import status
 
@@ -16,7 +17,8 @@ from idu_api.urban_api.schemas import (
     TerritoryWithoutGeometry,
 )
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering
-from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, Feature, GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
+from idu_api.urban_api.schemas.geometries import AllPossibleGeometry
 from idu_api.urban_api.schemas.pages import Page
 from idu_api.urban_api.utils.pagination import paginate
 

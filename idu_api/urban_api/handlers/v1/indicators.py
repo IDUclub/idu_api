@@ -20,6 +20,8 @@ from idu_api.urban_api.schemas import (
     MeasurementUnit,
     MeasurementUnitPost,
     OkResponse,
+    TerritoryIndicatorBind,
+    TerritoryIndicatorBindPut,
 )
 from idu_api.urban_api.schemas.enums import DateType, ValueType
 
@@ -534,3 +536,77 @@ async def get_indicator_values_by_id(
     )
 
     return [IndicatorValue.from_dto(value) for value in indicator_values]
+
+
+@indicators_router.get(
+    "/indicators/binds/territory",
+    response_model=list[TerritoryIndicatorBind],
+    status_code=status.HTTP_200_OK,
+)
+async def get_territory_indicators_binds(
+    request: Request,
+    territory_id: int | None = Query(None, description="regional (level=2) territory identifier", gt=0),
+    level: int | None = Query(None, description="territory level for which bindings were defined", gt=0),
+    indicator_ids: str | None = Query(None, description="list of identifiers separated by comma"),
+    indicators_group_id: int | None = Query(None, description="to filter by indicator group (identifier)", gt=0),
+) -> list[TerritoryIndicatorBind]:
+    """
+    ## Get territories indicators bindings.
+
+    **NOTE:** If a binding with the specified attributes already exists, it will be updated.
+    Otherwise, a new binding will be created.
+
+    ### Parameters:
+    - **territory_id** (int | None, Query): Filter results by regional (`level=2`) territory identifier.
+    - **level** (int | None, Query): Filter results by territory level for which bindings were defined.
+    - **indicator_ids** (str | None, Query): Comma-separated list of indicator IDs to filter results.
+    - **indicators_group_id** (int | None, Query): Filters results by indicator group.
+
+    ### Returns:
+    - **list[TerritoryIndicatorBind]**: A list of bindings wit territory and indicator short info.
+
+    ### Errors:
+    - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False
+    or the indicator_ids is specified in the wrong form.
+    """
+    indicators_service: IndicatorsService = request.state.indicators_service
+
+    if indicator_ids is not None:
+        try:
+            indicator_ids = {int(ind_id.strip()) for ind_id in indicator_ids.split(",")}
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Пожалуйста, укажите идентификаторы индикаторов в правильном формате, разделив их запятой.",
+            ) from exc
+
+    binds = await indicators_service.get_territory_indicators_binds(
+        territory_id, level, indicator_ids, indicators_group_id
+    )
+
+    return [TerritoryIndicatorBind.from_dto(bind) for bind in binds]
+
+
+@indicators_router.put(
+    "/indicators/binds/territory",
+    response_model=TerritoryIndicatorBind,
+    status_code=status.HTTP_200_OK,
+)
+async def put_territory_indicator_bind(request: Request, bind: TerritoryIndicatorBindPut) -> TerritoryIndicatorBind:
+    """
+    ## Update or create territory's indicator binding.
+
+    ### Parameters:
+    - **bind** (TerritoryIndicatorBindPut, Body): Data for updating or creating a binding.
+
+    ### Returns:
+    - **TerritoryIndicatorBind**: The updated or created territory's indicator binding.
+
+    ### Errors:
+    - **404 Not Found**: If related entities do not exist.
+    """
+    indicators_service: IndicatorsService = request.state.indicators_service
+
+    bind = await indicators_service.put_territory_indicator_bind(bind)
+
+    return TerritoryIndicatorBind.from_dto(bind)

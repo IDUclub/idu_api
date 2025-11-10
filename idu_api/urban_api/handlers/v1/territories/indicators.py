@@ -8,9 +8,16 @@ from geojson_pydantic.geometries import Geometry
 from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
-from idu_api.urban_api.schemas import Indicator, IndicatorValue, SocValueIndicatorValue, TerritoryWithIndicators
+from idu_api.urban_api.schemas import (
+    BinnedIndicatorValue,
+    Indicator,
+    ShortTerritoryIndicatorBind,
+    SocValueIndicatorValue,
+    TerritoryWithBinnedIndicators,
+    TerritoryWithIndicators,
+)
 from idu_api.urban_api.schemas.enums import ValueType
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse, TerritoriesWithBinnedIndicators
 
 from .routers import territories_router
 
@@ -45,7 +52,7 @@ async def get_indicators_by_territory_id(
 
 @territories_router.get(
     "/territory/{territory_id}/indicator_values/geojson",
-    response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]],
+    response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithBinnedIndicators]] | TerritoriesWithBinnedIndicators,
     status_code=status.HTTP_200_OK,
 )
 async def get_indicator_values_with_geometry_by_territory_id(
@@ -59,7 +66,7 @@ async def get_indicator_values_with_geometry_by_territory_id(
     information_source: str | None = Query(None, description="to filter by source"),
     last_only: bool = Query(True, description="to get last indicators"),
     centers_only: bool = Query(False, description="display only centers"),
-) -> GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]:
+) -> GeoJSONResponse[Feature[Geometry, TerritoryWithBinnedIndicators]] | TerritoriesWithBinnedIndicators:
     """
     ## Get indicator values for a given territory (for only one) in GeoJSON format.
 
@@ -75,7 +82,7 @@ async def get_indicator_values_with_geometry_by_territory_id(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **list[IndicatorValue]**: A list of indicator values matching the filters.
+    - **GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]**: Territory with list of indicators in geojson format.
 
     ### Errors:
     - **400 Bad Request**: If `indicator_ids` is specified in the wrong form.
@@ -110,7 +117,7 @@ async def get_indicator_values_with_geometry_by_territory_id(
 
 @territories_router.get(
     "/territory/{territory_id}/indicator_values",
-    response_model=list[IndicatorValue],
+    response_model=list[BinnedIndicatorValue],
     status_code=status.HTTP_200_OK,
 )
 async def get_indicator_values_by_territory_id(
@@ -125,7 +132,7 @@ async def get_indicator_values_by_territory_id(
     last_only: bool = Query(True, description="to get last indicators"),
     include_child_territories: bool = Query(False, description="to get from child territories"),
     cities_only: bool = Query(False, description="to get only for cities"),
-) -> list[IndicatorValue]:
+) -> list[BinnedIndicatorValue]:
     """
     ## Get indicator values for a given territory.
 
@@ -144,7 +151,7 @@ async def get_indicator_values_by_territory_id(
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
 
     ### Returns:
-    - **list[IndicatorValue]**: A list of indicator values matching the filters.
+    - **list[IndicatorValue]**: A list of indicator values matching the filters + binned min/max value.
 
     ### Errors:
     - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False
@@ -183,12 +190,12 @@ async def get_indicator_values_by_territory_id(
         cities_only,
     )
 
-    return [IndicatorValue.from_dto(value) for value in indicator_values]
+    return [BinnedIndicatorValue.from_dto(value) for value in indicator_values]
 
 
 @territories_router.get(
     "/territory/indicator_values",
-    response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]],
+    response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]] | TerritoriesWithBinnedIndicators,
     status_code=status.HTTP_200_OK,
 )
 async def get_indicator_values_by_parent_id(
@@ -203,8 +210,9 @@ async def get_indicator_values_by_parent_id(
     value_type: ValueType = Query(None, description="to filter by value type"),
     information_source: str | None = Query(None, description="to filter by source"),
     last_only: bool = Query(True, description="to get last indicators"),
+    with_binned: bool = Query(False, description="to get summary bindings for each indicator"),
     centers_only: bool = Query(False, description="display only centers"),
-) -> GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]:
+) -> GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]] | TerritoriesWithBinnedIndicators:
     """
     ## Get indicator values for child territories (only given territory's level + 1) in GeoJSON format.
 
@@ -217,10 +225,12 @@ async def get_indicator_values_by_parent_id(
     - **value_type** (ValueType, Query): Filters results by value type.
     - **information_source** (str | None, Query): Filters results by information source.
     - **last_only** (bool, Query): If True, retrieves only the most recent indicator values (default: true).
+    - **with_binned** (bool, Query): If True, returns not only geojson, but also list of binned values for each indicator.
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
     - **GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]**: A GeoJSON response containing territories and their indicator values.
+    - **TerritoriesWithBinnedIndicators**: If `with_binned` = True, returns geojson + summary list of binned values.
 
     ### Errors:
     - **400 Bad Request**: If the indicator_ids is specified in the wrong form.
@@ -239,7 +249,7 @@ async def get_indicator_values_by_parent_id(
 
     value_type_field = value_type.value if value_type is not None else None
 
-    territories = await territories_service.get_indicator_values_by_parent_id(
+    territories, binned = await territories_service.get_indicator_values_by_parent_id(
         parent_id,
         indicator_ids,
         indicators_group_id,
@@ -248,7 +258,16 @@ async def get_indicator_values_by_parent_id(
         value_type_field,
         information_source,
         last_only,
+        with_binned,
     )
+
+    if with_binned:
+        return TerritoriesWithBinnedIndicators(
+            geojson=await GeoJSONResponse.from_list(
+                [territory.to_geojson_dict() for territory in territories], centers_only, save_centers=True
+            ),
+            binned=[ShortTerritoryIndicatorBind.from_dto(b) for b in binned],
+        )
 
     return await GeoJSONResponse.from_list(
         [territory.to_geojson_dict() for territory in territories], centers_only, save_centers=True

@@ -25,7 +25,7 @@ from idu_api.urban_api.logic.impl.helpers.territories_physical_objects import (
 )
 from idu_api.urban_api.logic.impl.helpers.utils import include_child_territories_cte
 from idu_api.urban_api.schemas import PhysicalObject, PhysicalObjectType, PhysicalObjectWithGeometry
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################

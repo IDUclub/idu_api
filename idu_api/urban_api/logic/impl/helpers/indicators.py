@@ -18,6 +18,7 @@ from idu_api.common.db.entities import (
     physical_object_types_dict,
     service_types_dict,
     territories_data,
+    territory_indicators_binds_data,
     territory_indicators_data,
 )
 from idu_api.common.exceptions.logic.common import (
@@ -30,6 +31,7 @@ from idu_api.urban_api.dto import (
     IndicatorsGroupDTO,
     IndicatorValueDTO,
     MeasurementUnitDTO,
+    TerritoryIndicatorBindDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import build_recursive_query, check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
@@ -40,8 +42,9 @@ from idu_api.urban_api.schemas import (
     IndicatorValuePost,
     IndicatorValuePut,
     MeasurementUnitPost,
+    TerritoryIndicatorBindPut,
 )
-from idu_api.urban_api.utils.query_filters import EqFilter, ILikeFilter, apply_filters
+from idu_api.urban_api.utils.query_filters import EqFilter, ILikeFilter, InFilter, apply_filters
 
 func: Callable
 
@@ -608,3 +611,79 @@ async def delete_indicator_value_from_db(conn: AsyncConnection, indicator_value_
     await conn.commit()
 
     return {"status": "ok"}
+
+
+async def get_territory_indicators_binds_from_db(
+    conn: AsyncConnection,
+    territory_id: int | None = None,
+    level: int | None = None,
+    indicator_ids: set[int] | None = None,
+    indicators_group_id: int | None = None,
+) -> list[TerritoryIndicatorBindDTO]:
+    """Get bindings for territory's indicators.
+
+    Could be specified by region (territory), level, list of indicator identifiers and indicators group.
+    """
+
+    statement = (
+        select(
+            indicators_dict.c.indicator_id,
+            indicators_dict.c.name_full.label("indicator_name"),
+            indicators_dict.c.parent_id.label("indicator_parent_id"),
+            indicators_dict.c.level.label("indicator_level"),
+            indicators_dict.c.list_label.label("indicator_list_label"),
+            measurement_units_dict.c.measurement_unit_id,
+            measurement_units_dict.c.name.label("measurement_unit_name"),
+            territories_data.c.territory_id,
+            territories_data.c.name.label("territory_name"),
+            territory_indicators_binds_data.c.level.label("territory_level"),
+            territory_indicators_binds_data.c.min_value,
+            territory_indicators_binds_data.c.max_value,
+        )
+        .select_from(
+            territory_indicators_binds_data.join(
+                indicators_dict, indicators_dict.c.indicator_id == territory_indicators_binds_data.c.indicator_id
+            )
+            .outerjoin(
+                measurement_units_dict,
+                measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
+            )
+            .outerjoin(indicators_groups_data, indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id)
+            .join(territories_data, territories_data.c.territory_id == territory_indicators_binds_data.c.territory_id)
+        )
+        .distinct()
+    )
+
+    statement = apply_filters(
+        statement,
+        EqFilter(territory_indicators_binds_data, "territory_id", territory_id),
+        EqFilter(territory_indicators_binds_data, "level", level),
+        InFilter(territory_indicators_binds_data, "indicator_id", indicator_ids),
+        EqFilter(indicators_groups_data, "indicators_group_id", indicators_group_id),
+    )
+
+    result = (await conn.execute(statement)).mappings().all()
+
+    return [TerritoryIndicatorBindDTO(**res) for res in result]
+
+
+async def put_territory_indicator_bind_to_db(
+    conn: AsyncConnection,
+    bind: TerritoryIndicatorBindPut,
+) -> TerritoryIndicatorBindDTO:
+    """Create or update territory's indicator binding object."""
+
+    statement = (
+        insert(territory_indicators_binds_data)
+        .values(**bind.model_dump())
+        .on_conflict_do_update(
+            index_elements=["territory_id", "indicator_id", "level"],
+            set_={"min_value": bind.min_value, "max_value": bind.max_value},
+        )
+    )
+
+    await conn.execute(statement)
+    await conn.commit()
+
+    result = await get_territory_indicators_binds_from_db(conn, bind.territory_id, bind.level, {bind.indicator_id})
+    return result[0]

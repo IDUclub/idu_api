@@ -7,13 +7,13 @@ from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, P
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
 from idu_api.urban_api.dto import (
+    BinnedIndicatorValueDTO,
     BufferDTO,
     BuildingWithGeometryDTO,
     FunctionalZoneDTO,
     FunctionalZoneSourceDTO,
     HexagonDTO,
     IndicatorDTO,
-    IndicatorValueDTO,
     NormativeDTO,
     PageDTO,
     PhysicalObjectDTO,
@@ -23,11 +23,13 @@ from idu_api.urban_api.dto import (
     ServicesCountCapacityDTO,
     ServiceTypeDTO,
     ServiceWithGeometryDTO,
+    ShortTerritoryIndicatorBindDTO,
     SocValueIndicatorValueDTO,
     TargetCityTypeDTO,
     TerritoryDTO,
     TerritoryTreeWithoutGeometryDTO,
     TerritoryTypeDTO,
+    TerritoryWithBinnedIndicatorsDTO,
     TerritoryWithIndicatorsDTO,
     TerritoryWithNormativesDTO,
     TerritoryWithoutGeometryDTO,
@@ -247,7 +249,8 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 include_child_territories=False,
                 cities_only=False,
             )
-            return TerritoryWithIndicatorsDTO(
+
+            return TerritoryWithBinnedIndicatorsDTO(
                 territory_id=territory.territory_id,
                 name=territory.name,
                 territory_type_id=territory.territory_type_id,
@@ -270,7 +273,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         last_only: bool,
         include_child_territories: bool,
         cities_only: bool,
-    ) -> list[IndicatorValueDTO]:
+    ) -> list[BinnedIndicatorValueDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_indicator_values_by_territory_id_from_db(
                 conn,
@@ -296,7 +299,8 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         value_type: Literal["real", "target", "forecast"] | None,
         information_source: str | None,
         last_only: bool,
-    ) -> list[TerritoryWithIndicatorsDTO]:
+        with_binned: bool,
+    ) -> tuple[list[TerritoryWithIndicatorsDTO], list[ShortTerritoryIndicatorBindDTO]]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_indicator_values_by_parent_id_from_db(
                 conn,
@@ -308,6 +312,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 value_type,
                 information_source,
                 last_only,
+                with_binned,
             )
 
     async def get_normatives_by_territory_id(

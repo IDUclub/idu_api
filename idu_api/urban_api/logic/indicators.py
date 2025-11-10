@@ -11,6 +11,7 @@ from idu_api.urban_api.dto import (
     IndicatorsGroupDTO,
     IndicatorValueDTO,
     MeasurementUnitDTO,
+    TerritoryIndicatorBindDTO,
 )
 from idu_api.urban_api.schemas import (
     IndicatorPost,
@@ -20,6 +21,7 @@ from idu_api.urban_api.schemas import (
     IndicatorValuePost,
     IndicatorValuePut,
     MeasurementUnitPost,
+    TerritoryIndicatorBindPut,
 )
 
 
@@ -118,3 +120,20 @@ class IndicatorsService(Protocol):
         information_source: str | None,
     ) -> list[IndicatorValueDTO]:
         """Get indicator values objects by indicator id."""
+
+    @abc.abstractmethod
+    async def get_territory_indicators_binds(
+        self,
+        territory_id: int | None,
+        level: int | None,
+        indicator_ids: set[int] | None,
+        indicators_group_id: int | None,
+    ) -> list[TerritoryIndicatorBindDTO]:
+        """Get bindings for territory's indicators.
+
+        Could be specified by region (territory), level, list of indicator identifiers and indicators group.
+        """
+
+    @abc.abstractmethod
+    async def put_territory_indicator_bind(self, bind: TerritoryIndicatorBindPut) -> TerritoryIndicatorBindDTO:
+        """Create or update territory's indicator binding object."""

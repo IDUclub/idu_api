@@ -16,7 +16,7 @@ from idu_api.common.db.entities import (
     soc_value_indicators_data,
     soc_values_dict,
     territories_data,
-    territory_indicators_data,
+    territory_indicators_data, territory_types_dict, territory_indicators_binds_data,
 )
 from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
@@ -28,7 +28,7 @@ from idu_api.urban_api.logic.impl.helpers.territories_indicators import (
 )
 from idu_api.urban_api.logic.impl.helpers.utils import include_child_territories_cte
 from idu_api.urban_api.schemas import Indicator, IndicatorValue, SocValueIndicatorValue, TerritoryWithIndicators
-from idu_api.urban_api.schemas.geometries import GeoJSONResponse
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################
@@ -118,7 +118,16 @@ async def test_get_indicator_values_by_territory_id_from_db(mock_conn: MockConne
         measurement_units_dict.c.measurement_unit_id,
         measurement_units_dict.c.name.label("measurement_unit_name"),
         territories_data.c.name.label("territory_name"),
-    ).distinct()
+        territory_indicators_binds_data.c.min_value.label("binned_min_value"),
+        territory_indicators_binds_data.c.max_value.label("binned_max_value"),
+    ).distinct().where(
+        (
+            (territory_indicators_binds_data.c.territory_id == 1)
+            & territory_indicators_binds_data.c.min_value.isnot(None)
+            & territory_indicators_binds_data.c.max_value.isnot(None)
+        )
+        | True
+    )
     base_select_from = (
         territory_indicators_data.join(
             indicators_dict,
@@ -136,31 +145,18 @@ async def test_get_indicator_values_by_territory_id_from_db(mock_conn: MockConne
             territories_data,
             territories_data.c.territory_id == territory_indicators_data.c.territory_id,
         )
+        .outerjoin(
+            territory_indicators_binds_data,
+            (territory_indicators_binds_data.c.indicator_id == indicators_dict.c.indicator_id)
+            & (territory_indicators_binds_data.c.level == territories_data.c.level),
+        )
     )
-    last_only_select_from = (
-        territory_indicators_data.join(
-            subquery,
-            (territory_indicators_data.c.indicator_id == subquery.c.indicator_id)
-            & (territory_indicators_data.c.value_type == subquery.c.value_type)
-            & (territory_indicators_data.c.date_value == subquery.c.max_date)
-            & (territory_indicators_data.c.territory_id == subquery.c.territory_id),
-        )
-        .join(
-            indicators_dict,
-            indicators_dict.c.indicator_id == territory_indicators_data.c.indicator_id,
-        )
-        .outerjoin(
-            measurement_units_dict,
-            measurement_units_dict.c.measurement_unit_id == indicators_dict.c.measurement_unit_id,
-        )
-        .outerjoin(
-            indicators_groups_data,
-            indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
-        )
-        .join(
-            territories_data,
-            territories_data.c.territory_id == territory_indicators_data.c.territory_id,
-        )
+    last_only_select_from = base_select_from.join(
+        subquery,
+        (territory_indicators_data.c.indicator_id == subquery.c.indicator_id)
+        & (territory_indicators_data.c.value_type == subquery.c.value_type)
+        & (territory_indicators_data.c.date_value == subquery.c.max_date)
+        & (territory_indicators_data.c.territory_id == subquery.c.territory_id),
     )
     statement = base_statement.select_from(base_select_from)
     last_only_statement = base_statement.select_from(last_only_select_from)
@@ -253,10 +249,16 @@ async def test_get_indicator_values_by_parent_id_from_db(mock_conn: MockConnecti
         "end_date": date.today(),
         "value_type": "real",
         "information_source": "mock_string",
+        "with_binned": False,
     }
     statement = (
         select(
+            territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
+            territory_types_dict.c.territory_type_id,
+            territory_types_dict.c.name.label("territory_type_name"),
+            territories_data.c.is_city,
+            territories_data.c.level.label("territory_level"),
             ST_AsEWKB(territories_data.c.geometry).label("geometry"),
             ST_AsEWKB(territories_data.c.centre_point).label("centre_point"),
             territory_indicators_data,
@@ -317,6 +319,10 @@ async def test_get_indicator_values_by_parent_id_from_db(mock_conn: MockConnecti
             indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
         )
         .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
+        .join(
+            territory_types_dict,
+            territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id,
+        )
     )
     statement = statement.select_from(
         territory_indicators_data.join(
@@ -332,6 +338,10 @@ async def test_get_indicator_values_by_parent_id_from_db(mock_conn: MockConnecti
             indicators_groups_data.c.indicator_id == indicators_dict.c.indicator_id,
         )
         .join(territories_data, territories_data.c.territory_id == territory_indicators_data.c.territory_id)
+        .join(
+            territory_types_dict,
+            territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id,
+        )
     )
 
     # Act
@@ -340,8 +350,8 @@ async def test_get_indicator_values_by_parent_id_from_db(mock_conn: MockConnecti
         with pytest.raises(EntityNotFoundById):
             await get_indicator_values_by_parent_id_from_db(mock_conn, parent_id, **filters, last_only=False)
     await get_indicator_values_by_parent_id_from_db(mock_conn, parent_id, **filters, last_only=True)
-    result = await get_indicator_values_by_parent_id_from_db(mock_conn, parent_id, **filters, last_only=False)
-    geojson_result = await GeoJSONResponse.from_list([r.to_geojson_dict() for r in result])
+    result, _ = await get_indicator_values_by_parent_id_from_db(mock_conn, parent_id, **filters, last_only=False)
+    geojson_result = await GeoJSONResponse.from_list([r.to_geojson_dict() for r in result], save_centers=True)
 
     # Assert
     assert isinstance(result, list), "Result should be a list."

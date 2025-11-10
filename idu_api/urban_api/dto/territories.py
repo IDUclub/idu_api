@@ -7,7 +7,7 @@ from typing import Any
 import shapely.geometry as geom
 from shapely.wkb import loads as wkb_loads
 
-from idu_api.urban_api.dto.indicators import IndicatorValueDTO
+from idu_api.urban_api.dto.indicators import BinnedIndicatorValueDTO, IndicatorValueDTO
 from idu_api.urban_api.dto.normatives import NormativeDTO
 
 
@@ -123,30 +123,6 @@ class TerritoryTreeWithoutGeometryDTO(TerritoryWithoutGeometryDTO):
 
 
 @dataclass
-class TerritoryWithIndicatorDTO:
-    """Territory DTO used to transfer short territory data with indicator."""
-
-    territory_id: int
-    name: str
-    geometry: geom.Polygon | geom.MultiPolygon | geom.Point
-    centre_point: geom.Point
-    indicator_name: str
-    indicator_value: float
-    measurement_unit_name: str | None
-
-    def __post_init__(self) -> None:
-        if isinstance(self.centre_point, bytes):
-            self.centre_point = wkb_loads(self.centre_point)
-        if self.geometry is None:
-            self.geometry = self.centre_point
-        if isinstance(self.geometry, bytes):
-            self.geometry = wkb_loads(self.geometry)
-
-    def to_geojson_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass
 class TerritoryWithIndicatorsDTO:
     """Territory DTO used to transfer short territory data with list of indicators."""
 
@@ -176,6 +152,7 @@ class TerritoryWithIndicatorsDTO:
         territory["centre_point"] = geom.mapping(self.centre_point)
         territory["indicators"] = [
             {
+                "indicator_id": ind.indicator_id,
                 "name_full": ind.name_full,
                 "measurement_unit_name": ind.measurement_unit_name,
                 "level": ind.level,
@@ -184,6 +161,38 @@ class TerritoryWithIndicatorsDTO:
                 "value": ind.value,
                 "value_type": ind.value_type,
                 "information_source": ind.information_source,
+            }
+            for ind in self.indicators
+        ]
+        return territory
+
+
+@dataclass
+class TerritoryWithBinnedIndicatorsDTO(TerritoryWithIndicatorsDTO):
+    """Territory DTO used to transfer short territory data with list of indicators."""
+
+    indicators: list[BinnedIndicatorValueDTO]
+
+    def to_geojson_dict(self) -> dict[str, Any]:
+        territory = asdict(self)
+        territory["territory_type"] = {
+            "id": territory.pop("territory_type_id"),
+            "name": territory.pop("territory_type_name"),
+        }
+        territory["centre_point"] = geom.mapping(self.centre_point)
+        territory["indicators"] = [
+            {
+                "indicator_id": ind.indicator_id,
+                "name_full": ind.name_full,
+                "measurement_unit_name": ind.measurement_unit_name,
+                "level": ind.level,
+                "list_label": ind.list_label,
+                "date_value": ind.date_value,
+                "value": ind.value,
+                "value_type": ind.value_type,
+                "information_source": ind.information_source,
+                "binned_min_value": ind.binned_min_value,
+                "binned_max_value": ind.binned_max_value,
             }
             for ind in self.indicators
         ]
