@@ -92,7 +92,7 @@ async def get_service_types_by_scenario_id_from_db(
         .where(
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             (
-                ST_Within(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
+                ST_Intersects(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
                 if not scenario.is_regional
                 else True
             ),
@@ -271,6 +271,11 @@ async def get_services_by_scenario_id_from_db(
     ).cte(name="public_urban_object_ids")
 
     # Step 2: Collect all services from `public.urban_objects_data`
+    is_locked_logic = (
+        (~ST_Within(object_geometries_data.c.geometry, project_geometry))
+        if project_geometry is not None
+        else literal(False)
+    )
     public_services_query = (
         select(
             services_data.c.service_id,
@@ -293,6 +298,7 @@ async def get_services_by_scenario_id_from_db(
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_object"),
+            is_locked_logic.label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
@@ -320,7 +326,7 @@ async def get_services_by_scenario_id_from_db(
         .where(
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             (
-                ST_Within(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
+                ST_Intersects(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
                 if not scenario.is_regional
                 else True
             ),
@@ -358,6 +364,7 @@ async def get_services_by_scenario_id_from_db(
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_object"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
@@ -466,6 +473,16 @@ async def get_services_with_geometry_by_scenario_id_from_db(
     ).cte(name="public_urban_object_ids")
 
     # Step 2: Collect all physical objects from `public.urban_objects_data`
+    is_locked_logic = (
+        (~ST_Within(object_geometries_data.c.geometry, project_geometry))
+        if project_geometry is not None
+        else literal(False)
+    )
+    intersected_geom = (
+        ST_Intersection(object_geometries_data.c.geometry, project_geometry)
+        if project_geometry is not None
+        else object_geometries_data.c.geometry
+    )
     public_services_query = (
         select(
             services_data.c.service_id,
@@ -488,12 +505,13 @@ async def get_services_with_geometry_by_scenario_id_from_db(
             object_geometries_data.c.object_geometry_id,
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_service"),
             literal(False).label("is_scenario_geometry"),
+            is_locked_logic.label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
@@ -521,7 +539,7 @@ async def get_services_with_geometry_by_scenario_id_from_db(
         .where(
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
             (
-                ST_Within(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
+                ST_Intersects(object_geometries_data.c.geometry, select(project_geometry).scalar_subquery())
                 if not scenario.is_regional
                 else True
             ),
@@ -534,6 +552,17 @@ async def get_services_with_geometry_by_scenario_id_from_db(
     )
 
     # Step 3: Collect all physical objects from `user_projects.urban_objects_data`
+    geom_expr = (
+        ST_Intersection(
+            coalesce(
+                projects_object_geometries_data.c.geometry,
+                object_geometries_data.c.geometry,
+            ),
+            project_geometry,
+        )
+        if project_geometry is not None
+        else coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
+    )
     scenario_services_query = (
         select(
             coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
@@ -568,22 +597,13 @@ async def get_services_with_geometry_by_scenario_id_from_db(
                 projects_object_geometries_data.c.osm_id,
                 object_geometries_data.c.osm_id,
             ).label("osm_id"),
-            ST_AsEWKB(
-                coalesce(
-                    projects_object_geometries_data.c.geometry,
-                    object_geometries_data.c.geometry,
-                ),
-            ).label("geometry"),
-            ST_AsEWKB(
-                coalesce(
-                    projects_object_geometries_data.c.centre_point,
-                    object_geometries_data.c.centre_point,
-                ),
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
             (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
@@ -1068,22 +1088,22 @@ async def add_service_to_db(
         if service.is_scenario_geometry
         else projects_urban_objects_data.c.public_object_geometry_id
     )
-    statement = select(projects_urban_objects_data).where(
+    statement = select(projects_urban_objects_data.c.urban_object_id).where(
         physical_object_column == service.physical_object_id,
         geometry_column == service.object_geometry_id,
         projects_urban_objects_data.c.scenario_id == scenario_id,
     )
-    urban_objects = (await conn.execute(statement)).mappings().all()
+    urban_object_ids = (await conn.execute(statement)).scalars().all()
     is_from_public = False
-    if not urban_objects:
+    if not urban_object_ids:
         is_from_public = True
         if not service.is_scenario_physical_object and not service.is_scenario_geometry:
-            statement = select(urban_objects_data).where(
+            statement = select(urban_objects_data.c.urban_object_id).where(
                 urban_objects_data.c.physical_object_id == service.physical_object_id,
                 urban_objects_data.c.object_geometry_id == service.object_geometry_id,
             )
-            urban_objects = (await conn.execute(statement)).mappings().all()
-        if not urban_objects:
+            urban_object_ids = (await conn.execute(statement)).scalars().all()
+        if not urban_object_ids:
             raise EntityNotFoundByParams(
                 "urban object", service.physical_object_id, service.object_geometry_id, scenario_id
             )
@@ -1104,6 +1124,19 @@ async def add_service_to_db(
     )
     service_id = (await conn.execute(statement)).scalar_one()
 
+    statement = (
+        select(projects_urban_objects_data.c.urban_object_id)
+        .where(
+            projects_urban_objects_data.c.urban_object_id.in_(urban_object_ids),
+            projects_urban_objects_data.c.service_id.is_(None),
+            projects_urban_objects_data.c.public_service_id.is_(None),
+        )
+        .with_for_update(skip_locked=True)
+        .limit(1)
+    )
+
+    urban_object_id = (await conn.execute(statement)).scalar_one_or_none()
+
     if is_from_public:
         statement = (
             insert(projects_urban_objects_data)
@@ -1115,34 +1148,28 @@ async def add_service_to_db(
             )
             .returning(projects_urban_objects_data.c.urban_object_id)
         )
-    else:
-        flag = False
-        for urban_object in urban_objects:
-            if urban_object.service_id is None:
-                statement = (
-                    update(projects_urban_objects_data)
-                    .where(projects_urban_objects_data.c.urban_object_id == urban_object.urban_object_id)
-                    .values(service_id=service_id)
-                    .returning(projects_urban_objects_data.c.urban_object_id)
-                )
-                flag = True
-                break
-
-        if not flag:
-            statement = (
-                insert(projects_urban_objects_data)
-                .values(
-                    scenario_id=scenario_id,
-                    service_id=service_id,
-                    physical_object_id=service.physical_object_id if service.is_scenario_physical_object else None,
-                    object_geometry_id=service.object_geometry_id if service.is_scenario_geometry else None,
-                    public_physical_object_id=(
-                        service.physical_object_id if not service.is_scenario_physical_object else None
-                    ),
-                    public_object_geometry_id=service.object_geometry_id if not service.is_scenario_geometry else None,
-                )
-                .returning(projects_urban_objects_data.c.urban_object_id)
+    elif not urban_object_id:
+        statement = (
+            insert(projects_urban_objects_data)
+            .values(
+                scenario_id=scenario_id,
+                service_id=service_id,
+                physical_object_id=service.physical_object_id if service.is_scenario_physical_object else None,
+                object_geometry_id=service.object_geometry_id if service.is_scenario_geometry else None,
+                public_physical_object_id=(
+                    service.physical_object_id if not service.is_scenario_physical_object else None
+                ),
+                public_object_geometry_id=service.object_geometry_id if not service.is_scenario_geometry else None,
             )
+            .returning(projects_urban_objects_data.c.urban_object_id)
+        )
+    else:
+        statement = (
+            update(projects_urban_objects_data)
+            .where(projects_urban_objects_data.c.urban_object_id == urban_object_id)
+            .values(service_id=service_id)
+            .returning(projects_urban_objects_data.c.urban_object_id)
+        )
 
     urban_object_id = (await conn.execute(statement)).scalar_one()
     await conn.commit()

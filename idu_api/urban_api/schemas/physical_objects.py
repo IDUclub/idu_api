@@ -223,6 +223,7 @@ class ScenarioPhysicalObject(PhysicalObject):
     """Scenario physical object with all its attributes."""
 
     is_scenario_object: bool = Field(..., description="boolean parameter to determine scenario object")
+    is_locked: bool = Field(..., description="boolean parameter to determine locked (to edit) object")
 
     @classmethod
     def from_dto(cls, dto: ScenarioPhysicalObjectDTO) -> "ScenarioPhysicalObject":
@@ -268,6 +269,7 @@ class ScenarioPhysicalObject(PhysicalObject):
             created_at=dto.created_at,
             updated_at=dto.updated_at,
             is_scenario_object=dto.is_scenario_object,
+            is_locked=dto.is_locked,
         )
 
 
@@ -279,3 +281,4 @@ class ScenarioPhysicalObjectWithGeometryAttributes(PhysicalObject):
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
     is_scenario_physical_object: bool = Field(..., description="boolean parameter to determine scenario object")
     is_scenario_geometry: bool = Field(..., description="boolean parameter to determine scenario geometry")
+    is_locked: bool = Field(..., description="boolean parameter to determine locked (to edit) object")

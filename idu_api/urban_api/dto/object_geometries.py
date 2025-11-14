@@ -52,6 +52,7 @@ class GeometryWithAllObjectsDTO:
     centre_point: geom.Point
     physical_objects: list[dict[str, Any]]
     services: list[dict[str, Any]]
+    is_locked: bool
 
     def __post_init__(self) -> None:
         if isinstance(self.centre_point, bytes):
