@@ -12,7 +12,8 @@ from idu_api.common.db.entities import (
     service_types_dict,
     service_types_normatives_data,
     territories_data,
-    urban_functions_dict, territory_types_dict,
+    territory_types_dict,
+    urban_functions_dict,
 )
 from idu_api.common.exceptions.logic.common import (
     EntitiesNotFoundByIds,

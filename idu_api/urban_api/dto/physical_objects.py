@@ -151,6 +151,7 @@ class ShortScenarioPhysicalObjectDTO(ShortPhysicalObjectDTO):
 @dataclass(frozen=True)
 class ScenarioPhysicalObjectDTO(PhysicalObjectDTO):
     is_scenario_object: bool
+    is_locked: bool
 
     @classmethod
     def fields(cls) -> Iterable[str]:
@@ -161,3 +162,4 @@ class ScenarioPhysicalObjectDTO(PhysicalObjectDTO):
 class ScenarioPhysicalObjectWithGeometryDTO(PhysicalObjectWithGeometryDTO):
     is_scenario_physical_object: bool
     is_scenario_geometry: bool
+    is_locked: bool

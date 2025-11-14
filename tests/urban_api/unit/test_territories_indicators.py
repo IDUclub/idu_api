@@ -16,7 +16,9 @@ from idu_api.common.db.entities import (
     soc_value_indicators_data,
     soc_values_dict,
     territories_data,
-    territory_indicators_data, territory_types_dict, territory_indicators_binds_data,
+    territory_indicators_binds_data,
+    territory_indicators_data,
+    territory_types_dict,
 )
 from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
@@ -109,24 +111,28 @@ async def test_get_indicator_values_by_territory_id_from_db(mock_conn: MockConne
         )
         .subquery()
     )
-    base_statement = select(
-        territory_indicators_data,
-        indicators_dict.c.parent_id,
-        indicators_dict.c.name_full,
-        indicators_dict.c.level,
-        indicators_dict.c.list_label,
-        measurement_units_dict.c.measurement_unit_id,
-        measurement_units_dict.c.name.label("measurement_unit_name"),
-        territories_data.c.name.label("territory_name"),
-        territory_indicators_binds_data.c.min_value.label("binned_min_value"),
-        territory_indicators_binds_data.c.max_value.label("binned_max_value"),
-    ).distinct().where(
-        (
-            (territory_indicators_binds_data.c.territory_id == 1)
-            & territory_indicators_binds_data.c.min_value.isnot(None)
-            & territory_indicators_binds_data.c.max_value.isnot(None)
+    base_statement = (
+        select(
+            territory_indicators_data,
+            indicators_dict.c.parent_id,
+            indicators_dict.c.name_full,
+            indicators_dict.c.level,
+            indicators_dict.c.list_label,
+            measurement_units_dict.c.measurement_unit_id,
+            measurement_units_dict.c.name.label("measurement_unit_name"),
+            territories_data.c.name.label("territory_name"),
+            territory_indicators_binds_data.c.min_value.label("binned_min_value"),
+            territory_indicators_binds_data.c.max_value.label("binned_max_value"),
         )
-        | True
+        .distinct()
+        .where(
+            (
+                (territory_indicators_binds_data.c.territory_id == 1)
+                & territory_indicators_binds_data.c.min_value.isnot(None)
+                & territory_indicators_binds_data.c.max_value.isnot(None)
+            )
+            | True
+        )
     )
     base_select_from = (
         territory_indicators_data.join(

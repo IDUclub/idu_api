@@ -295,6 +295,16 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
     ).cte(name="public_urban_object_ids")
 
     # Step 2: Collect all geometries from `public.urban_objects_data`
+    is_locked_logic = (
+        (~ST_Within(object_geometries_data.c.geometry, project_geometry))
+        if project_geometry is not None
+        else literal(False)
+    )
+    intersected_geom = (
+        ST_Intersection(object_geometries_data.c.geometry, project_geometry)
+        if project_geometry is not None
+        else object_geometries_data.c.geometry
+    )
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
     public_urban_objects_query = (
         select(
@@ -311,8 +321,8 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
             territories_data.c.name.label("territory_name"),
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             services_data.c.service_id,
             services_data.c.name.label("service_name"),
             services_data.c.capacity,
@@ -326,6 +336,7 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
             literal(False).label("is_scenario_geometry"),
             literal(False).label("is_scenario_physical_object"),
             literal(False).label("is_scenario_service"),
+            is_locked_logic.label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(
@@ -360,7 +371,7 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
         )
         .where(
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
-            ST_Within(object_geometries_data.c.geometry, project_geometry) if not project.is_regional else True,
+            ST_Intersects(object_geometries_data.c.geometry, project_geometry) if not project.is_regional else True,
             (
                 object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id))
                 if project.is_regional
@@ -376,6 +387,17 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
     ]
 
     # Step 3: Collect all geometries from `user_projects.urban_objects_data`
+    geom_expr = (
+        ST_Intersection(
+            coalesce(
+                projects_object_geometries_data.c.geometry,
+                object_geometries_data.c.geometry,
+            ),
+            project_geometry,
+        )
+        if project_geometry is not None
+        else coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
+    )
     scenario_urban_objects_query = (
         select(
             coalesce(
@@ -397,13 +419,8 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
             territories_data.c.name.label("territory_name"),
             coalesce(projects_object_geometries_data.c.address, object_geometries_data.c.address).label("address"),
             coalesce(projects_object_geometries_data.c.osm_id, object_geometries_data.c.osm_id).label("osm_id"),
-            coalesce(
-                ST_AsEWKB(projects_object_geometries_data.c.geometry), ST_AsEWKB(object_geometries_data.c.geometry)
-            ).label("geometry"),
-            coalesce(
-                ST_AsEWKB(projects_object_geometries_data.c.centre_point),
-                ST_AsEWKB(object_geometries_data.c.centre_point),
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
             coalesce(projects_services_data.c.name, services_data.c.name).label("service_name"),
             coalesce(projects_services_data.c.capacity, services_data.c.capacity).label("capacity"),
@@ -419,6 +436,7 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
             (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
             (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_physical_object"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
@@ -528,6 +546,7 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
                 "address": obj["address"],
                 "osm_id": obj["osm_id"],
                 "is_scenario_object": is_scenario_geometry,
+                "is_locked": obj["is_locked"],
             }
         )
 

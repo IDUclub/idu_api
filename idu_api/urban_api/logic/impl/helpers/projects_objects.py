@@ -484,7 +484,7 @@ async def add_project_to_db(
     project_territory = extract_values_from_model(project.territory)
     await conn.execute(insert(projects_territory_data).values(**project_territory, project_id=project_id))
 
-    scenario_id = await create_project_base_scenario(conn, project_id, project.territory_id)
+    scenario_id, parent_id = await create_project_base_scenario(conn, project_id, project.territory_id)
 
     og_id_mapping = await insert_intersecting_geometries(conn, given_geometry)
 
@@ -501,6 +501,8 @@ async def add_project_to_db(
     await project_storage_manager.init_project(project_id, logger)
 
     event = ProjectCreated(project_id=project_id, base_scenario_id=scenario_id, territory_id=project.territory_id)
+    await kafka_producer.send(event)
+    event = BaseScenarioCreated(project_id=project_id, base_scenario_id=scenario_id, regional_scenario_id=parent_id)
     await kafka_producer.send(event)
 
     await conn.commit()
@@ -551,7 +553,9 @@ async def create_base_scenario_to_db(
     ):
         raise EntityAlreadyExists("base scenario", project_id, scenario_id)
 
-    base_scenario_id = await create_project_base_scenario(conn, project_id, project.territory_id, parent_id=scenario_id)
+    base_scenario_id, _ = await create_project_base_scenario(
+        conn, project_id, project.territory_id, parent_id=scenario_id
+    )
 
     await copy_urban_objects_from_regional_scenario(conn, scenario_id, project.geometry, base_scenario_id)
 
@@ -940,7 +944,7 @@ async def create_project_base_scenario(
     project_id: int,
     territory_id: int,
     parent_id: int | None = None,
-) -> int:
+) -> tuple[int, int]:
     """
     Create a base scenario for a given project.
 
@@ -954,7 +958,7 @@ async def create_project_base_scenario(
         parent_id (int | None): Optional ID of the parent (regional) scenario.
 
     Returns:
-        int: ID of the newly created scenario.
+        tuple[int, int]: ID of the newly created scenario and ID of parent regional scenario.
 
     Raises:
         EntityNotFoundByParams: If no regional base scenario is found when expected.
@@ -1005,8 +1009,8 @@ async def create_project_base_scenario(
         )
     ).scalar_one()
 
-    # Return the ID of the newly created scenario.
-    return scenario_id
+    # Return tuple of scenario IDs.
+    return scenario_id, parent_id
 
 
 async def copy_urban_objects_from_regional_scenario(
