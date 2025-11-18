@@ -126,7 +126,7 @@ class ShortScenarioServiceDTO(ShortServiceDTO):
 @dataclass(frozen=True)
 class ScenarioServiceDTO(ServiceDTO):
     is_scenario_object: bool
-    is_locked: bool
+    is_locked: bool = False
 
     @classmethod
     def fields(cls) -> Iterable[str]:
@@ -137,4 +137,4 @@ class ScenarioServiceDTO(ServiceDTO):
 class ScenarioServiceWithGeometryDTO(ServiceWithGeometryDTO):
     is_scenario_service: bool
     is_scenario_geometry: bool
-    is_locked: bool
+    is_locked: bool = False

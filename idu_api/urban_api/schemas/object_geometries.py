@@ -130,6 +130,7 @@ class ScenarioGeometryAttributes(GeometryAttributes):
     """Scenario object geometry schema (but without geometry columns)."""
 
     is_scenario_object: bool = Field(..., description="boolean parameter to determine scenario object")
+    is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")
 
 
 class AllObjects(BaseModel):
@@ -147,6 +148,6 @@ class ScenarioAllObjects(AllObjects):
     """Scenario object geometry with all its physical objects and services (but without geometry columns...)."""
 
     is_scenario_object: bool = Field(..., description="boolean parameter to determine scenario object")
-    is_locked: bool = Field(..., description="boolean parameter to determine locked (to edit) object")
+    is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")
     physical_objects: list[ShortScenarioPhysicalObject]
     services: list[ShortScenarioService]

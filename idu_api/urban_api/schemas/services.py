@@ -217,7 +217,7 @@ class ScenarioService(Service):
     """Service with all its attributes."""
 
     is_scenario_object: bool = Field(..., description="boolean parameter to determine scenario object")
-    is_locked: bool = Field(..., description="boolean parameter to determine locked (to edit) object")
+    is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")
 
     @classmethod
     def from_dto(cls, dto: ScenarioServiceDTO) -> "ScenarioService":
@@ -264,4 +264,4 @@ class ScenarioServiceWithGeometryAttributes(Service):
     osm_id: str | None = Field(None, description="open street map identifier", examples=["1"])
     is_scenario_service: bool = Field(..., description="boolean parameter to determine scenario service")
     is_scenario_geometry: bool = Field(..., description="boolean parameter to determine scenario geometry")
-    is_locked: bool = Field(..., description="boolean parameter to determine locked (to edit) object")
+    is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")

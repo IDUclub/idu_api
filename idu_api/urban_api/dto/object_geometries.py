@@ -39,6 +39,7 @@ class ObjectGeometryDTO:
 @dataclass
 class ScenarioGeometryDTO(ObjectGeometryDTO):
     is_scenario_object: bool
+    is_locked: bool = False
 
 
 @dataclass
@@ -52,7 +53,6 @@ class GeometryWithAllObjectsDTO:
     centre_point: geom.Point
     physical_objects: list[dict[str, Any]]
     services: list[dict[str, Any]]
-    is_locked: bool
 
     def __post_init__(self) -> None:
         if isinstance(self.centre_point, bytes):
@@ -73,3 +73,4 @@ class ScenarioGeometryWithAllObjectsDTO(GeometryWithAllObjectsDTO):
     is_scenario_object: bool
     physical_objects: list[dict[str, Any]]
     services: list[dict[str, Any]]
+    is_locked: bool = False
