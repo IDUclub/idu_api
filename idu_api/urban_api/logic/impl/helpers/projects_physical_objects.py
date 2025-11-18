@@ -849,6 +849,16 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
     ).cte(name="public_urban_object_ids")
 
     # Step 2: Collect all physical objects from `public.urban_objects_data`
+    is_locked_logic = (
+        (~ST_Within(object_geometries_data.c.geometry, project_geometry))
+        if project_geometry is not None
+        else literal(False)
+    )
+    intersected_geom = (
+        ST_Intersection(object_geometries_data.c.geometry, project_geometry)
+        if project_geometry is not None
+        else object_geometries_data.c.geometry
+    )
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
     public_urban_objects_query = (
         select(
@@ -866,12 +876,13 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
             object_geometries_data.c.object_geometry_id,
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_physical_object"),
             literal(False).label("is_scenario_geometry"),
+            is_locked_logic.label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(
@@ -902,7 +913,7 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
         )
         .where(
             urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
-            ST_Within(object_geometries_data.c.geometry, project_geometry) if not scenario.is_regional else True,
+            ST_Intersects(object_geometries_data.c.geometry, project_geometry) if not scenario.is_regional else True,
             (
                 object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id))
                 if scenario.is_regional
@@ -912,6 +923,17 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
     )
 
     # Step 3: Collect all physical objects from `user_projects.urban_objects_data`
+    geom_expr = (
+        ST_Intersection(
+            coalesce(
+                projects_object_geometries_data.c.geometry,
+                object_geometries_data.c.geometry,
+            ),
+            project_geometry,
+        )
+        if project_geometry is not None
+        else coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
+    )
     scenario_urban_objects_query = (
         select(
             coalesce(
@@ -990,18 +1012,13 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
                 projects_object_geometries_data.c.osm_id,
                 object_geometries_data.c.osm_id,
             ).label("osm_id"),
-            coalesce(
-                projects_object_geometries_data.c.geometry,
-                object_geometries_data.c.geometry,
-            ).label("geometry"),
-            coalesce(
-                projects_object_geometries_data.c.centre_point,
-                object_geometries_data.c.centre_point,
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_physical_object"),
             (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
