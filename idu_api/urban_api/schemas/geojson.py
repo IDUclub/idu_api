@@ -4,6 +4,7 @@ from collections.abc import Iterable
 from typing import Any, Literal
 
 import shapely.geometry as geom
+import structlog
 from geojson_pydantic import Feature, FeatureCollection
 from geojson_pydantic.geometries import Geometry
 from pydantic import BaseModel
@@ -15,6 +16,7 @@ from idu_api.urban_api.schemas.territories import TerritoryWithIndicators
 _BaseGeomTypes = (
     geom.Point | geom.MultiPoint | geom.Polygon | geom.MultiPolygon | geom.LineString | geom.MultiLineString
 )
+_logger: structlog.stdlib.BoundLogger = structlog.get_logger("geometry_schemas")
 
 
 class GeoJSONResponse(FeatureCollection):
@@ -32,14 +34,18 @@ class GeoJSONResponse(FeatureCollection):
         with one field in each containing GeoJSON geometries.
         """
         geom_columns = ("geometry", "centre_point") if not save_centers else "geometry"
-        feature_collection = [
-            Feature(
-                type="Feature",
-                geometry=feature["centre_point" if centers_only else "geometry"],
-                properties={k: v for k, v in feature.items() if k not in geom_columns},
-            )
-            for feature in features
-        ]
+        feature_collection = []
+        for feature in features:
+            try:
+                feature = Feature(
+                    type="Feature",
+                    geometry=feature["centre_point" if centers_only else "geometry"],
+                    properties={k: v for k, v in feature.items() if k not in geom_columns},
+                )
+                feature_collection.append(feature)
+            except Exception:
+                await _logger.awarning("Skipped feature", feature=feature)
+                continue
         return cls(features=feature_collection)
 
     def update_geometries(

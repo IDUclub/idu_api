@@ -12,6 +12,7 @@ from geoalchemy2 import Geography, Geometry
 from geoalchemy2.functions import (
     ST_Area,
     ST_AsEWKB,
+    ST_AsGeoJSON,
     ST_Buffer,
     ST_Centroid,
     ST_GeometryType,
@@ -19,7 +20,7 @@ from geoalchemy2.functions import (
     ST_Intersection,
     ST_Intersects,
     ST_IsEmpty,
-    ST_Within, ST_AsGeoJSON,
+    ST_Within,
 )
 from otteroad import KafkaProducerClient
 from otteroad.models import BaseScenarioCreated, ProjectCreated
@@ -1176,7 +1177,9 @@ async def insert_intersecting_geometries(
                 object_geometries_data.c.object_geometry_id.label("public_object_geometry_id"),
                 object_geometries_data.c.territory_id,
                 func.normalize_intersection(object_geometries_data.c.geometry, geometry).label("geometry"),
-                ST_Centroid(func.normalize_intersection(object_geometries_data.c.geometry, geometry)).label("centre_point"),
+                ST_Centroid(func.normalize_intersection(object_geometries_data.c.geometry, geometry)).label(
+                    "centre_point"
+                ),
                 object_geometries_data.c.address,
                 object_geometries_data.c.osm_id,
             ).where(
