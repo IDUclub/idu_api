@@ -2,7 +2,11 @@ app:
   host: 0.0.0.0
   port: 8000
   debug: false
-  name: urban_api
+  cors:
+    allow_origins: ["*"]
+    allow_methods: ["*"]
+    allow_headers: ["*"]
+    allow_credentials: True
 db:
   master:
     host: localhost
@@ -11,13 +15,15 @@ db:
     user: postgres
     password: postgres
     pool_size: 15
+    debug: false
   replicas:
-  - host: localhost
-    port: 5433
-    database: urban_db
-    user: readonly
-    password: readonly
-    pool_size: 8
+    - host: localhost
+      port: 5433
+      database: urban_db
+      user: readonly
+      password: readonly
+      pool_size: 8
+      debug: false
 auth:
   url: http://localhost:8086/introspect
   validate: false
@@ -34,14 +40,17 @@ fileserver:
 external:
   gen_planner_api: http://localhost:8101
   hextech_api: http://localhost:8100
-logging:
-  level: INFO
-  files:
-  - filename: logs/info.log
-    level: INFO
-prometheus:
-  port: 9000
-  disable: false
+observability:
+  logging:
+    stderr_level: INFO
+    files:
+      - filename: logs/info.log
+        level: INFO
+  prometheus:
+    port: 9000
+    disable: false
+    urls_mapping:
+      /\.well-known/.*: /.well-known/*
 broker:
   client_id: urban-api
   bootstrap_servers: localhost:9092,localhost9093,localhost9094

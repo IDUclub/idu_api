@@ -20,8 +20,8 @@ from idu_api.common.db.entities import (
     territory_indicators_data,
     territory_types_dict,
 )
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import IndicatorDTO, IndicatorValueDTO, SocValueIndicatorValueDTO, TerritoryWithIndicatorsDTO
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.territories_indicators import (
     get_indicator_values_by_parent_id_from_db,
     get_indicator_values_by_territory_id_from_db,

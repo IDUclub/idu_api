@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from typing import Any
 
+from idu_api.common.utils.secrets import SecretStr
+
 
 @dataclass
 class DBConfig:
@@ -10,15 +12,18 @@ class DBConfig:
     port: int
     database: str
     user: str
-    password: str
+    password: SecretStr
     pool_size: int
-    debug: bool
+    debug: bool = False
+
+    def __post_init__(self):
+        self.password = SecretStr(self.password)
 
 
 @dataclass
 class MultipleDBsConfig:
     master: DBConfig
-    replicas: list[DBConfig] | None
+    replicas: list[DBConfig] | None = None
 
     def __post_init__(self):
         _dict_to_dataclass(self, "master", DBConfig)

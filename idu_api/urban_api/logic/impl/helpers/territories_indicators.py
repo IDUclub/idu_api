@@ -21,7 +21,6 @@ from idu_api.common.db.entities import (
     territory_indicators_data,
     territory_types_dict,
 )
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import (
     BinnedIndicatorValueDTO,
     IndicatorDTO,
@@ -30,6 +29,7 @@ from idu_api.urban_api.dto import (
     SocValueIndicatorValueDTO,
     TerritoryWithIndicatorsDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
     get_parent_region_id,

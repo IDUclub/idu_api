@@ -4,7 +4,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from tenacity import RetryError
 
 from idu_api.common.exceptions import IduApiError
-from idu_api.common.exceptions.services.external import ExternalServiceUnavailable
+from idu_api.urban_api.exceptions.services.external import ExternalServiceUnavailable
 from idu_api.urban_api.utils.auth_client import AuthenticationClient
 
 

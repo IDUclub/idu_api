@@ -21,17 +21,17 @@ from idu_api.common.db.entities import (
     territory_indicators_binds_data,
     territory_indicators_data,
 )
-from idu_api.common.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-)
 from idu_api.urban_api.dto import (
     IndicatorDTO,
     IndicatorsGroupDTO,
     IndicatorValueDTO,
     MeasurementUnitDTO,
     TerritoryIndicatorBindDTO,
+)
+from idu_api.urban_api.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityNotFoundById,
+    EntityNotFoundByParams,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import build_recursive_query, check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (

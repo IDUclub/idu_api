@@ -10,12 +10,12 @@ from cachetools import TTLCache
 from fastapi import Request
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from idu_api.common.exceptions.services.auth import (
-    ExpiredToken,
+from idu_api.urban_api.dto.users import UserDTO
+from idu_api.urban_api.exceptions.services.auth import (
+    AuthTokenExpiredError,
     InvalidTokenSignature,
     JWTDecodeError,
 )
-from idu_api.urban_api.dto.users import UserDTO
 
 
 class AuthenticationClient:
@@ -87,7 +87,7 @@ class AuthenticationClient:
         # Optionally validate the token online
         if self._validate_token:
             if self.is_token_expired(payload):
-                raise ExpiredToken()
+                raise AuthTokenExpiredError()
             await self.validate_token_online(token)
 
         user_dto = UserDTO(id=payload.get("sub"), is_superuser=payload.get("is_superuser", False))

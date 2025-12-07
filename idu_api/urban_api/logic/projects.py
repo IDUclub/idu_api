@@ -72,7 +72,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Get project territory object by id."""
 
     @abc.abstractmethod
-    async def get_projects(
+    async def get_projects(  # pylint: disable=too-many-arguments
         self,
         user: UserDTO | None,
         only_own: bool,

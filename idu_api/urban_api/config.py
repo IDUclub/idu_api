@@ -1,17 +1,31 @@
 """Application configuration class is defined here."""
 
-import os
 from collections import OrderedDict
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path
-from typing import TextIO
+from types import NoneType, UnionType
+from typing import Any, Literal, TextIO, Type, Union, get_origin
 
 import yaml
 
 from idu_api.common.db.config import DBConfig, MultipleDBsConfig
-from idu_api.urban_api.version import VERSION as api_version
+from idu_api.common.utils.secrets import SecretStr, representSecretStrYAML
+from idu_api.urban_api.utils.observability import (
+    ExporterConfig,
+    FileLogger,
+    JaegerConfig,
+    LoggingConfig,
+    ObservabilityConfig,
+    PrometheusConfig,
+)
 
-from .utils.logging import LoggingLevel
+
+@dataclass
+class CORSConfig:
+    allow_origins: list[str]
+    allow_methods: list[str]
+    allow_headers: list[str]
+    allow_credentials: bool
 
 
 @dataclass
@@ -19,10 +33,7 @@ class AppConfig:
     host: str
     port: int
     debug: bool
-    name: str
-
-    def __post_init__(self):
-        self.name = f"urban_api ({api_version})"
+    cors: CORSConfig
 
 
 @dataclass
@@ -55,28 +66,6 @@ class ExternalServicesConfig:
 
 
 @dataclass
-class FileLogger:
-    filename: str
-    level: LoggingLevel
-
-
-@dataclass
-class LoggingConfig:
-    level: LoggingLevel
-    files: list[FileLogger] = field(default_factory=list)
-
-    def __post_init__(self):
-        if len(self.files) > 0 and isinstance(self.files[0], dict):
-            self.files = [FileLogger(**f) for f in self.files]
-
-
-@dataclass
-class PrometheusConfig:
-    port: int = 9000
-    disable: bool = False
-
-
-@dataclass
 class BrokerConfig:
     client_id: str
     bootstrap_servers: str
@@ -92,8 +81,7 @@ class UrbanAPIConfig:
     auth: AuthConfig
     fileserver: FileServerConfig
     external: ExternalServicesConfig
-    logging: LoggingConfig
-    prometheus: PrometheusConfig
+    observability: ObservabilityConfig
     broker: BrokerConfig
 
     def to_order_dict(self) -> OrderedDict:
@@ -112,18 +100,7 @@ class UrbanAPIConfig:
                 )
             return obj
 
-        return OrderedDict(
-            [
-                ("app", to_ordered_dict_recursive(self.app)),
-                ("db", to_ordered_dict_recursive(self.db)),
-                ("auth", to_ordered_dict_recursive(self.auth)),
-                ("fileserver", to_ordered_dict_recursive(self.fileserver)),
-                ("external", to_ordered_dict_recursive(self.external)),
-                ("logging", to_ordered_dict_recursive(self.logging)),
-                ("prometheus", to_ordered_dict_recursive(self.prometheus)),
-                ("broker", to_ordered_dict_recursive(self.broker)),
-            ]
-        )
+        return OrderedDict([(section, to_ordered_dict_recursive(getattr(self, section))) for section in asdict(self)])
 
     def dump(self, file: str | Path | TextIO) -> None:
         """Export current configuration to a file"""
@@ -132,20 +109,24 @@ class UrbanAPIConfig:
             def represent_dict_preserve_order(self, data):
                 return self.represent_dict(data.items())
 
+            def increase_indent(self, flow=False, indentless=False):
+                return super().increase_indent(flow, False)
+
         OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_dict_preserve_order)
+        OrderedDumper.add_representer(SecretStr, representSecretStrYAML)
 
         if isinstance(file, (str, Path)):
             with open(str(file), "w", encoding="utf-8") as file_w:
-                yaml.dump(self.to_order_dict(), file_w, Dumper=OrderedDumper, default_flow_style=False)
+                yaml.dump(self.to_order_dict(), file_w, Dumper=OrderedDumper)
         else:
-            yaml.dump(self.to_order_dict(), file, Dumper=OrderedDumper, default_flow_style=False)
+            yaml.dump(self.to_order_dict(), file, Dumper=OrderedDumper)
 
     @classmethod
     def example(cls) -> "UrbanAPIConfig":
         """Generate an example of configuration."""
 
         return cls(
-            app=AppConfig(host="0.0.0.0", port=8000, debug=False, name="urban_api"),
+            app=AppConfig(host="0.0.0.0", port=8000, debug=False, cors=CORSConfig(["*"], ["*"], ["*"], True)),
             db=MultipleDBsConfig(
                 master=DBConfig(
                     host="localhost",
@@ -181,8 +162,15 @@ class UrbanAPIConfig:
             external=ExternalServicesConfig(
                 hextech_api="http://localhost:8100", gen_planner_api="http://localhost:8101"
             ),
-            logging=LoggingConfig(level="INFO", files=[FileLogger(filename="logs/info.log", level="INFO")]),
-            prometheus=PrometheusConfig(port=9000, disable=False),
+            observability=ObservabilityConfig(
+                logging=LoggingConfig(
+                    stderr_level="INFO",
+                    exporter=ExporterConfig("http://127.0.0.1:4317", level="INFO"),
+                    files=[FileLogger(filename="logs/info.log", level="INFO")],
+                ),
+                prometheus=PrometheusConfig(host="0.0.0.0", port=9090, urls_mapping={}),
+                jaeger=JaegerConfig(endpoint="http://127.0.0.1:4318/v1/traces"),
+            ),
             broker=BrokerConfig(
                 client_id="urban-api",
                 bootstrap_servers="localhost:9092",
@@ -202,38 +190,54 @@ class UrbanAPIConfig:
                     data = yaml.safe_load(file_r)
             else:
                 data = yaml.safe_load(file)
-
         except Exception as exc:
             raise ValueError(f"Could not read app config file: {file}") from exc
+
         try:
-            return cls(
-                app=AppConfig(**data.get("app", {})),
-                db=MultipleDBsConfig(**data.get("db", {})),
-                auth=AuthConfig(**data.get("auth", {})),
-                fileserver=FileServerConfig(**data.get("fileserver", {})),
-                external=ExternalServicesConfig(**data.get("external", {})),
-                logging=LoggingConfig(**data.get("logging", {})),
-                prometheus=PrometheusConfig(**data.get("prometheus", {})),
-                broker=BrokerConfig(**data.get("broker", {})),
-            )
+            return UrbanAPIConfig._initialize_from_dict(UrbanAPIConfig, data)
         except Exception as e:
             raise RuntimeError(f"Could not initialize dependency configs: {e}") from e
 
-    @classmethod
-    def from_file_or_default(cls, config_path: str | None = os.getenv("CONFIG_PATH")) -> "UrbanAPIConfig":
-        """Try to load configuration from the path specified in the environment variable."""
+    @staticmethod
+    def _initialize_from_dict(t: Type, data: Any) -> Any:
+        """Try to initialize given type field-by-field recursively with data from dictionary substituting {} and None
+        if no value provided.
+        """
+        if get_origin(t) is Union or get_origin(t) is UnionType:  # both actually required
+            for inner_type in t.__args__:
+                if inner_type is NoneType and data is None:
+                    return None
+                try:
+                    return UrbanAPIConfig._initialize_from_dict(inner_type, data)
+                except Exception:  # pylint: disable=broad-except
+                    pass
+            raise ValueError(f"Cannot instanciate type '{t}' from {data}")
 
-        if not config_path:
-            return cls.example()
+        if hasattr(t, "__origin__") and t.__origin__ is dict:
+            return data
+
+        if not isinstance(data, dict):
+            if hasattr(t, "__origin__") and t.__origin__ is Literal and data in t.__args__:
+                return data
+            return t(data)
+
+        init_dict = {}
+        for fld in fields(t):
+            inner_data = data.get(fld.name)
+            if inner_data is None:
+                if isinstance(fld.type, UnionType) and NoneType in fld.type.__args__:
+                    init_dict[fld.name] = None
+                    continue
+                inner_data = {}
+            else:
+                init_dict[fld.name] = UrbanAPIConfig._initialize_from_dict(fld.type, inner_data)
+        return t(**init_dict)
+
+    @classmethod
+    def from_file(cls, config_path: str) -> "UrbanAPIConfig":
+        """Load configuration from the given path."""
+
+        if not config_path or not Path(config_path).is_file():
+            raise ValueError(f"Requested config is not a valid file: {config_path}")
 
         return cls.load(config_path)
-
-    def update(self, other: "UrbanAPIConfig") -> None:
-        """Update current config attributes with the values from another UrbanAPIConfig instance."""
-        for section in ("app", "db", "auth", "fileserver", "logging"):
-            current_subconfig = getattr(self, section)
-            other_subconfig = getattr(other, section)
-
-            for param, value in other_subconfig.__dict__.items():
-                if param in current_subconfig.__dict__:
-                    setattr(current_subconfig, param, value)

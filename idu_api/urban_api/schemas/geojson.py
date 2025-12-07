@@ -43,7 +43,7 @@ class GeoJSONResponse(FeatureCollection):
                     properties={k: v for k, v in feature.items() if k not in geom_columns},
                 )
                 feature_collection.append(feature)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 await _logger.awarning("Skipped feature", feature=feature)
                 continue
         return cls(features=feature_collection)
@@ -57,7 +57,8 @@ class GeoJSONResponse(FeatureCollection):
         """
         if len(new_geoms) != len(self.features):
             raise ValueError(
-                f"Number of new geometries ({len(new_geoms)}) does not match the number of features ({len(self.features)})"
+                f"Number of new geometries ({len(new_geoms)}) does not match the"
+                f" number of features ({len(self.features)})"
             )
 
         updated_features = [

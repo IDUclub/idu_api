@@ -38,12 +38,15 @@ async def get_scenarios(
 
     ### Parameters:
     - **parent_id** (int, Query): Unique identifier of the REGIONAL scenario.
-    **NOTE:** If passed, returns the child PROJECT scenarios with given parent only. Else, returns regional scenarios.
+        **NOTE:** If passed, returns the child PROJECT scenarios with given parent only. Else,
+        returns regional scenarios.
     - **project_id** (int, Query): Unique identifier of the project to get its scenarios only.
-    - **territory_id** (int, Query): Unique identifier of the territory to get scenarios for projects located on given territory.
-    **NOTE:** Only regions.
+    - **territory_id** (int, Query): Unique identifier of the territory to get scenarios for projects
+    located on given territory.
+        **NOTE:** Only regions.
     - **is_based** (bool, Query): If true, returns only base scenarios. Else, returns all scenarios.
-    - **only_own** (bool, Query): If true, returns only own scenarios + base regional scenarios if parent_id skipped. Else, returns all public scenarios.
+    - **only_own** (bool, Query): If true, returns only own scenarios + base regional scenarios if parent_id skipped.
+    Else, returns all public scenarios.
 
     ### Returns:
     - **list[Scenario]**: List of all scenarios matching the given filters.

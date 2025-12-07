@@ -9,8 +9,8 @@ from sqlalchemy import select, text
 from sqlalchemy.sql.selectable import CTE, ScalarSelect, Select
 
 from idu_api.common.db.entities import projects_data, scenarios_data, territories_data
-from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.dto import UserDTO
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.logic.impl.helpers.utils import (
     SRID,
     build_hierarchy,

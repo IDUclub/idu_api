@@ -93,9 +93,10 @@ async def get_services_by_territory_id(
     - **urban_function_id** (int | None, Query): Filters results by urban function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving services (default: 1).
     - **page_size** (int, Query): Defines the number of services per page (default: 10).
@@ -178,9 +179,10 @@ async def get_services_with_geometry_by_territory_id(
     - **urban_function_id** (int | None, Query): Filters results by urban function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving services (default: 1).
     - **page_size** (int, Query): Defines the number of services per page (default: 10).
@@ -258,7 +260,7 @@ async def get_services_geojson_by_territory_id(
     - **urban_function_id** (int | None, Query): Filters results by urban function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
@@ -316,10 +318,12 @@ async def get_total_services_capacity_by_territory_id(
     ### Parameters:
     - **territory_id** (int, Path): Unique identifier of the territory.
     - **level** (int, Query): Level of the territory hierarchy to retrieve data for.
-    - **service_type_id** (int | None, Query): Filters results by service type. If not provided, returns data for all service types.
+    - **service_type_id** (int | None, Query): Filters results by service type. If not provided,
+    returns data for all service types.
 
     ### Returns:
-    - **list[ServicesCountCapacity]**: A list of aggregated service counts and capacities for the specified territory and level.
+    - **list[ServicesCountCapacity]**: A list of aggregated service counts and capacities for the specified
+    territory and level.
 
     ### Errors:
     - **404 Not Found**: If the territory does not exist.

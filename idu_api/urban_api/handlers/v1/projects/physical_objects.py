@@ -142,7 +142,8 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     - **physical_object_function_id** (int | None, Query): Optional filter by physical object function identifier.
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]**: A GeoJSON response containing the physical objects.
+    - **GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]**:
+    A GeoJSON response containing the physical objects.
 
     ### Errors:
     - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id`.
@@ -192,7 +193,8 @@ async def get_physical_objects_around_geometry_by_scenario_id(
     - **physical_object_type_id** (int | None, Query): Filters results by physical object type.
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]**: A GeoJSON response containing the physical objects.
+    - **GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]**:
+    A GeoJSON response containing the physical objects.
 
     ## Errors:
     - **400 Bad Request**: If an invalid geometry is specified.

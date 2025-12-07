@@ -182,7 +182,8 @@ async def get_urban_functions_by_parent_id(
     ## Get urban functions by parent identifier.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent urban function. If skipped, it returns the highest level functions.
+    - **parent_id** (int | None, Query): Unique identifier of the parent urban function.
+    If skipped, it returns the highest level functions.
     - **name** (str | None, Query): Filters results by function name.
     - **get_all_subtree** (bool, Query): If True, retrieves all subtree of urban functions.
 

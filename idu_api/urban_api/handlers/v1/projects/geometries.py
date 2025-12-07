@@ -70,7 +70,7 @@ async def get_geometries_by_scenario_id(
     response_model=GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]],
     status_code=status.HTTP_200_OK,
 )
-async def get_geometries_with_all_objects_by_scenario_id(
+async def get_geometries_with_all_objects_by_scenario_id(  # pylint: disable=too-many-arguments
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
@@ -87,7 +87,8 @@ async def get_geometries_with_all_objects_by_scenario_id(
     """
     ## Get geometries with associated services and physical objects for a given scenario in GeoJSON format.
 
-    **WARNING:** You can only filter by physical object type or physical object function (and only by service type or urban function).
+    **WARNING:** You can only filter by physical object type or physical object function
+    (and only by service type or urban function).
 
     ### Parameters:
     - **scenario_id** (int, Path): Unique identifier of the scenario.
@@ -100,10 +101,12 @@ async def get_geometries_with_all_objects_by_scenario_id(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]**: A GeoJSON response containing the geometries with associated objects in properties.
+    - **GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]**: A GeoJSON response containing the
+    geometries with associated objects in properties.
 
     ### Errors:
-    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id` (or `service_type_id` and `urban_function_id`).
+    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id`
+    (or `service_type_id` and `urban_function_id`).
     - **403 Forbidden**: If the user does not have access rights.
     - **404 Not Found**: If the scenario does not exist.
 
@@ -189,7 +192,7 @@ async def get_context_geometries(
     response_model=GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]],
     status_code=status.HTTP_200_OK,
 )
-async def get_context_geometries_with_all_objects(
+async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-arguments
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
@@ -204,9 +207,11 @@ async def get_context_geometries_with_all_objects(
     user: UserDTO = Depends(get_user),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
-    ## Get geometries with associated services and physical objects for the context of a project territory in GeoJSON format.
+    ## Get geometries with associated services and physical objects for the context of a project \
+territory in GeoJSON format.
 
-    **WARNING:** You can only filter by physical object type or physical object function (and only by service type or urban function).
+    **WARNING:** You can only filter by physical object type or physical object function
+    (and only by service type or urban function).
 
     ### Parameters:
     - **scenario_id** (int, Path): Unique identifier of the scenario.
@@ -219,10 +224,12 @@ async def get_context_geometries_with_all_objects(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, AllObjects]]**: A GeoJSON response containing the geometries with associated objects.
+    - **GeoJSONResponse[Feature[Geometry, AllObjects]]**: A GeoJSON response containing the geometries
+    with associated objects.
 
     ### Errors:
-    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id` (or `service_type_id` and `urban_function_id`).
+    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id`
+    (or `service_type_id` and `urban_function_id`).
     - **403 Forbidden**: If the user does not have access rights.
     - **404 Not Found**: If the scenario does not exist.
 

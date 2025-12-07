@@ -55,7 +55,7 @@ async def get_indicators_by_territory_id(
     response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithBinnedIndicators]] | TerritoriesWithBinnedIndicators,
     status_code=status.HTTP_200_OK,
 )
-async def get_indicator_values_with_geometry_by_territory_id(
+async def get_indicator_values_with_geometry_by_territory_id(  # pylint: disable=too-many-arguments
     request: Request,
     territory_id: int = Path(..., description="territory identifier", gt=0),
     indicator_ids: str | None = Query(None, description="list of identifiers separated by comma"),
@@ -82,7 +82,8 @@ async def get_indicator_values_with_geometry_by_territory_id(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]**: Territory with list of indicators in geojson format.
+    - **GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]**: Territory with list of indicators in
+    geojson format.
 
     ### Errors:
     - **400 Bad Request**: If `indicator_ids` is specified in the wrong form.
@@ -120,7 +121,7 @@ async def get_indicator_values_with_geometry_by_territory_id(
     response_model=list[BinnedIndicatorValue],
     status_code=status.HTTP_200_OK,
 )
-async def get_indicator_values_by_territory_id(
+async def get_indicator_values_by_territory_id(  # pylint: disable=too-many-arguments
     request: Request,
     territory_id: int = Path(..., description="territory identifier", gt=0),
     indicator_ids: str | None = Query(None, description="list of identifiers separated by comma"),
@@ -198,7 +199,7 @@ async def get_indicator_values_by_territory_id(
     response_model=GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]] | TerritoriesWithBinnedIndicators,
     status_code=status.HTTP_200_OK,
 )
-async def get_indicator_values_by_parent_id(
+async def get_indicator_values_by_parent_id(  # pylint: disable=too-many-arguments
     request: Request,
     parent_id: int | None = Query(
         None, description="parent territory identifier, should be skipped to get top level territories", gt=0
@@ -217,7 +218,8 @@ async def get_indicator_values_by_parent_id(
     ## Get indicator values for child territories (only given territory's level + 1) in GeoJSON format.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the
+    highest level territories.
     - **indicator_ids** (str | None, Query): Comma-separated list of indicator IDs to filter results.
     - **indicators_group_id** (int | None, Query): Filters results by indicator group.
     - **start_date** (date | None, Query): Filters results by the earliest date included.
@@ -225,11 +227,13 @@ async def get_indicator_values_by_parent_id(
     - **value_type** (ValueType, Query): Filters results by value type.
     - **information_source** (str | None, Query): Filters results by information source.
     - **last_only** (bool, Query): If True, retrieves only the most recent indicator values (default: true).
-    - **with_binned** (bool, Query): If True, returns not only geojson, but also list of binned values for each indicator.
+    - **with_binned** (bool, Query): If True, returns not only geojson, but also list of binned values
+    for each indicator.
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]**: A GeoJSON response containing territories and their indicator values.
+    - **GeoJSONResponse[Feature[Geometry, TerritoryWithIndicators]]**: A GeoJSON response containing territories
+    and their indicator values.
     - **TerritoriesWithBinnedIndicators**: If `with_binned` = True, returns geojson + summary list of binned values.
 
     ### Errors:

@@ -3,11 +3,11 @@
 from asyncio import Lock
 from typing import Any, Protocol
 
-import structlog
 from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
+from idu_api.urban_api.dependencies import logger_dep
 
 
 class DependencyInitializer(Protocol):  # pylint: disable=too-few-public-methods
@@ -40,7 +40,7 @@ class PassServicesDependenciesMiddleware(BaseHTTPMiddleware):
             await self._connection_manager.shutdown()
 
     async def dispatch(self, request: Request, call_next):
-        logger: structlog.stdlib.BoundLogger = request.state.logger
+        logger = logger_dep.from_request(request)
         for dependency, init in self._dependencies.items():
             setattr(request.state, dependency, init(self._connection_manager, logger=logger))
         return await call_next(request)

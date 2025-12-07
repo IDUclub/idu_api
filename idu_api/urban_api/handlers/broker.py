@@ -13,8 +13,8 @@ from otteroad.models import (
 )
 from starlette import status
 
+from idu_api.urban_api.dependencies import kafka_producer_dep
 from idu_api.urban_api.schemas import OkResponse
-from idu_api.urban_api.utils.broker import get_kafka_producer
 
 from .routers import broker_router
 
@@ -26,7 +26,7 @@ from .routers import broker_router
 )
 async def urban_objects_update(
     message: UrbanObjectsUpdated,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
     ## Push message to Kafka broker (topic `urban.events`) indicates that urban objects have been updated for territory.
@@ -49,10 +49,11 @@ async def urban_objects_update(
 )
 async def functional_zones_update(
     message: FunctionalZonesUpdated,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
-    ## Push message to Kafka broker (topic `urban.events`) indicates that functional zones have been updated for territory.
+    ## Push message to Kafka broker (topic `urban.events`) indicates that functional zones have been updated \
+for territory.
 
     ### Parameters:
     - **message** (FunctionalZonesUpdated, Body): Model for message value includes territory identifier.
@@ -71,7 +72,7 @@ async def functional_zones_update(
 )
 async def territories_update(
     message: TerritoriesUpdated,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
     ## Push message to Kafka broker (topic `urban.events`) indicates that territories have been created or updated.
@@ -93,7 +94,7 @@ async def territories_update(
 )
 async def territories_delete(
     message: TerritoriesDeleted,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
     ## Push message to Kafka broker (topic `urban.events`) indicates that territories have been deleted.
@@ -116,7 +117,7 @@ async def territories_delete(
 )
 async def regional_scenario_create(
     message: RegionalScenarioCreated,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
     ## Push message to Kafka broker (topic `scenario.events`) indicates that regional scenario has been created.
@@ -139,10 +140,11 @@ async def regional_scenario_create(
 )
 async def scenario_objects_update(
     message: ScenarioObjectsUpdated,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
-    ## Push message to Kafka broker (topic `urban.events`) indicates that new urban objects have been uploaded for **PROJECT** scenario.
+    ## Push message to Kafka broker (topic `urban.events`) indicates that new urban objects have been uploaded for \
+**PROJECT** scenario.
 
     ### Parameters:
     - **message** (RegionalScenarioCreated, Body): Model for message value includes project and scenario identifiers,
@@ -162,10 +164,11 @@ async def scenario_objects_update(
 )
 async def scenario_zones_update(
     message: ScenarioZonesUpdated,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> OkResponse:
     """
-    ## Push message to Kafka broker (topic `urban.events`) indicates that new functional zones have been uploaded for **PROJECT** scenario.
+    ## Push message to Kafka broker (topic `urban.events`) indicates that new functional zones have been uploaded \
+for **PROJECT** scenario.
 
     ### Parameters:
     - **message** (RegionalScenarioCreated, Body): Model for message value includes project and scenario identifiers.

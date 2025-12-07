@@ -30,18 +30,18 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityAlreadyEdited,
-    EntityAlreadyExists,
-    EntityNotFoundById,
-)
 from idu_api.urban_api.dto import (
     PhysicalObjectTypeDTO,
     ScenarioPhysicalObjectDTO,
     ScenarioPhysicalObjectWithGeometryDTO,
     ScenarioUrbanObjectDTO,
     UserDTO,
+)
+from idu_api.urban_api.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityAlreadyEdited,
+    EntityAlreadyExists,
+    EntityNotFoundById,
 )
 from idu_api.urban_api.logic.impl.helpers.physical_objects import Geom, func
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario

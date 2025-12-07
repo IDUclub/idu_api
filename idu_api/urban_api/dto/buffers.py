@@ -27,7 +27,7 @@ class DefaultBufferValueDTO:
 
 
 @dataclass
-class BufferDTO:
+class BufferDTO:  # pylint: disable=too-many-instance-attributes
     buffer_type_id: int
     buffer_type_name: str
     buffer_type_description: str | None

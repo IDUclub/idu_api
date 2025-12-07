@@ -13,13 +13,13 @@ from idu_api.common.db.entities import (
     service_types_dict,
     urban_functions_dict,
 )
-from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import (
     PhysicalObjectFunctionDTO,
     PhysicalObjectTypeDTO,
     PhysicalObjectTypesHierarchyDTO,
     ServiceTypeDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.physical_object_types import (
     add_physical_object_function_to_db,
     add_physical_object_type_to_db,

@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.selectable import CTE, Select
 
 from idu_api.common.db.entities import projects_data, scenarios_data, territories_data
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
-from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
-from idu_api.common.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.dto import UserDTO
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
+from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 
 # The maximum number of records that can be returned in methods that accept a list of IDs as input.
 OBJECTS_NUMBER_LIMIT = 25_000
@@ -23,8 +23,8 @@ OBJECTS_NUMBER_TO_INSERT_LIMIT = 7_000
 SRID = 4326
 
 UrbanAPIModel = TypeVar("UrbanAPIModel", bound=BaseModel)
-InputDTOType = TypeVar("InputDTOType")
-OutputDTOType = TypeVar("OutputDTOType")
+InputDTOType = TypeVar("InputDTOType")  # pylint: disable=invalid-name
+OutputDTOType = TypeVar("OutputDTOType")  # pylint: disable=invalid-name
 
 
 async def check_existence(

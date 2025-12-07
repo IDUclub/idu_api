@@ -9,8 +9,8 @@ import aioboto3
 from PIL import Image
 from structlog.stdlib import BoundLogger
 
-from idu_api.common.exceptions.services.minio import FileNotFound, InvalidImageError
 from idu_api.urban_api.config import UrbanAPIConfig
+from idu_api.urban_api.exceptions.services.minio import FileNotFound, InvalidImageError
 from idu_api.urban_api.minio.client import AsyncMinioClient, get_minio_client_from_config
 from idu_api.urban_api.schemas.enums import ProjectPhase
 
@@ -573,4 +573,4 @@ def get_project_storage_manager_from_config(app_config: UrbanAPIConfig) -> Proje
 
 
 def get_project_storage_manager():
-    return get_project_storage_manager_from_config(UrbanAPIConfig.from_file_or_default())
+    return get_project_storage_manager_from_config(UrbanAPIConfig.example())

@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """
 This module provides classes for applying filters to SQLAlchemy `select()` queries.
 It uses the Strategy pattern to define various filter behaviors, such as equality filtering and recursive filtering

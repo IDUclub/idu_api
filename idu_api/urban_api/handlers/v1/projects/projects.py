@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Projects endpoints are defined here."""
 
 from datetime import date
@@ -11,6 +12,7 @@ from otteroad import KafkaProducerClient
 from starlette import status
 from structlog.stdlib import BoundLogger
 
+from idu_api.urban_api.dependencies import kafka_producer_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -32,7 +34,6 @@ from idu_api.urban_api.schemas import (
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering, ProjectPhase, ProjectType
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.auth_client import get_user
-from idu_api.urban_api.utils.broker import get_kafka_producer
 from idu_api.urban_api.utils.pagination import paginate
 
 
@@ -208,7 +209,7 @@ async def put_phases_by_project_id(
     response_model=Page[Project],
     status_code=status.HTTP_200_OK,
 )
-async def get_projects(
+async def get_projects(  # pylint: disable=too-many-arguments
     request: Request,
     only_own: bool = Query(False, description="if True, return only user's own projects"),
     is_regional: bool = Query(False, description="to get regional projects"),
@@ -234,13 +235,16 @@ async def get_projects(
 
     ### Parameters:
     - **only_own** (bool, Query): If True, returns only the user's projects (default: false).
-    - **is_regional** (bool, Query): If True, returns regional projects, else returns only common projects (default: false).
-    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns only common projects (default: None).
-      NOTE: Skip to get all projects (non-regional).
+    - **is_regional** (bool, Query): If True, returns regional projects, else returns only common projects
+    (default: false).
+    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common"
+    returns only common projects (default: None).
+        NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters projects by a specific territory.
     - **name** (str | None, Query): Filters projects by a case-insensitive substring match.
     - **created_at** (date | None, Query): Returns projects created after the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving images (default: 1).
     - **page_size** (int, Query): Defines the number of project images per page (default: 10).
@@ -313,8 +317,9 @@ async def get_projects_territories(
 
     ### Parameters:
     - **only_own** (bool, Query): If True, returns only territories for the user's projects (default: false).
-    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns only common projects (default: None).
-      NOTE: Skip to get all projects (non-regional).
+    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns
+    only common projects (default: None).
+        NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters results by a specific territory.
     - **centers_only** (bool, Query): If True, retrieves only center points of project territories (default: true).
 
@@ -352,7 +357,7 @@ async def add_project(
     request: Request,
     project: ProjectPost,
     user: UserDTO = Depends(get_user),
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
 ) -> Project:
     """
@@ -391,7 +396,7 @@ async def create_base_scenario(
     project_id: int = Path(..., description="project identifier", gt=0),
     scenario_id: int = Path(..., description="regional scenario identifier", gt=0),
     user: UserDTO = Depends(get_user),
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> Scenario:
     """
     ## Create a new base scenario for given project from specified regional scenario.
@@ -546,7 +551,7 @@ async def delete_project(
     response_model=Page[MinioImageURL],
     status_code=status.HTTP_200_OK,
 )
-async def get_projects_main_image_url(
+async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     request: Request,
     only_own: bool = Query(False, description="if True, return only user's own projects"),
     is_regional: bool = Query(False, description="filter to get only regional projects or not"),
@@ -574,12 +579,14 @@ async def get_projects_main_image_url(
     ### Parameters:
     - **only_own** (bool, Query): If True, returns only images url for the user's projects (default: false).
     - **is_regional** (bool, Query): If True, filters results to include only regional projects (default: false).
-    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns only common projects (default: None).
-      NOTE: Skip to get all projects (non-regional).
+    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns
+    only common projects (default: None).
+        NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters projects by a specific territory.
     - **name** (str | None, Query): Filters projects by a case-insensitive substring match.
     - **created_at** (date | None, Query): Returns projects created after the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving images (default: 1).
     - **page_size** (int, Query): Defines the number of project images per page (default: 10).

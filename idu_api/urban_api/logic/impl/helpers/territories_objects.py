@@ -9,8 +9,8 @@ from sqlalchemy import func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import target_city_types_dict, territories_data, territory_types_dict
-from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import PageDTO, TerritoryDTO, TerritoryWithoutGeometryDTO
+from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
     SRID,
@@ -138,7 +138,7 @@ async def patch_territory_to_db(
     return await get_territory_by_id(conn, territory_id)
 
 
-async def get_territories_by_parent_id_from_db(
+async def get_territories_by_parent_id_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     parent_id: int | None,
     get_all_levels: bool,
@@ -236,7 +236,7 @@ async def get_territories_by_parent_id_from_db(
     return [TerritoryDTO(**territory) for territory in result]
 
 
-async def get_territories_without_geometry_by_parent_id_from_db(
+async def get_territories_without_geometry_by_parent_id_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     parent_id: int | None,
     get_all_levels: bool,

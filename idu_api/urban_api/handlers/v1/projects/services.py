@@ -136,7 +136,8 @@ async def get_services_with_geometry_by_scenario_id(
     - **urban_function_id** (int | None, Query): Optional filter by urban function identifier.
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]**:  A GeoJSON response containing the services.
+    - **GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]**:
+    A GeoJSON response containing the services.
 
     ### Errors:
     - **400 Bad Request**: If you set both `service_type_id` and `urban_function_id`.

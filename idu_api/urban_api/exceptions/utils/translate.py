@@ -1,11 +1,9 @@
-from typing import Any, Literal
+from typing import Any
 
 from asyncpg import exceptions as apg_exc
 from sqlalchemy.exc import DBAPIError, IntegrityError
 
-from idu_api.common.exceptions import IduApiError
-from idu_api.common.exceptions.base import CityApiError, UrbanApiError
-from idu_api.common.exceptions.logic.db import (
+from idu_api.urban_api.exceptions.logic.db import (
     CustomTriggerError,
     DependencyNotFound,
     InvalidValueError,
@@ -48,13 +46,15 @@ def _decode_if_bytes(val: Any) -> str | None:
         for enc in ("utf-8", "latin-1", "cp1251"):
             try:
                 return val.decode(enc)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 continue
         return val.decode(errors="ignore")
     return str(val)
 
 
-def _extract_info(exc: Exception) -> tuple[list[str], list[str], list[str], list[str]]:
+def _extract_info(  # pylint: disable=too-many-branches
+    exc: Exception,
+) -> tuple[list[str], list[str], list[str], list[str]]:
     """Extracts texts, sqlstates, details, and statements from nested exceptions.
     Returns (texts, sqlstates, details, statements)."""
 
@@ -78,7 +78,7 @@ def _extract_info(exc: Exception) -> tuple[list[str], list[str], list[str], list
             s = _decode_if_bytes(cur)
             if s:
                 texts.append(s)
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             pass
 
         # asyncpg specifics
@@ -103,7 +103,7 @@ def _extract_info(exc: Exception) -> tuple[list[str], list[str], list[str], list
         for attr in ("orig", "__cause__", "__context__"):
             try:
                 v = getattr(cur, attr, None)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 v = None
             if v is not None:
                 queue.append(v)
@@ -111,40 +111,39 @@ def _extract_info(exc: Exception) -> tuple[list[str], list[str], list[str], list
     return texts, sqlstates, details, statements
 
 
-def translate_db_error(exc: Exception, api: Literal["urban", "city"] = "urban") -> IduApiError:
+def translate_db_constraint_error(  # pylint: disable=too-many-return-statements
+    exc: IntegrityError | DBAPIError,
+) -> Exception:
     """
-    Translate SQLAlchemy/asyncpg/Postgres exceptions into domain-specific IduApiError.
+    Translate SQLAlchemy/asyncpg/Postgres exceptions into domain-specific UrbanApiError if possible -
+    return original exception otherwise.
+
     Strategy: type -> sqlstate -> keywords.
     """
-    # Already domain error
-    if isinstance(exc, IduApiError):
-        return exc
 
     # Integrity / DB constraint errors
-    if isinstance(exc, (IntegrityError, DBAPIError)):
-        texts, sqlstates, details, _ = _extract_info(exc)
-        combined_text = " ".join(texts).lower()
-        detail = details[0] if details else None
+    texts, sqlstates, details, _ = _extract_info(exc)
+    combined_text = " ".join(texts).lower()
+    detail = details[0] if details else None
 
-        # sqlstate check
-        for ss in sqlstates:
-            if ss == SQLSTATE_UNIQUE:
-                return UniqueConstraintError(detail)
-            if ss == SQLSTATE_FK:
-                return DependencyNotFound(detail)
-            if ss.startswith("P"):
-                return CustomTriggerError(detail)
-
-        # fallback by keywords
-        if any(k in combined_text for k in _UNIQUE_KEYWORDS):
+    # sqlstate check
+    for ss in sqlstates:
+        if ss == SQLSTATE_UNIQUE:
             return UniqueConstraintError(detail)
-        if any(k in combined_text for k in _FK_KEYWORDS):
+        if ss == SQLSTATE_FK:
             return DependencyNotFound(detail)
-        if any(k in combined_text for k in ("int32", "out of range")):
-            return InvalidValueError("Значение выходит за диапазон INTEGER (int32).")
+        if ss.startswith("P"):
+            return CustomTriggerError(detail)
 
-    # Default fallback
-    return UrbanApiError() if api == "urban" else CityApiError
+    # fallback by keywords
+    if any(k in combined_text for k in _UNIQUE_KEYWORDS):
+        return UniqueConstraintError(detail)
+    if any(k in combined_text for k in _FK_KEYWORDS):
+        return DependencyNotFound(detail)
+    if any(k in combined_text for k in ("int32", "out of range")):
+        return InvalidValueError("Значение выходит за диапазон INTEGER (int32).")
+
+    return exc
 
 
 def extract_sql(exc: Exception, max_len: int = 500) -> str | None:

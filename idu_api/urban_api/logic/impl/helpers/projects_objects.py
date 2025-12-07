@@ -12,7 +12,6 @@ from geoalchemy2 import Geography, Geometry
 from geoalchemy2.functions import (
     ST_Area,
     ST_AsEWKB,
-    ST_AsGeoJSON,
     ST_Buffer,
     ST_Centroid,
     ST_GeometryType,
@@ -63,9 +62,6 @@ from idu_api.common.db.entities import (
     territory_types_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
-from idu_api.common.exceptions.logic.projects import NotAllowedInProjectScenario, NotAllowedInRegionalProject
-from idu_api.common.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import (
     PageDTO,
@@ -76,6 +72,9 @@ from idu_api.urban_api.dto import (
     ScenarioDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInProjectScenario, NotAllowedInRegionalProject
+from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, check_existence, extract_values_from_model
 from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
@@ -296,7 +295,7 @@ async def get_all_projects_from_db(conn: AsyncConnection) -> list[ProjectDTO]:
     return [ProjectDTO(**item) for item in result]
 
 
-async def get_projects_from_db(
+async def get_projects_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     user: UserDTO | None,
     only_own: bool,
@@ -1211,7 +1210,8 @@ async def insert_urban_objects(conn: AsyncConnection, scenario_id: int, id_mappi
     Args:
         conn (AsyncConnection): Asynchronous database connection.
         scenario_id (int): The scenario to which the urban objects should be linked.
-        id_mapping (dict[int, int]): Mapping from original object_geometry_id to newly inserted project-specific geometry_id.
+        id_mapping (dict[int, int]): Mapping from original object_geometry_id to newly inserted \
+project-specific geometry_id.
 
     Returns:
         dict[int, int]: A mapping of public urban object IDs to inserted project urban object IDs.
@@ -1379,7 +1379,7 @@ async def save_indicators(project_id: int, scenario_id: int, logger: structlog.s
     """
 
     # Load configuration settings from a file or default environment variables
-    config = UrbanAPIConfig.from_file_or_default(os.getenv("CONFIG_PATH"))
+    config = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
     params = {"scenario_id": scenario_id, "project_id": project_id, "background": "true"}
 
     # Create an asynchronous HTTP client session
