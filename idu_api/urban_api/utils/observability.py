@@ -167,7 +167,7 @@ def configure_logging(
         root_logger.addHandler(exporter_handler)
 
     logger: structlog.stdlib.BoundLogger = structlog.get_logger("urban_api")
-    logger.setLevel(config.root_logger_level)
+    logger.setLevel(level_name_mapping[config.root_logger_level])
 
     return logger
 

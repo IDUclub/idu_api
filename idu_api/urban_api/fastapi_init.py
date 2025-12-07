@@ -179,7 +179,7 @@ async def lifespan(application: FastAPI):
     Initializes database connection in pass_services_dependencies middleware.
     """
     app_config: UrbanAPIConfig = application.state.config
-    logger = logger_dep.from_request(application)
+    logger = logger_dep.from_app(application)
 
     await logger.ainfo("application is starting", config=app_config.to_order_dict())
 

@@ -3,6 +3,7 @@
 import threading
 import time
 from dataclasses import dataclass
+from typing import Callable
 
 import psutil
 from opentelemetry import metrics
@@ -33,9 +34,6 @@ def setup_metrics() -> Metrics:
     meter = metrics.get_meter("{{project_name}}")
 
     _setup_callback_metrics(meter)
-    meter.create_gauge("application_startup_time", "sec", "Unix time at which applicatinon was started").set(
-        time.time(), {"version", VERSION}
-    )
 
     return Metrics(
         http=HTTPMetrics(
@@ -79,11 +77,11 @@ def _setup_callback_metrics(meter: metrics.Meter) -> None:
         name="application_metrics",
         description="Application-specific metrics",
         unit="1",
-        callbacks=[_application_metrics_callback],
+        callbacks=[_get_application_metrics_callback()],
     )
 
 
-def _get_system_metrics_callback():
+def _get_system_metrics_callback() -> Callable[[CallbackOptions], None]:
     collect_num_fds = True
     try:
         psutil.Process().num_fds()
@@ -113,11 +111,17 @@ def _get_system_metrics_callback():
     return system_metrics_callback
 
 
-def _application_metrics_callback(options: CallbackOptions):  # pylint: disable=unused-argument
-    """Callback function to collect application-specific metrics"""
-    # Current timestamp
-    yield Observation(time.time(), {"metric": "last_update"})
+def _get_application_metrics_callback() -> Callable[[CallbackOptions], None]:
+    startup_time = time.time()
 
-    # Active threads
-    active_threads = threading.active_count()
-    yield Observation(active_threads, {"metric": "active_threads"})
+    def application_metrics_callback(options: CallbackOptions):  # pylint: disable=unused-argument
+        """Callback function to collect application-specific metrics"""
+        # Current timestamp
+        yield Observation(startup_time, {"metric": "startup_time", "version": VERSION})
+        yield Observation(time.time(), {"metric": "last_update_time", "version": VERSION})
+
+        # Active threads
+        active_threads = threading.active_count()
+        yield Observation(active_threads, {"metric": "active_threads"})
+
+    return application_metrics_callback
