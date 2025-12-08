@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+import os
 import uuid
 from io import BytesIO
 from typing import Literal
@@ -207,10 +208,8 @@ class ProjectStorageManager:
         preview_bytes = make_preview(image)
 
         async with self._client.get_session() as session:
-            await asyncio.gather(
-                self._client.upload_file(session, original_bytes, original_name, logger),
-                self._client.upload_file(session, preview_bytes, preview_name, logger),
-            )
+            await self._client.upload_file(session, original_bytes, original_name, logger)
+            await self._client.upload_file(session, preview_bytes, preview_name, logger)
 
             metadata = await self.load_metadata(session, project_id, logger)
             metadata.setdefault("gallery_images", []).append(image_id)
@@ -573,4 +572,4 @@ def get_project_storage_manager_from_config(app_config: UrbanAPIConfig) -> Proje
 
 
 def get_project_storage_manager():
-    return get_project_storage_manager_from_config(UrbanAPIConfig.example())
+    return get_project_storage_manager_from_config(UrbanAPIConfig.from_file(os.environ["CONFIG_PATH"]))

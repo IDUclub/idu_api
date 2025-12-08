@@ -2,6 +2,7 @@
 
 import asyncio
 import io
+import os
 from contextlib import asynccontextmanager
 
 import aioboto3
@@ -174,7 +175,7 @@ def get_minio_client_from_config(app_config: UrbanAPIConfig) -> AsyncMinioClient
     minio_client = AsyncMinioClient(
         url=app_config.fileserver.url,
         access_key=app_config.fileserver.access_key,
-        secret_key=app_config.fileserver.secret_key,
+        secret_key=app_config.fileserver.secret_key.get_secret_value(),
         bucket_name=app_config.fileserver.projects_bucket,
         region_name=app_config.fileserver.region_name,
         connect_timeout=app_config.fileserver.connect_timeout,
@@ -184,4 +185,4 @@ def get_minio_client_from_config(app_config: UrbanAPIConfig) -> AsyncMinioClient
 
 
 def get_minio_client() -> AsyncMinioClient:
-    return get_minio_client_from_config(UrbanAPIConfig.example())
+    return get_minio_client_from_config(UrbanAPIConfig.from_file(os.environ["CONFIG_PATH"]))

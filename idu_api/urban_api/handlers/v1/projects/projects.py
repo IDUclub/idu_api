@@ -602,7 +602,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     - The user must be authenticated to retrieve image URLs of their own projects.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     if project_type is not None and is_regional:
         raise HTTPException(
@@ -678,7 +678,7 @@ async def upload_project_main_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -733,7 +733,7 @@ async def upload_project_gallery_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -779,7 +779,7 @@ async def set_project_main_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -817,7 +817,7 @@ async def get_project_gallery_images_urls(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -857,7 +857,7 @@ async def delete_project_gallery_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -894,7 +894,7 @@ async def get_full_project_main_image(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -935,7 +935,7 @@ async def get_preview_project_main_image(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -977,7 +977,7 @@ async def get_full_project_main_image_url(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1019,7 +1019,7 @@ async def get_preview_project_main_image_url(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1061,7 +1061,7 @@ async def get_project_logo_url(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1103,7 +1103,7 @@ async def upload_project_logo(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -1148,7 +1148,7 @@ async def delete_project_logo(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1188,7 +1188,7 @@ async def get_project_phase_documents_urls(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1231,7 +1231,7 @@ async def upload_phase_document(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1278,7 +1278,7 @@ async def rename_phase_document(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1321,7 +1321,7 @@ async def delete_project_phase_document(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
+    logger: BoundLogger = request.app.state.logger_dep
 
     project = await user_project_service.get_project_by_id(project_id, user)
 

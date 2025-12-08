@@ -47,8 +47,8 @@ observability:
       - filename: logs/info.log
         level: INFO
   prometheus:
+    host: localhost
     port: 9000
-    disable: false
     urls_mapping:
       /\.well-known/.*: /.well-known/*
 broker:

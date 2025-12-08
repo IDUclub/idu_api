@@ -122,7 +122,7 @@ async def test_get_context_buffers(
         (200, None, None, False),
         (403, "запрещён", None, True),
         (404, "не найден", 1e9, True),
-        (409, "уже изменен или удален для этого сценария", None, False),
+        (409, "уже изменена или удалена для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
@@ -185,7 +185,7 @@ async def test_put_scenario_buffer(
         (200, None, None, False),
         (403, "запрещён", None, True),
         (404, "не найден", 1e9, True),
-        (409, "уже изменен или удален для этого сценария", None, False),
+        (409, "уже изменена или удалена для этого сценария", None, False),
     ],
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )

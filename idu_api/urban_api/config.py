@@ -49,7 +49,7 @@ class FileServerConfig:
     url: str
     projects_bucket: str
     access_key: str
-    secret_key: str
+    secret_key: SecretStr
     region_name: str
     connect_timeout: int
     read_timeout: int
@@ -57,6 +57,7 @@ class FileServerConfig:
     def __post_init__(self):
         if not self.url.startswith("http"):
             self.url = "http://" + self.url
+        self.secret_key = SecretStr(self.secret_key)
 
 
 @dataclass

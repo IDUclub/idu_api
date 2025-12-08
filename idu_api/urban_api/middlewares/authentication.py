@@ -26,11 +26,11 @@ class AuthenticationMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-p
         except IduApiError:
             raise
         except RetryError as exc:
-            logger: structlog.stdlib.BoundLogger = request.app.state.logger
+            logger: structlog.stdlib.BoundLogger = request.app.state.logger_dep
             await logger.aerror("could not connect to authentication server")
             raise ExternalServiceUnavailable("сервер аутентификации") from exc
         except Exception as exc:
-            logger: structlog.stdlib.BoundLogger = request.app.state.logger
+            logger: structlog.stdlib.BoundLogger = request.app.state.logger_dep
             await logger.aexception("unexpected error in AuthenticationMiddleware")
             raise exc
 
