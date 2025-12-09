@@ -37,11 +37,13 @@ async def from_request(request: Request, optional: bool = False) -> UserDTO | No
             await logger.aerror("could not connect to authentication server")
             if not optional:
                 raise ExternalServiceUnavailable("сервер аутентификации") from exc
+            request.state.auth_user_dep = None
         except Exception:  # pylint: disable=broad-except
             logger = await logger_dep.from_request(request)
             await logger.aexception("unexpected error in authentication process")
             if not optional:
                 raise
+            request.state.auth_user_dep = None
 
     return request.state.auth_user_dep
 
