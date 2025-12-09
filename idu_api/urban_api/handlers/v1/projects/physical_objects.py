@@ -7,6 +7,7 @@ from geojson_pydantic.geometries import Geometry
 from pydantic import conlist
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -26,7 +27,6 @@ from idu_api.urban_api.schemas import (
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.schemas.geometries import AllPossibleGeometry
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -38,7 +38,7 @@ async def get_physical_object_types_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     for_context: bool = Query(False, description="to get types for context or project territory"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[PhysicalObjectType]:
     """
     ## Get a list of physical object types for a given scenario.
@@ -77,7 +77,7 @@ async def get_physical_objects_by_scenario_id(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioPhysicalObject]:
     """
     ## Get a list of physical objects for a given scenario.
@@ -129,7 +129,7 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get a list of physical objects with geometry for a given scenario.
@@ -181,7 +181,7 @@ async def get_physical_objects_around_geometry_by_scenario_id(
     geometry: AllPossibleGeometry,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get physical objects within a specified area (+ buffer 50 meters).
@@ -224,7 +224,7 @@ async def get_context_physical_objects(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioPhysicalObject]:
     """
     ## Get a list of physical objects for the context of a project territory.
@@ -273,7 +273,7 @@ async def get_context_physical_objects_with_geometry(
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get a list of physical objects for the context of a project territory.
@@ -321,7 +321,7 @@ async def add_physical_object_with_geometry(
     request: Request,
     physical_object: PhysicalObjectWithGeometryPost,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioUrbanObject:
     """
     ## Create a new physical object with geometry for a given scenario.
@@ -362,7 +362,7 @@ async def update_physical_objects_by_function_id(
     physical_object: conlist(PhysicalObjectWithGeometryPost, min_length=1),
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_function_id: int = Query(..., description="physical object function identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioUrbanObject]:
     """
     ## Update physical objects by function identifier for a given scenario.
@@ -413,7 +413,7 @@ async def put_physical_object(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_id: int = Path(..., description="physical object identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioPhysicalObject:
     """
     ## Update all attributes of a physical object for a given scenario.
@@ -461,7 +461,7 @@ async def patch_physical_object(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_id: int = Path(..., description="physical object identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioPhysicalObject:
     """
     ## Update specific fields of a physical object for a given scenario.
@@ -508,7 +508,7 @@ async def delete_physical_object(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_id: int = Path(..., description="physical object identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a physical object by its identifier for a given scenario.
@@ -544,7 +544,7 @@ async def add_building(
     request: Request,
     building: ScenarioBuildingPost,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioPhysicalObject:
     """
     ## Create a new building for given scenario.
@@ -579,7 +579,7 @@ async def put_building(
     request: Request,
     building: ScenarioBuildingPut,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioPhysicalObject:
     """
     ## Create or update a building for given scenario.
@@ -616,7 +616,7 @@ async def patch_building(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     building_id: int = Path(..., description="building identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioPhysicalObject:
     """
     ## Partially update a building for given scenario.
@@ -652,7 +652,7 @@ async def delete_building(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     building_id: int = Path(..., description="building identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a building by its identifier for given scenario.

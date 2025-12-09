@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import aiohttp
 from aiohttp import ClientConnectorError, ClientResponseError
 from cachetools import TTLCache
-from fastapi import Request
+from opentelemetry import trace
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from idu_api.urban_api.dto.users import UserDTO
@@ -16,6 +16,9 @@ from idu_api.urban_api.exceptions.services.auth import (
     InvalidTokenSignature,
     JWTDecodeError,
 )
+from idu_api.urban_api.utils.observability import get_span_headers
+
+_tracer = trace.get_tracer(__name__)
 
 
 class AuthenticationClient:
@@ -65,13 +68,14 @@ class AuthenticationClient:
     async def validate_token_online(self, token: str) -> None:
         """Validate token by calling an external service if needed."""
         try:
-            async with aiohttp.ClientSession() as session:
-                response = await session.post(
-                    self._auth_url,
-                    headers={"Authorization": f"Bearer {token}"},
-                    data={"token": token, "token_type_hint": "access_token"},
-                )
-            response.raise_for_status()
+            with _tracer.start_span("authentication"):
+                async with aiohttp.ClientSession() as session:
+                    response = await session.post(
+                        self._auth_url,
+                        headers={"Authorization": f"Bearer {token}"} | get_span_headers(),
+                        data={"token": token, "token_type_hint": "access_token"},
+                    )
+                response.raise_for_status()
         except ClientResponseError as exc:
             raise InvalidTokenSignature() from exc
 
@@ -95,7 +99,3 @@ class AuthenticationClient:
         self._cache[token] = user_dto
 
         return user_dto
-
-
-def get_user(request: Request):
-    return request.state.user if hasattr(request.state, "user") else None

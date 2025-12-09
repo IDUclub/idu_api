@@ -6,6 +6,7 @@ from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -18,7 +19,6 @@ from idu_api.urban_api.schemas import (
     ScenarioObjectGeometry,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -32,7 +32,7 @@ async def get_geometries_by_scenario_id(
     physical_object_id: int | None = Query(None, description="to filter by physical object", gt=0),
     service_id: int | None = Query(None, description="to filter by service", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]]:
     """
     ## Get geometries for a given scenario in GeoJSON format.
@@ -82,7 +82,7 @@ async def get_geometries_with_all_objects_by_scenario_id(  # pylint: disable=too
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
     ## Get geometries with associated services and physical objects for a given scenario in GeoJSON format.
@@ -154,7 +154,7 @@ async def get_context_geometries(
     physical_object_id: int | None = Query(None, description="to filter by physical object", gt=0),
     service_id: int | None = Query(None, description="to filter by service", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]]:
     """
     ## Get geometries for the context of a project territory in GeoJSON format.
@@ -204,7 +204,7 @@ async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-a
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
     ## Get geometries with associated services and physical objects for the context of a project \
@@ -278,7 +278,7 @@ async def put_object_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioObjectGeometry:
     """
     ## Update all attributes of a scenario object geometry.
@@ -326,7 +326,7 @@ async def patch_object_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioObjectGeometry:
     """
     ## Update specific fields of a scenario object geometry.
@@ -373,7 +373,7 @@ async def delete_object_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a scenario object geometry by its identifier.

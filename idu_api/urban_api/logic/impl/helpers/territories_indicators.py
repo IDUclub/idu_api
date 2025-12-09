@@ -76,7 +76,7 @@ async def get_indicators_by_territory_id_from_db(conn: AsyncConnection, territor
     return [IndicatorDTO(**indicator) for indicator in result]
 
 
-async def get_indicator_values_by_territory_id_from_db(
+async def get_indicator_values_by_territory_id_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     territory_id: int,
     indicator_ids: set[int] | None,
@@ -196,7 +196,7 @@ async def get_indicator_values_by_territory_id_from_db(
     return [BinnedIndicatorValueDTO(**indicator_value) for indicator_value in result]
 
 
-async def get_indicator_values_by_parent_id_from_db(
+async def get_indicator_values_by_parent_id_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     parent_id: int | None,
     indicator_ids: set[int] | None,

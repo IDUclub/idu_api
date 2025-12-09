@@ -12,7 +12,7 @@ from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags
 from starlette import status
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from idu_api.urban_api.dependencies import logger_dep
+from idu_api.urban_api.dependencies import auth_dep, logger_dep
 from idu_api.urban_api.exceptions.mapper import ExceptionMapper
 from idu_api.urban_api.observability.metrics import Metrics
 from idu_api.urban_api.utils.observability import URLsMapper
@@ -37,7 +37,9 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         self._urls_mapper = urls_mapper
 
     async def dispatch(self, request: Request, call_next):
-        logger = logger_dep.from_request(request)
+        logger = await logger_dep.from_request(request)
+        user = await auth_dep.from_request_optional(request)
+
         _try_get_parent_span_id(request)
         with _tracer.start_as_current_span("http-request", record_exception=False) as span:
             trace_id = hex(span.get_span_context().trace_id or randint(1, 1 << 63))[2:]
@@ -54,6 +56,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                     url_attributes.URL_PATH: request.url.path,
                     url_attributes.URL_QUERY: str(request.query_params),
                     "request_client": request.client.host,
+                    "user": user.id if user is not None else "",
                 }
             )
 
@@ -76,20 +79,21 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
             time_begin = time.monotonic()
             try:
-                result = await call_next(request)
+                response = await call_next(request)
                 duration_seconds = time.monotonic() - time_begin
 
-                result.headers.update({"X-Trace-Id": trace_id, "X-Span-Id": str(span_id)})
+                response.headers.update({"X-Trace-Id": trace_id, "X-Span-Id": str(span_id)})
                 await self._handle_success(
                     request=request,
-                    status_code=result.status_code,
+                    status_code=response.status_code,
                     logger=logger,
                     span=span,
                     path_for_metric=path_for_metric,
                     duration_seconds=duration_seconds,
                     handler_found=True,
+                    body_size=response.headers.get("Content-Length"),
                 )
-                return result
+                return response
             except HandlerNotFoundError as exc:  # hack to filter requests without handlers
                 duration_seconds = time.monotonic() - time_begin
                 if isinstance(exc, HandlerNotFoundError):
@@ -130,6 +134,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         path_for_metric: str,
         duration_seconds: float,
         handler_found: bool,
+        body_size: int | None = None,
     ) -> None:
         await logger.ainfo("request handled successfully", time_consumed=round(duration_seconds, 3))
         self._http_metrics.requests_finished.add(
@@ -145,6 +150,8 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
         span.set_attribute(http_attributes.HTTP_RESPONSE_STATUS_CODE, status_code)
         if not handler_found:
             span.set_attribute("handler_found", False)
+        if body_size is not None:
+            span.set_attribute("body_size", body_size)
 
     async def _handle_exception(  # pylint: disable=too-many-arguments
         self,

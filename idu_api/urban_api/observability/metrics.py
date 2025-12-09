@@ -20,7 +20,7 @@ class HTTPMetrics:
     requests_started: Counter
     """Total started requests counter by `["method", "path"]`."""
     requests_finished: Counter
-    """Total finished requests counter by `["method", "path", "status_code"]`."""
+    """Total finished requests counter by `["method", "path", "status_code", "handler_found"]`."""
     errors: Counter
     """Total errors (exceptions) counter by `["method", "path", "error_type", "status_code"]`."""
 

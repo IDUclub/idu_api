@@ -7,7 +7,7 @@ from geojson_pydantic.geometries import Geometry
 from otteroad import KafkaProducerClient
 from starlette import status
 
-from idu_api.urban_api.dependencies import kafka_producer_dep
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -20,7 +20,6 @@ from idu_api.urban_api.schemas import (
     ScenarioIndicatorValuePut,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -35,7 +34,7 @@ async def get_indicators_values_by_scenario_id(
     indicators_group_id: int | None = Query(None, description="to filter by indicator group (identifier)", gt=0),
     territory_id: int | None = Query(None, description="to filter by territory identifier", gt=0),
     hexagon_id: int | None = Query(None, description="to filter by hexagon identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioIndicatorValue]:
     """
     ## Get indicator values for a given scenario.
@@ -86,7 +85,7 @@ async def add_scenario_indicator_value(
     request: Request,
     indicator_value: ScenarioIndicatorValuePost,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> ScenarioIndicatorValue:
     """
@@ -130,7 +129,7 @@ async def put_scenario_indicator_value(
     request: Request,
     indicator_value: ScenarioIndicatorValuePut,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> ScenarioIndicatorValue:
     """
@@ -175,7 +174,7 @@ async def patch_scenario_indicator_value(
     indicator_value: ScenarioIndicatorValuePatch,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     indicator_value_id: int = Path(..., description="indicator value identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> ScenarioIndicatorValue:
     """
@@ -216,7 +215,7 @@ async def patch_scenario_indicator_value(
 async def delete_indicators_values_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete all indicator values for a given scenario.
@@ -251,7 +250,7 @@ async def delete_scenario_indicator_value_by_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     indicator_value_id: int = Path(..., description="indicator value identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a specific indicator value for a given scenario.
@@ -288,7 +287,7 @@ async def get_hexagons_with_indicators_values_by_scenario_id(
     indicator_ids: str | None = Query(None, description="list of identifiers separated by comma"),
     indicators_group_id: int | None = Query(None, description="to filter by indicator group (identifier)"),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, HexagonWithIndicators]]:
     """
     ## Get hexagons with indicator values for a given scenario in GeoJSON format.
@@ -338,7 +337,7 @@ async def get_hexagons_with_indicators_values_by_scenario_id(
 async def update_all_indicators_values_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Update all indicator values for a given scenario.

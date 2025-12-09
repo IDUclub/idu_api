@@ -39,8 +39,10 @@ async def check_existence(
     Args:
         conn (AsyncConnection): An active SQLAlchemy async connection.
         table (Table): SQLAlchemy Table object representing the target table.
-        conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs for equality checks.
-        not_conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs for inequality checks.
+        conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs \
+for equality checks.
+        not_conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs \
+for inequality checks.
 
     Returns:
         bool: True if at least one row matches the conditions, False otherwise.

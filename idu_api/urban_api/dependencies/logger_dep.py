@@ -25,13 +25,13 @@ def attach_to_request(request: Request, logger: BoundLogger) -> None:
 
 
 def from_app(app: FastAPI) -> BoundLogger:
-    """Get a logger from request or app state."""
+    """Get a logger from app state."""
     if not hasattr(app.state, "logger_dep"):
         raise ValueError("BoundLogger dispencer was not initialized at app preparation")
     return app.state.logger_dep
 
 
-def from_request(request: Request) -> BoundLogger:
+async def from_request(request: Request) -> BoundLogger:
     """Get a logger from request or app state."""
     if hasattr(request.state, "logger_dep"):
         logger = request.state.logger_dep

@@ -38,12 +38,12 @@ def init_dispencer(app: FastAPI, kafka_producer: KafkaProducerClient) -> None:
 
 
 def from_app(app: FastAPI) -> KafkaProducerClient:
-    """Get a KafkaProducer from request's app state."""
+    """Get a KafkaProducer from app state."""
     if not hasattr(app.state, "kafka_producer_dep"):
         raise ValueError("KafkaProducer dispencer was not initialized at app preparation")
     return app.state.kafka_producer_dep
 
 
-def from_request(request: Request) -> KafkaProducerClient:
+async def from_request(request: Request) -> KafkaProducerClient:
     """Get a KafkaProducer from request's app state."""
     return from_app(request.app)

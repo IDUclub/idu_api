@@ -1,4 +1,3 @@
-# pylint: disable=too-many-lines
 """Projects geometries internal logic is defined here."""
 
 from collections import defaultdict

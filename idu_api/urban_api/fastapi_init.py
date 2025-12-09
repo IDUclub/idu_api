@@ -15,7 +15,7 @@ from otteroad import KafkaProducerClient, KafkaProducerSettings
 from idu_api.common.db.connection.manager import PostgresConnectionManager
 from idu_api.common.exceptions.mapper import ExceptionMapper
 from idu_api.urban_api.config import UrbanAPIConfig
-from idu_api.urban_api.dependencies import kafka_producer_dep, logger_dep, metrics_dep
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep, metrics_dep
 from idu_api.urban_api.exceptions.mapper import register_exceptions
 from idu_api.urban_api.logic.impl.functional_zones import FunctionalZonesServiceImpl
 from idu_api.urban_api.logic.impl.indicators import IndicatorsServiceImpl
@@ -29,7 +29,6 @@ from idu_api.urban_api.logic.impl.soc_groups import SocGroupsServiceImpl
 from idu_api.urban_api.logic.impl.system import SystemServiceImpl
 from idu_api.urban_api.logic.impl.territories import TerritoriesServiceImpl
 from idu_api.urban_api.logic.impl.urban_objects import UrbanObjectsServiceImpl
-from idu_api.urban_api.middlewares.authentication import AuthenticationMiddleware
 from idu_api.urban_api.middlewares.dependency_injection import PassServicesDependenciesMiddleware
 from idu_api.urban_api.middlewares.exception_handler import ExceptionHandlerMiddleware
 from idu_api.urban_api.middlewares.observability import HandlerNotFoundError, ObservabilityMiddleware
@@ -135,6 +134,7 @@ def get_app(prefix: str = "/api") -> FastAPI:
 
     metrics_dep.init_dispencer(application, metrics)
     logger_dep.init_dispencer(application, logger)
+    auth_dep.init_dispencer(application, auth_client)
 
     application.add_middleware(
         PassServicesDependenciesMiddleware,
@@ -152,10 +152,6 @@ def get_app(prefix: str = "/api") -> FastAPI:
         urban_objects_service=ignore_kwargs(UrbanObjectsServiceImpl),
         user_project_service=UserProjectServiceImpl,
         system_service=SystemServiceImpl,
-    )
-    application.add_middleware(
-        AuthenticationMiddleware,
-        auth_client=auth_client,
     )
     application.add_middleware(
         ObservabilityMiddleware,
