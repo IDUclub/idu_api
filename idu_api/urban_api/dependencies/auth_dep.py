@@ -47,4 +47,4 @@ async def from_request(request: Request, optional: bool = False) -> UserDTO | No
 
 
 async def from_request_optional(request: Request) -> UserDTO | None:
-    return from_request(request, optional=True)
+    return await from_request(request, optional=True)
