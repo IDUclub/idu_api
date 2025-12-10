@@ -22,7 +22,7 @@ def init_dispencer(app: FastAPI, auth_client: AuthenticationClient) -> None:
 
 
 async def from_request(request: Request, optional: bool = False) -> UserDTO | None:
-    """Get a Authentication information from request's state."""
+    """Get an Authentication information from request's state."""
     if not hasattr(request.state, "auth_user_dep"):
         auth_client: AuthenticationClient = request.app.state.auth_dep
         try:

@@ -535,6 +535,15 @@ async def create_base_scenario_to_db(
     if project.is_regional:
         raise NotAllowedInRegionalProject()
 
+    project_geometry = (
+        select(
+            func.ST_GeomFromWKB(
+                project.geometry.data,
+                text(str(SRID))
+            ).label("geometry")
+        ).scalar_subquery()
+    )
+
     statement = (
         select(scenarios_data, projects_data.c.is_regional)
         .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
@@ -559,11 +568,13 @@ async def create_base_scenario_to_db(
 
     await copy_urban_objects_from_regional_scenario(conn, scenario_id, project.geometry, base_scenario_id)
 
-    id_mapping = await insert_intersecting_geometries(conn, project.geometry)
+    og_id_mapping = await insert_intersecting_geometries(conn, project_geometry)
 
-    await insert_urban_objects(conn, base_scenario_id, id_mapping)
+    uo_id_mapping = await insert_urban_objects(conn, scenario_id, og_id_mapping)
 
-    await insert_functional_zones(conn, base_scenario_id, project.geometry)
+    await copy_buffers(conn, uo_id_mapping)
+
+    await insert_functional_zones(conn, base_scenario_id, project_geometry)
 
     await save_indicators(project_id, base_scenario_id, logger)
 

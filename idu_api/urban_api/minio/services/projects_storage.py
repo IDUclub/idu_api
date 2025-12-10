@@ -379,10 +379,8 @@ class ProjectStorageManager:
             if image_id not in metadata["gallery_images"]:
                 raise FileNotFound(project_id, f"{image_id}.jpg")
 
-            await asyncio.gather(
-                self._client.delete_file(session, original_name, logger),
-                self._client.delete_file(session, preview_name, logger),
-            )
+            await self._client.delete_file(session, original_name, logger)
+            await self._client.delete_file(session, preview_name, logger)
 
             metadata["gallery_images"] = [id_ for id_ in metadata["gallery_images"] if id_ != image_id]
             if metadata.get("main_image_id") == image_id:
