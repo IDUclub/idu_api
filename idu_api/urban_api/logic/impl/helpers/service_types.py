@@ -17,7 +17,6 @@ from idu_api.common.db.entities import (
     soc_values_service_types_dict,
     urban_functions_dict,
 )
-from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById
 from idu_api.urban_api.dto import (
     PhysicalObjectTypeDTO,
     ServiceTypeDTO,
@@ -26,6 +25,7 @@ from idu_api.urban_api.dto import (
     SocValueDTO,
     UrbanFunctionDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.utils import build_recursive_query, check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
     ServiceTypePatch,

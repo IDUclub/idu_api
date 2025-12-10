@@ -35,13 +35,14 @@ async def get_living_buildings_with_geometry_by_territory_id(
     ### Parameters:
     - **territory_id** (int, Path): Unique identifier of the territory. Must be greater than 0.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: False).
     - **cursor** (str, Query): Cursor (encrypted living_building_id) for the next page.
     - **page_size** (int, Query): Defines the number of physical objects per page (default: 10).
 
     ### Returns:
-    - **CursorPage[BuildingWithGeometry]**: A paginated list of living buildings with geometry, including cursor-based pagination data.
+    - **CursorPage[BuildingWithGeometry]**: A paginated list of living buildings with geometry,
+    including cursor-based pagination data.
 
     ### Errors:
     - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False.

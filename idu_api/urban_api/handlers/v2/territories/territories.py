@@ -47,14 +47,16 @@ async def get_territory_by_parent_id(
     **WARNING:** Set `cities_only = True` only if you want to get entities from all levels.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped,
+    returns the highest level territories.
     - **get_all_levels** (bool, Query): If True, retrieves the full subtree of territories (default: false).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **territory_type_id** (int | None, Query): Filters results by territory type.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **created_at** (date | None, Query): Returns territories created at the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **cursor** (str, Query): Cursor (encrypted `territory_id`) for the next page.
     - **page_size** (int, Query): Defines the number of territories per page (default: 10).
@@ -126,14 +128,16 @@ async def get_territory_without_geometry_by_parent_id(
     **WARNING:** Set `cities_only = True` only if you want to get entities from all levels.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If none, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If none,
+    returns the highest level territories.
     - **get_all_levels** (bool, Query): If True, retrieves the full subtree of territories (default: false).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **territory_type_id** (int | None, Query): Filters results by territory type.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **created_at** (date | None, Query): Returns territories created at the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **cursor** (str, Query): Cursor (encrypted `territory_id`) for the next page.
     - **page_size** (int, Query): Defines the number of territories per page (default: 10).

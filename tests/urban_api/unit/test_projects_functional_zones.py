@@ -14,14 +14,14 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
-from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
-from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.dto import (
     FunctionalZoneDTO,
     FunctionalZoneSourceDTO,
     ScenarioFunctionalZoneDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById, TooManyObjectsError
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.logic.impl.helpers.projects_functional_zones import (
     add_scenario_functional_zones_to_db,
     delete_functional_zones_by_scenario_id_from_db,

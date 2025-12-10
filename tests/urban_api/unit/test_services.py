@@ -15,8 +15,8 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import ServiceDTO, UrbanObjectDTO
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.services import (
     add_service_to_db,
     add_service_to_object_in_db,

@@ -14,18 +14,18 @@ from idu_api.common.db.entities import (
     profiles_reclamation_data,
     territories_data,
 )
-from idu_api.common.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
-    EntityAlreadyExists,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-    TooManyObjectsError,
-)
 from idu_api.urban_api.dto import (
     FunctionalZoneDTO,
     FunctionalZoneTypeDTO,
     ProfilesReclamationDataDTO,
     ProfilesReclamationDataMatrixDTO,
+)
+from idu_api.urban_api.exceptions.logic.common import (
+    EntitiesNotFoundByIds,
+    EntityAlreadyExists,
+    EntityNotFoundById,
+    EntityNotFoundByParams,
+    TooManyObjectsError,
 )
 from idu_api.urban_api.logic.impl.helpers.functional_zones import (
     add_functional_zone_to_db,

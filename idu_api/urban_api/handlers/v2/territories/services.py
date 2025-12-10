@@ -45,9 +45,10 @@ async def get_services_by_territory_id(
     - **urban_function_id** (int | None, Query): Filters results by urban function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: true).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **cursor** (str, Query): Cursor (encrypted `service_id`) for the next page.
     - **page_size** (int, Query): Defines the number of services per page (default: 10).
@@ -129,9 +130,10 @@ async def get_services_with_geometry_by_territory_id(
     - **urban_function_id** (int | None, Query): Filters results by urban function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: true).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - service_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **cursor** (str, Query): Cursor (encrypted `service_id`) for the next page.
     - **page_size** (int, Query): Defines the number of services per page (default: 10).

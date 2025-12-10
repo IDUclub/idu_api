@@ -46,7 +46,8 @@ async def get_buffers_geojson_by_territory_id(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, BufferAttributes]]**: A GeoJSON response containing buffers and their geometries.
+    - **GeoJSONResponse[Feature[Geometry, BufferAttributes]]**: A GeoJSON response containing buffers
+    and their geometries.
 
     ### Errors:
     - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False or

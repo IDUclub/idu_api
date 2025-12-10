@@ -81,7 +81,8 @@ async def get_profiles_reclamation_data_matrix(
     ## Get a matrix of profiles reclamation data.
 
     ### Parameters:
-    - **labels** (str | None, Query): Comma-separated list of profile labels to filter results. If labels is skipped, it will return all profiles reclamation data.
+    - **labels** (str | None, Query): Comma-separated list of profile labels to filter results. If labels is
+    skipped, it will return all profiles reclamation data.
     - **territory_id** (int | None, Query): Filters results by a specific territory.
 
     ### Returns:
@@ -156,7 +157,8 @@ async def put_profiles_reclamation_data(
     Otherwise, a new profiles reclamation data will be created.
 
     ### Parameters:
-    - **profiles_reclamation** (ProfilesReclamationDataPut, Body): Data for updating or creating a profiles reclamation entry.
+    - **profiles_reclamation** (ProfilesReclamationDataPut, Body): Data for updating or creating a profiles
+    reclamation entry.
 
     ### Returns:
     - **ProfilesReclamationData**: The updated or newly created profiles reclamation data.
@@ -184,7 +186,8 @@ async def delete_profiles_reclamation_data(
     ## Delete profiles reclamation data.
 
     ### Parameters:
-    - **profiles_reclamation** (ProfilesReclamationDataDelete, Body): Identifiers of the source and target profiles and the territory.
+    - **profiles_reclamation** (ProfilesReclamationDataDelete, Body): Identifiers of the source and target profiles
+    and the territory.
 
     ### Returns:
     - **OkResponse**: A confirmation message of the deletion.

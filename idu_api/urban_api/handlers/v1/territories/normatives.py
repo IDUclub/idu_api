@@ -217,13 +217,15 @@ async def get_normatives_values_by_parent_id(
     **WARNING:** Set `last_only = True` only if you don't specify `year`.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns
+    the highest level territories.
     - **year** (int | None, Query): Optional filter by the specified year (default: None).
     - **last_only** (bool, Query): If True, retrieves only the most recent normatives (default: true).
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, TerritoryWithNormatives]]**: A GeoJSON response containing territories and their normatives.
+    - **GeoJSONResponse[Feature[Geometry, TerritoryWithNormatives]]**: A GeoJSON response containing territories
+    and their normatives.
 
     ### Errors:
     - **400 Bad Request**: If `last_only` is set to True and `year` is set.

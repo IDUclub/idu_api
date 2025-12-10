@@ -17,7 +17,6 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_functions_dict,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.dto import (
     ServiceTypeDTO,
     SocGroupDTO,
@@ -26,6 +25,7 @@ from idu_api.urban_api.dto import (
     SocValueIndicatorValueDTO,
     SocValueWithServiceTypesDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
     SocGroupPost,

@@ -157,7 +157,8 @@ async def get_physical_object_functions_by_parent_id(
     ## Get physical object functions by parent identifier.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent physical object function. If skipped, it returns the highest level functions.
+    - **parent_id** (int | None, Query): Unique identifier of the parent physical object function
+    If skipped, it returns the highest level functions.
     - **name** (str | None, Query): Filters results by function name.
     - **get_all_subtree** (bool, Query): If True, retrieves all subtree of physical object functions.
 

@@ -13,7 +13,7 @@ class ShortTerritoryIndicatorBindDTO:
 
 
 @dataclass(frozen=True)
-class TerritoryIndicatorBindDTO:
+class TerritoryIndicatorBindDTO:  # pylint: disable=too-many-instance-attributes
     indicator_id: int
     indicator_name: str
     indicator_parent_id: int | None

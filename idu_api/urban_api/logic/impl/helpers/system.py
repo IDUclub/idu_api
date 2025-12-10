@@ -16,6 +16,7 @@ from shapely.wkb import loads as wkb_loads
 from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql import case, column, select, text, values
 from sqlalchemy.sql.functions import coalesce
+from tqdm import tqdm
 
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_TO_INSERT_LIMIT
 
@@ -60,7 +61,6 @@ async def fix_geojson_by_postgis(
     ]
     iterator = enumerate(batches)
     if show_progress:
-        from tqdm import tqdm
 
         iterator = tqdm(iterator, total=len(batches), desc="Fixing geometries")
 

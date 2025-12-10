@@ -33,12 +33,12 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyEdited, EntityNotFoundById
 from idu_api.urban_api.dto import (
     ScenarioGeometryDTO,
     ScenarioGeometryWithAllObjectsDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyEdited, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,

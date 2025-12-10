@@ -20,12 +20,12 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityNotFoundByParams
 from idu_api.urban_api.dto import (
     BufferDTO,
     BufferTypeDTO,
     DefaultBufferValueDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundByParams
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import (
     BufferPut,

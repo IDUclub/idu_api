@@ -138,7 +138,8 @@ async def get_functional_zones_geojson_by_territory_id(
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, FunctionalZoneWithoutGeometry]]**: A GeoJSON response containing functional zones.
+    - **GeoJSONResponse[Feature[Geometry, FunctionalZoneWithoutGeometry]]**: A GeoJSON response containing
+    functional zones.
 
     ### Errors:
     - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False.

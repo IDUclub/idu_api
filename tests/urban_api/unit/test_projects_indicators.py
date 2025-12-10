@@ -22,9 +22,9 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import HexagonWithIndicatorsDTO, ScenarioIndicatorValueDTO, UserDTO
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_indicators import (
     add_scenario_indicator_value_to_db,
     delete_scenario_indicator_value_by_id_from_db,

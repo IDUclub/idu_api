@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from structlog.stdlib import BoundLogger
 
-from idu_api.common.exceptions.services.minio import FileNotFound
+from idu_api.urban_api.exceptions.services.minio import FileNotFound
 from idu_api.urban_api.minio.client import AsyncMinioClient
 from idu_api.urban_api.minio.services import ProjectStorageManager
 

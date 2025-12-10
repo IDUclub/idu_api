@@ -1,6 +1,7 @@
 import asyncio
 import io
 import json
+import os
 import uuid
 from io import BytesIO
 from typing import Literal
@@ -9,8 +10,8 @@ import aioboto3
 from PIL import Image
 from structlog.stdlib import BoundLogger
 
-from idu_api.common.exceptions.services.minio import FileNotFound, InvalidImageError
 from idu_api.urban_api.config import UrbanAPIConfig
+from idu_api.urban_api.exceptions.services.minio import FileNotFound, InvalidImageError
 from idu_api.urban_api.minio.client import AsyncMinioClient, get_minio_client_from_config
 from idu_api.urban_api.schemas.enums import ProjectPhase
 
@@ -207,10 +208,8 @@ class ProjectStorageManager:
         preview_bytes = make_preview(image)
 
         async with self._client.get_session() as session:
-            await asyncio.gather(
-                self._client.upload_file(session, original_bytes, original_name, logger),
-                self._client.upload_file(session, preview_bytes, preview_name, logger),
-            )
+            await self._client.upload_file(session, original_bytes, original_name, logger)
+            await self._client.upload_file(session, preview_bytes, preview_name, logger)
 
             metadata = await self.load_metadata(session, project_id, logger)
             metadata.setdefault("gallery_images", []).append(image_id)
@@ -380,10 +379,8 @@ class ProjectStorageManager:
             if image_id not in metadata["gallery_images"]:
                 raise FileNotFound(project_id, f"{image_id}.jpg")
 
-            await asyncio.gather(
-                self._client.delete_file(session, original_name, logger),
-                self._client.delete_file(session, preview_name, logger),
-            )
+            await self._client.delete_file(session, original_name, logger)
+            await self._client.delete_file(session, preview_name, logger)
 
             metadata["gallery_images"] = [id_ for id_ in metadata["gallery_images"] if id_ != image_id]
             if metadata.get("main_image_id") == image_id:
@@ -573,4 +570,4 @@ def get_project_storage_manager_from_config(app_config: UrbanAPIConfig) -> Proje
 
 
 def get_project_storage_manager():
-    return get_project_storage_manager_from_config(UrbanAPIConfig.from_file_or_default())
+    return get_project_storage_manager_from_config(UrbanAPIConfig.from_file(os.environ["CONFIG_PATH"]))

@@ -6,6 +6,7 @@ from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -18,7 +19,6 @@ from idu_api.urban_api.schemas import (
     ScenarioBufferPut,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -32,7 +32,7 @@ async def get_buffers_by_scenario_id(
     buffer_type_id: int | None = Query(None, description="buffer type identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
     service_type_id: int | None = Query(None, description="service type identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
     """
     ## Get a list of buffers in GeoJSON format for a given scenario
@@ -82,7 +82,7 @@ async def get_context_buffers(
     buffer_type_id: int | None = Query(None, description="buffer type identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
     service_type_id: int | None = Query(None, description="service type identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, BufferAttributes]]:
     """
     ## Get buffers for the context of a project territory in GeoJSON format.
@@ -133,7 +133,7 @@ async def put_buffer(
     request: Request,
     buffer: ScenarioBufferPut,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioBuffer:
     """
     ## Create or update a scenario buffer.
@@ -175,7 +175,7 @@ async def delete_buffer(
     request: Request,
     buffer: ScenarioBufferDelete,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a scenario buffer.

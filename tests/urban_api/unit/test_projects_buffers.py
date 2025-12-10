@@ -27,15 +27,15 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import (
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-)
-from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.dto import (
     ScenarioBufferDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import (
+    EntityNotFoundById,
+    EntityNotFoundByParams,
+)
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.logic.impl.helpers.projects_buffers import (
     delete_buffer_from_db,
     get_buffer_from_db,

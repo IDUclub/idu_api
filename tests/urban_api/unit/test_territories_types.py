@@ -6,8 +6,8 @@ import pytest
 from sqlalchemy.sql import insert, select
 
 from idu_api.common.db.entities import target_city_types_dict, territory_types_dict
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists
 from idu_api.urban_api.dto import TargetCityTypeDTO, TerritoryTypeDTO
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists
 from idu_api.urban_api.logic.impl.helpers.territories_types import (
     add_target_city_type_to_db,
     add_territory_type_to_db,

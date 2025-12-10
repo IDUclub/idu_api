@@ -175,7 +175,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_all_projects_from_db(conn)
 
-    async def get_projects(
+    async def get_projects(  # pylint: disable=too-many-arguments
         self,
         user: UserDTO | None,
         only_own: bool,

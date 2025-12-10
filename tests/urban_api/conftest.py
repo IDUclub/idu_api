@@ -9,12 +9,13 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import httpx
+import psutil
 from alembic import command
 from alembic.config import Config
 from dotenv import load_dotenv
 
 from idu_api.common.db.config import MultipleDBsConfig
-from idu_api.urban_api.config import AppConfig, UrbanAPIConfig
+from idu_api.urban_api.config import UrbanAPIConfig
 from tests.urban_api.helpers import *
 
 load_dotenv(dotenv_path="urban_api/.env")
@@ -24,10 +25,10 @@ load_dotenv(dotenv_path="urban_api/.env")
 def database() -> MultipleDBsConfig:
     """Fixture to get database credentials from environment variables."""
 
-    if "CONFIG_PATH" not in os.environ:
+    if "TEST_CONFIG_PATH" not in os.environ:
         pytest.skip("Database for integration tests is not configured")
 
-    config = UrbanAPIConfig.load(os.environ["CONFIG_PATH"])
+    config = UrbanAPIConfig.load(os.environ["TEST_CONFIG_PATH"])
 
     run_migrations(config.db)
     return config.db
@@ -39,23 +40,11 @@ def config(database) -> UrbanAPIConfig:
 
     s = socket.socket()
     s.bind(("", 0))
-    port = s.getsockname()[1]
-    config = UrbanAPIConfig.load(os.environ["CONFIG_PATH"])
-    config = UrbanAPIConfig(
-        app=AppConfig(
-            host=config.app.host,
-            port=port,
-            debug=config.app.debug,
-            name=config.app.name,
-        ),
-        db=database,
-        auth=config.auth,
-        fileserver=config.fileserver,
-        external=config.external,
-        logging=config.logging,
-        prometheus=config.prometheus,
-        broker=config.broker,
-    )
+    port: int = s.getsockname()[1]
+    config = UrbanAPIConfig.load(os.environ["TEST_CONFIG_PATH"])
+    config.app.port = port
+    config.db = database
+    config.app.debug = False
     return config
 
 
@@ -67,6 +56,7 @@ def urban_api_host(config) -> Iterator[str]:  # pylint: disable=redefined-outer-
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_yaml_config_path = temp_file.name
         config.dump(temp_yaml_config_path)
+    os.environ["CONFIG_PATH"] = temp_yaml_config_path
     with subprocess.Popen(
         [
             # fmt: off
@@ -76,25 +66,39 @@ def urban_api_host(config) -> Iterator[str]:  # pylint: disable=redefined-outer-
         ]
     ) as process:
         try:
-            time.sleep(30)
-            with httpx.Client() as client:
-                if client.get(f"{host}/health_check/ping").is_success:
-                    yield host
-                else:
-                    pytest.fail("Failed to start urban_api server")
+            attempts = 15
+            success = False
+            for _ in range(attempts):
+                try:
+                    with httpx.Client() as client:
+                        if client.get(f"{host}/health_check/ping", timeout=1).is_success:
+                            success = True
+                            break
+                except Exception:  # pylint: disable=broad-except
+                    pass
+                time.sleep(1)
+            if success:
+                yield host
+            else:
+                pytest.fail(f"Failed to start urban_api server in {attempts} attempts with a second interval")
         finally:
-            if os.path.exists(temp_yaml_config_path):
-                os.remove(temp_yaml_config_path)
+            for child in psutil.Process(process.pid).children(recursive=True):
+                child.terminate()
             process.terminate()
+
             try:
                 process.wait(timeout=5)
             except subprocess.TimeoutExpired:
+                for child in psutil.Process(process.pid).children(recursive=True):
+                    child.kill()
                 process.kill()
+            if os.path.exists(temp_yaml_config_path):
+                os.remove(temp_yaml_config_path)
 
 
 def run_migrations(database: MultipleDBsConfig):  # pylint: disable=redefined-outer-name
     dsn = (
-        f"postgresql+asyncpg://{database.master.user}:{database.master.password}"
+        f"postgresql+asyncpg://{database.master.user}:{database.master.password.get_secret_value()}"
         f"@{database.master.host}:{database.master.port}/{database.master.database}"
     )
     alembic_dir = Path(__file__).resolve().parent.parent.parent / "idu_api" / "common" / "db"

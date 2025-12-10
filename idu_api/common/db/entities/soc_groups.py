@@ -67,7 +67,7 @@ Social values:
 """
 
 
-InfrastructureTypeEnum = Enum(InfrastructureType, name="infrastructure_type")
+InfrastructureTypeEnum = Enum(InfrastructureType, name="infrastructure_type")  # pylint: disable=invalid-name
 soc_group_values_data_id_seq = Sequence("soc_group_values_data_id_seq")
 soc_group_values_data = Table(
     "soc_group_values_data",
@@ -88,7 +88,7 @@ Social group value:
 - infrastructure_type enum
 """
 
-IndicatorValueTypeEnum = Enum(IndicatorValueType, name="indicator_value_type")
+IndicatorValueTypeEnum = Enum(IndicatorValueType, name="indicator_value_type")  # pylint: disable=invalid-name
 soc_value_indicators_data = Table(
     "soc_value_indicators_data",
     metadata,

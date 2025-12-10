@@ -17,13 +17,13 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import (
+from idu_api.urban_api.dto import UrbanObjectDTO
+from idu_api.urban_api.exceptions.logic.common import (
     EntitiesNotFoundByIds,
     EntityAlreadyExists,
     EntityNotFoundById,
     TooManyObjectsError,
 )
-from idu_api.urban_api.dto import UrbanObjectDTO
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
     check_existence,

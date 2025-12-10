@@ -31,13 +31,3 @@ class CityApiError(IduApiError):
 
     def __str__(self) -> str:
         return "Unexpected error happened in CITY API"
-
-
-class UrbanApiError(IduApiError):
-    """
-    Base Urban API exception to inherit from.
-    User can redefine `status_code` method and `__str__` as its value will be used in HTTPException.
-    """
-
-    def __str__(self) -> str:
-        return "Unexpected error happened in URBAN API"

@@ -2,73 +2,78 @@
 
 import itertools
 import traceback
-from http.client import HTTPException
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-from sqlalchemy.exc import SQLAlchemyError
+from starlette.exceptions import HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from idu_api.common.exceptions import IduApiError
-from idu_api.common.exceptions.utils.translate import translate_db_error
-from idu_api.urban_api.prometheus import metrics
-from idu_api.urban_api.utils.logging import get_handler_from_path
+from idu_api.urban_api.exceptions.mapper import ExceptionMapper
+
+from .observability import ObservableException
 
 
 class ExceptionHandlerMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods
-    """Middleware to handle uncaught exceptions and convert them into HTTP responses.
+    """Handle exceptions, so they become http response code 500 - Internal Server Error.
 
-    If debug is enabled, full stack trace and details are returned.
-    Otherwise, only a safe generic error message is exposed.
-    In all cases, error metrics are incremented.
+    If debug is activated in app configuration, then stack trace is returned, otherwise only a generic error message.
+    Message is sent to logger error stream anyway.
     """
 
-    def __init__(self, app: FastAPI, debug: list[bool]):
-        """Passing debug as a list with single element is a hack to allow
-        changing the value on application startup.
-        """
+    def __init__(
+        self,
+        app: FastAPI,
+        debug: bool,
+        exception_mapper: ExceptionMapper,
+    ):
         super().__init__(app)
         self._debug = debug
+        self._mapper = exception_mapper
 
     async def dispatch(self, request: Request, call_next):
         try:
             return await call_next(request)
         except Exception as exc:  # pylint: disable=broad-except
-            # Normalize exception to IduApiError
-            if isinstance(exc, (IduApiError, HTTPException)):
-                translated = exc
-            elif isinstance(exc, SQLAlchemyError):
-                translated = translate_db_error(exc)
+            additional_headers: dict[str, str] | None = None
+            if isinstance(exc, ObservableException):
+                additional_headers = {"X-Trace-Id": exc.trace_id, "X-Span-Id": str(exc.span_id)}
+                exc = exc.__cause__
+            status_code = 500
+            detail = "exception occured"
+
+            if isinstance(exc, HTTPException) and hasattr(exc, "status_code"):
+                status_code = exc.status_code  # pylint: disable=no-member
+                detail = exc.detail  # pylint: disable=no-member
+
+            if self._debug:
+                if (res := self._mapper.apply_if_known(exc)) is not None:
+                    response = res
+                else:
+                    response = JSONResponse(
+                        {
+                            "code": status_code,
+                            "detail": detail,
+                            "error": str(exc),
+                            "error_type": type(exc).__name__,
+                            "path": request.url.path,
+                            "query_params": request.url.query,
+                            "tracebacks": _get_tracebacks(exc),
+                        },
+                        status_code=status_code,
+                    )
             else:
-                translated = IduApiError()
+                response = self._mapper.apply(exc)
+            if additional_headers is not None:
+                response.headers.update(additional_headers)
+            return response
 
-            status_code = getattr(translated, "status_code", 500)
 
-            # Record metrics
-            metrics.ERRORS_COUNTER.labels(
-                method=request.method,
-                path=get_handler_from_path(request.url.path),
-                error_type=type(translated).__name__,
-                status_code=status_code,
-            ).inc(1)
-
-            if self._debug[0] and type(translated) is IduApiError:
-                return JSONResponse(
-                    {
-                        "error": str(translated),
-                        "error_type": type(translated).__name__,
-                        "path": request.url.path,
-                        "params": request.url.query,
-                        "trace": list(
-                            itertools.chain.from_iterable(
-                                map(lambda x: x.split("\n"), traceback.format_tb(exc.__traceback__))
-                            )
-                        ),
-                    },
-                    status_code=status_code,
-                )
-
-            return JSONResponse(
-                {"detail": str(translated)},
-                status_code=status_code,
-            )
+def _get_tracebacks(exc: Exception) -> list[list[str]]:
+    tracebacks: list[list[str]] = []
+    while exc is not None:
+        tracebacks.append(
+            list(itertools.chain.from_iterable(map(lambda x: x.split("\n"), traceback.format_tb(exc.__traceback__))))
+        )
+        tracebacks[-1].append(f"{exc.__class__.__module__}.{exc.__class__.__qualname__}: {exc}")
+        exc = exc.__cause__
+    return tracebacks
