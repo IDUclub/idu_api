@@ -665,8 +665,6 @@ async def get_services_with_geometry_by_scenario_id_from_db(
         RecursiveFilter(union_query, "urban_function_id", urban_function_id, urban_functions_dict),
     )
 
-    print(statement)
-
     result = (await conn.execute(statement)).mappings().all()
 
     return [ScenarioServiceWithGeometryDTO(**row) for row in result]

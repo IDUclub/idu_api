@@ -32,7 +32,7 @@ async def get_service_types_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     for_context: bool = Query(False, description="to get types for context or project territory"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[ServiceType]:
     """
     ## Get a list of service types for a given scenario.
@@ -71,7 +71,7 @@ async def get_services_by_scenario_id(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioService]:
     """
     ## Get a list of services for a given scenario.
@@ -123,7 +123,7 @@ async def get_services_with_geometry_by_scenario_id(
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
     """
     ## Get a list of services with geometry for a given scenario.
@@ -175,7 +175,7 @@ async def get_context_services(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioService]:
     """
     ## Get a list of services for the context of a project territory.
@@ -222,7 +222,7 @@ async def get_context_services_with_geometry(
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
     """
     ## Get a list of services with geometry for the context of a project territory.

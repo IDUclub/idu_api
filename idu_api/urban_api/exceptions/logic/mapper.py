@@ -80,7 +80,7 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         db.CustomTriggerError,
         lambda exc: _get_response(status.HTTP_400_BAD_REQUEST, "Invalid Value", exc.detail),
     )
-    mapper.register_simple(db.DBError, 500, "Exception occured at database request")
+    mapper.register_simple(db.DBError, 500, "Exception occurred at database request")
 
     mapper.register_simple(
         projects.NotAllowedInRegionalScenario,

@@ -34,7 +34,7 @@ async def get_indicators_values_by_scenario_id(
     indicators_group_id: int | None = Query(None, description="to filter by indicator group (identifier)", gt=0),
     territory_id: int | None = Query(None, description="to filter by territory identifier", gt=0),
     hexagon_id: int | None = Query(None, description="to filter by hexagon identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioIndicatorValue]:
     """
     ## Get indicator values for a given scenario.
@@ -287,7 +287,7 @@ async def get_hexagons_with_indicators_values_by_scenario_id(
     indicator_ids: str | None = Query(None, description="list of identifiers separated by comma"),
     indicators_group_id: int | None = Query(None, description="to filter by indicator group (identifier)"),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, HexagonWithIndicators]]:
     """
     ## Get hexagons with indicator values for a given scenario in GeoJSON format.

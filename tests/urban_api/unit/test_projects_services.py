@@ -574,9 +574,6 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
     union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
     statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
 
-    print(statement)
-    print()
-
     # Act
     result = await get_services_with_geometry_by_scenario_id_from_db(
         mock_conn, scenario_id, user, service_type_id, urban_function_id
@@ -858,14 +855,12 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
         .where(~ST_IsEmpty(intersected_geom))
         .distinct()
     )
-    geom_expr = (
-        ST_Intersection(
-            coalesce(
-                projects_object_geometries_data.c.geometry,
-                object_geometries_data.c.geometry,
-            ),
-            mock_geom,
-        )
+    geom_expr = ST_Intersection(
+        coalesce(
+            projects_object_geometries_data.c.geometry,
+            object_geometries_data.c.geometry,
+        ),
+        mock_geom,
     )
     scenario_services_query = (
         select(

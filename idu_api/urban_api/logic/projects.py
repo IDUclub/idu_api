@@ -10,6 +10,7 @@ from idu_api.urban_api.dto import (
     HexagonWithIndicatorsDTO,
     PageDTO,
     PhysicalObjectTypeDTO,
+    ProjectCadastreDTO,
     ProjectDTO,
     ProjectPhasesDTO,
     ProjectTerritoryDTO,
@@ -36,6 +37,7 @@ from idu_api.urban_api.schemas import (
     PhysicalObjectPatch,
     PhysicalObjectPut,
     PhysicalObjectWithGeometryPost,
+    ProjectCadastrePut,
     ProjectPatch,
     ProjectPhasesPut,
     ProjectPost,
@@ -681,3 +683,24 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         user: UserDTO | None,
     ) -> dict:
         """Get buffer objects by scenario identifier."""
+
+    @abc.abstractmethod
+    async def get_cadastres(
+        self,
+        project_id: int,
+        user: UserDTO | None,
+    ) -> list[ProjectCadastreDTO]:
+        """Get list of project cadastre objects by project identifier."""
+
+    @abc.abstractmethod
+    async def put_cadastres(
+        self,
+        cadastres: list[ProjectCadastrePut],
+        project_id: int,
+        user: UserDTO,
+    ) -> dict:
+        """Update list of project cadastre objects."""
+
+    @abc.abstractmethod
+    async def delete_cadastres(self, project_id: int, user: UserDTO) -> dict:
+        """Delete cadastres by project identifier."""

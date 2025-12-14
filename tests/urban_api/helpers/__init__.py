@@ -4,6 +4,7 @@ from .auth import *
 from .broker import *
 from .buffers import *
 from .buildings import *
+from .cadastres import *
 from .connection import *
 from .functional_zones import *
 from .geometries import *

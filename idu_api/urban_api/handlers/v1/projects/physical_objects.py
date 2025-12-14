@@ -38,7 +38,7 @@ async def get_physical_object_types_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     for_context: bool = Query(False, description="to get types for context or project territory"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[PhysicalObjectType]:
     """
     ## Get a list of physical object types for a given scenario.
@@ -77,7 +77,7 @@ async def get_physical_objects_by_scenario_id(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioPhysicalObject]:
     """
     ## Get a list of physical objects for a given scenario.
@@ -129,7 +129,7 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get a list of physical objects with geometry for a given scenario.
@@ -181,7 +181,7 @@ async def get_physical_objects_around_geometry_by_scenario_id(
     geometry: AllPossibleGeometry,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get physical objects within a specified area (+ buffer 50 meters).
@@ -224,7 +224,7 @@ async def get_context_physical_objects(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioPhysicalObject]:
     """
     ## Get a list of physical objects for the context of a project territory.
@@ -273,7 +273,7 @@ async def get_context_physical_objects_with_geometry(
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """
     ## Get a list of physical objects for the context of a project territory.

@@ -31,7 +31,7 @@ async def get_scenarios(
     territory_id: int | None = Query(None, description="to filter by territory (region)"),
     is_based: bool = Query(..., description="to get only base scenarios"),
     only_own: bool = Query(False, description="if True, return only user's own projects"),
-    user: UserDTO | None = Depends(auth_dep.from_request),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[Scenario]:
     """
     ## Get a list of scenarios.
@@ -88,7 +88,7 @@ async def get_scenarios(
 async def get_scenario_by_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> Scenario:
     """
     ## Get a scenario by its identifier.

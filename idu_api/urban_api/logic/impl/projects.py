@@ -13,6 +13,7 @@ from idu_api.urban_api.dto import (
     HexagonWithIndicatorsDTO,
     PageDTO,
     PhysicalObjectTypeDTO,
+    ProjectCadastreDTO,
     ProjectDTO,
     ProjectPhasesDTO,
     ProjectTerritoryDTO,
@@ -36,6 +37,11 @@ from idu_api.urban_api.logic.impl.helpers.projects_buffers import (
     get_buffers_by_scenario_id_from_db,
     get_context_buffers_from_db,
     put_buffer_to_db,
+)
+from idu_api.urban_api.logic.impl.helpers.projects_cadastres import (
+    delete_cadastres_by_project_id_from_db,
+    get_cadastres_by_project_id_from_db,
+    put_project_cadastres_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_functional_zones import (
     add_scenario_functional_zones_to_db,
@@ -129,6 +135,7 @@ from idu_api.urban_api.schemas import (
     PhysicalObjectPatch,
     PhysicalObjectPut,
     PhysicalObjectWithGeometryPost,
+    ProjectCadastrePut,
     ProjectPatch,
     ProjectPhasesPut,
     ProjectPost,
@@ -888,3 +895,24 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
     ) -> dict:
         async with self._connection_manager.get_connection() as conn:
             return await delete_buffer_from_db(conn, buffer, scenario_id, user)
+
+    async def get_cadastres(
+        self,
+        project_id: int,
+        user: UserDTO | None,
+    ) -> list[ProjectCadastreDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            return await get_cadastres_by_project_id_from_db(conn, project_id, user)
+
+    async def put_cadastres(
+        self,
+        cadastres: list[ProjectCadastrePut],
+        project_id: int,
+        user: UserDTO,
+    ) -> dict:
+        async with self._connection_manager.get_connection() as conn:
+            return await put_project_cadastres_to_db(conn, cadastres, project_id, user)
+
+    async def delete_cadastres(self, project_id: int, user: UserDTO) -> dict:
+        async with self._connection_manager.get_connection() as conn:
+            return await delete_cadastres_by_project_id_from_db(conn, project_id, user)
