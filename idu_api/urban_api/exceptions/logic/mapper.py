@@ -103,6 +103,17 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         "Если вы хотите создать новый базовый сценарий, измените тот, который должен стать базовым, а не текущий.",
     )
 
+    mapper.register_simple(
+        users.NotAuthorizedError, status.HTTP_401_UNAUTHORIZED, "Для доступа необходима авторизация."
+    )
+    mapper.register_func(
+        users.AuthorizationError,
+        lambda exc: _get_response(
+            status.HTTP_403_FORBIDDEN,
+            "AuthorizationError",
+            exc.reason,
+        ),
+    )
     mapper.register_func(
         users.AccessDeniedError,
         lambda exc: _get_response(

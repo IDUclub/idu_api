@@ -1,5 +1,6 @@
 """Exception mapper registration of available exceptions is located here."""
 
+from fastapi.responses import JSONResponse
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from starlette import status
 
@@ -21,5 +22,11 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
     register_logic_errors(mapper)
     register_services_errors(mapper)
 
-    mapper.register_func(IntegrityError, lambda exc: mapper.apply(translate_db_constraint_error(exc)))
-    mapper.register_func(DBAPIError, lambda exc: mapper.apply(translate_db_constraint_error(exc)))
+    def translate_if_possible(mapper: ExceptionMapper, exc: Exception) -> JSONResponse:
+        exc_after_map = translate_db_constraint_error(exc)
+        if exc_after_map != exc:
+            return translate_if_possible(mapper, exc_after_map)
+        return mapper.apply(exc)
+
+    mapper.register_func(IntegrityError, lambda exc: translate_if_possible(mapper, exc))
+    mapper.register_func(DBAPIError, lambda exc: translate_if_possible(mapper, exc))

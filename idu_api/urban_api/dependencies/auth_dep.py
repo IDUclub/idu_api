@@ -5,7 +5,7 @@ from tenacity import RetryError
 
 from idu_api.urban_api.dependencies import logger_dep
 from idu_api.urban_api.dto.users.users import UserDTO
-from idu_api.urban_api.exceptions.services.external import ExternalServiceUnavailable
+from idu_api.urban_api.exceptions.logic.users import AuthorizationError, NotAuthorizedError
 from idu_api.urban_api.utils.auth_client import AuthenticationClient
 
 
@@ -21,7 +21,7 @@ def init_dispencer(app: FastAPI, auth_client: AuthenticationClient) -> None:
     app.state.auth_dep = auth_client
 
 
-async def from_request(request: Request, optional: bool = False) -> UserDTO | None:
+async def _from_request(request: Request, required: bool = True) -> UserDTO | None:
     """Get an Authentication information from request's state."""
     if not hasattr(request.state, "auth_user_dep"):
         auth_client: AuthenticationClient = request.app.state.auth_dep
@@ -32,21 +32,29 @@ async def from_request(request: Request, optional: bool = False) -> UserDTO | No
                 request.state.auth_user_dep = await auth_client.get_user_from_token(token)
             else:
                 request.state.auth_user_dep = None
-        except RetryError as exc:
+        except RetryError:
             logger = await logger_dep.from_request(request)
             await logger.aerror("could not connect to authentication server")
-            if not optional:
-                raise ExternalServiceUnavailable("сервер аутентификации") from exc
             request.state.auth_user_dep = None
+            request.state.auth_user_reason = "Сервер аутентификации недоступен."
         except Exception:  # pylint: disable=broad-except
             logger = await logger_dep.from_request(request)
             await logger.aexception("unexpected error in authentication process")
-            if not optional:
+            if not required:
                 raise
             request.state.auth_user_dep = None
+            request.state.auth_user_reason = "Ошибка обработки JWT-токена."
+    if required and request.state.auth_user_dep is None:
+        if hasattr(request.state, "auth_user_missing_reason"):
+            raise AuthorizationError(request.state.auth_user_missing_reason)
+        raise NotAuthorizedError()
 
     return request.state.auth_user_dep
 
 
 async def from_request_optional(request: Request) -> UserDTO | None:
-    return await from_request(request, optional=True)
+    return await _from_request(request, required=False)
+
+
+async def from_request(request: Request) -> UserDTO:
+    return await _from_request(request, required=True)

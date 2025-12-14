@@ -520,7 +520,7 @@ async def create_base_scenario_to_db(
     """Create base scenario object for given project from specified regional scenario."""
 
     statement = (
-        select(projects_data, projects_territory_data.c.geometry)
+        select(projects_data, ST_AsEWKB(projects_territory_data.c.geometry))
         .select_from(
             projects_data.outerjoin(
                 projects_territory_data,
@@ -535,14 +535,9 @@ async def create_base_scenario_to_db(
     if project.is_regional:
         raise NotAllowedInRegionalProject()
 
-    project_geometry = (
-        select(
-            func.ST_GeomFromWKB(
-                project.geometry.data,
-                text(str(SRID))
-            ).label("geometry")
-        ).scalar_subquery()
-    )
+    project_geometry = select(
+        func.ST_GeomFromWKB(project.geometry, text(str(SRID))).label("geometry")
+    ).scalar_subquery()
 
     statement = (
         select(scenarios_data, projects_data.c.is_regional)

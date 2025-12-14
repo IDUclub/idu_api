@@ -177,7 +177,11 @@ async def lifespan(application: FastAPI):
     app_config: UrbanAPIConfig = application.state.config
     logger = logger_dep.from_app(application)
 
-    await logger.ainfo("application is starting", config=app_config.to_order_dict())
+    config_to_log = app_config.to_order_dict()
+    config_to_log["observability"]["prometheus"][
+        "urls_mapping"
+    ] = f"(dict[str, str]{{{len(app_config.observability.prometheus.urls_mapping)}}})"
+    await logger.ainfo("application is starting", config=config_to_log)
 
     kafka_producer_settings = KafkaProducerSettings.from_custom_config(app_config.broker)
     kafka_producer = KafkaProducerClient(
