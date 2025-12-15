@@ -17,8 +17,8 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import PageDTO, ServiceDTO, ServicesCountCapacityDTO, ServiceTypeDTO, ServiceWithGeometryDTO
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, include_child_territories_cte
 from idu_api.urban_api.utils.pagination import paginate_dto
 from idu_api.urban_api.utils.query_filters import CustomFilter, EqFilter, ILikeFilter, RecursiveFilter, apply_filters
@@ -67,7 +67,7 @@ async def get_service_types_by_territory_id_from_db(
     return [ServiceTypeDTO(**s) for s in service_types]
 
 
-async def get_services_by_territory_id_from_db(
+async def get_services_by_territory_id_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     territory_id: int,
     service_type_id: int | None,
@@ -167,7 +167,7 @@ async def get_services_by_territory_id_from_db(
     return group_objects(result)
 
 
-async def get_services_with_geometry_by_territory_id_from_db(
+async def get_services_with_geometry_by_territory_id_from_db(  # pylint: disable=too-many-arguments
     conn: AsyncConnection,
     territory_id: int,
     service_type_id: int | None,

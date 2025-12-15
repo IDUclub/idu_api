@@ -19,8 +19,8 @@ from idu_api.common.db.entities import (
     territories_data,
     territory_indicators_data,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import IndicatorDTO, IndicatorsGroupDTO, IndicatorValueDTO, MeasurementUnitDTO
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.indicators import (
     add_indicator_to_db,
     add_indicator_value_to_db,

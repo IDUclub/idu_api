@@ -401,7 +401,7 @@ async def test_create_base_scenario_to_db(config: UrbanAPIConfig, project_post_r
     project_id = 1
     scenario_id = 1
     check_project_statement = (
-        select(projects_data, projects_territory_data.c.geometry)
+        select(projects_data, ST_AsEWKB(projects_territory_data.c.geometry).label("geometry"))
         .select_from(
             projects_data.outerjoin(
                 projects_territory_data,

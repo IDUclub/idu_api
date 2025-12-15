@@ -93,9 +93,10 @@ async def get_physical_objects_by_territory_id(
     - **physical_object_function_id** (int | None, Query): Filters results by physical object function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
-    - **order_by** (PhysicalObjectsOrderByField, Query): Defines the sorting attribute - physical_object_id (default), created_at or updated_at.
+    - **order_by** (PhysicalObjectsOrderByField, Query): Defines the sorting attribute - physical_object_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving physical objects (default: 1).
     - **page_size** (int, Query): Defines the number of physical objects per page (default: 10).
@@ -178,9 +179,10 @@ async def get_physical_objects_with_geometry_by_territory_id(
     - **physical_object_function_id** (int | None, Query): Filters results by physical object function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
-    - **order_by** (PhysicalObjectsOrderByField, Query): Defines the sorting attribute - physical_object_id (default), created_at or updated_at.
+    - **order_by** (PhysicalObjectsOrderByField, Query): Defines the sorting attribute - physical_object_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving physical objects (default: 1).
     - **page_size** (int, Query): Defines the number of physical objects per page (default: 10).
@@ -258,12 +260,13 @@ async def get_physical_objects_geojson_by_territory_id(
     - **physical_object_function_id** (int | None, Query): Filters results by physical object function.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **include_child_territories** (bool, Query): If True, includes data from child territories (default: True).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, PhysicalObject]]**: A GeoJSON response containing physical objects and their geometries.
+    - **GeoJSONResponse[Feature[Geometry, PhysicalObject]]**: A GeoJSON response containing physical objects
+    and their geometries.
 
     ### Errors:
     - **400 Bad Request**: If `cities_only` is set to True and `include_child_territories` is set to False or

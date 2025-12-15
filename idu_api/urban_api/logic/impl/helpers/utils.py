@@ -8,10 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncConnection
 from sqlalchemy.sql.selectable import CTE, Select
 
 from idu_api.common.db.entities import projects_data, scenarios_data, territories_data
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
-from idu_api.common.exceptions.logic.projects import NotAllowedInRegionalScenario
-from idu_api.common.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.dto import UserDTO
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
+from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 
 # The maximum number of records that can be returned in methods that accept a list of IDs as input.
 OBJECTS_NUMBER_LIMIT = 25_000
@@ -23,8 +23,8 @@ OBJECTS_NUMBER_TO_INSERT_LIMIT = 7_000
 SRID = 4326
 
 UrbanAPIModel = TypeVar("UrbanAPIModel", bound=BaseModel)
-InputDTOType = TypeVar("InputDTOType")
-OutputDTOType = TypeVar("OutputDTOType")
+InputDTOType = TypeVar("InputDTOType")  # pylint: disable=invalid-name
+OutputDTOType = TypeVar("OutputDTOType")  # pylint: disable=invalid-name
 
 
 async def check_existence(
@@ -39,8 +39,10 @@ async def check_existence(
     Args:
         conn (AsyncConnection): An active SQLAlchemy async connection.
         table (Table): SQLAlchemy Table object representing the target table.
-        conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs for equality checks.
-        not_conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs for inequality checks.
+        conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs \
+for equality checks.
+        not_conditions (dict[str, Any]): Conditions to filter the query, provided as key-value pairs \
+for inequality checks.
 
     Returns:
         bool: True if at least one row matches the conditions, False otherwise.

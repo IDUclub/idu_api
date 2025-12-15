@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, Path, Query, Request, Security
 from fastapi.security import HTTPBearer
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -14,7 +15,6 @@ from idu_api.urban_api.schemas import (
     ScenarioPost,
     ScenarioPut,
 )
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -31,19 +31,22 @@ async def get_scenarios(
     territory_id: int | None = Query(None, description="to filter by territory (region)"),
     is_based: bool = Query(..., description="to get only base scenarios"),
     only_own: bool = Query(False, description="if True, return only user's own projects"),
-    user: UserDTO | None = Depends(get_user),
+    user: UserDTO | None = Depends(auth_dep.from_request),
 ) -> list[Scenario]:
     """
     ## Get a list of scenarios.
 
     ### Parameters:
     - **parent_id** (int, Query): Unique identifier of the REGIONAL scenario.
-    **NOTE:** If passed, returns the child PROJECT scenarios with given parent only. Else, returns regional scenarios.
+        **NOTE:** If passed, returns the child PROJECT scenarios with given parent only. Else,
+        returns regional scenarios.
     - **project_id** (int, Query): Unique identifier of the project to get its scenarios only.
-    - **territory_id** (int, Query): Unique identifier of the territory to get scenarios for projects located on given territory.
-    **NOTE:** Only regions.
+    - **territory_id** (int, Query): Unique identifier of the territory to get scenarios for projects
+    located on given territory.
+        **NOTE:** Only regions.
     - **is_based** (bool, Query): If true, returns only base scenarios. Else, returns all scenarios.
-    - **only_own** (bool, Query): If true, returns only own scenarios + base regional scenarios if parent_id skipped. Else, returns all public scenarios.
+    - **only_own** (bool, Query): If true, returns only own scenarios + base regional scenarios if parent_id skipped.
+    Else, returns all public scenarios.
 
     ### Returns:
     - **list[Scenario]**: List of all scenarios matching the given filters.
@@ -85,7 +88,7 @@ async def get_scenarios(
 async def get_scenario_by_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Scenario:
     """
     ## Get a scenario by its identifier.
@@ -117,7 +120,9 @@ async def get_scenario_by_id(
     dependencies=[Security(HTTPBearer())],
     deprecated=True,
 )
-async def add_scenario(request: Request, scenario: ScenarioPost, user: UserDTO = Depends(get_user)) -> Scenario:
+async def add_scenario(
+    request: Request, scenario: ScenarioPost, user: UserDTO = Depends(auth_dep.from_request)
+) -> Scenario:
     """
     ## Create a new scenario by copying base scenario for relevant project.
 
@@ -154,7 +159,7 @@ async def copy_scenario(
     request: Request,
     scenario: ScenarioPost,
     scenario_id: int = Path(..., description="another scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Scenario:
     """
     ## Create a new scenario by copying another existing scenario.
@@ -191,7 +196,7 @@ async def put_scenario(
     request: Request,
     scenario: ScenarioPut,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Scenario:
     """
     ## Update all attributes of the given scenario.
@@ -234,7 +239,7 @@ async def patch_scenario(
     request: Request,
     scenario: ScenarioPatch,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Scenario:
     """
     ## Partially update a scenario.
@@ -273,7 +278,7 @@ async def patch_scenario(
 async def delete_scenario(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a scenario by its identifier.

@@ -20,17 +20,17 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import (
-    EntityAlreadyEdited,
-    EntityNotFoundById,
-    EntityNotFoundByParams,
-)
 from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
     ScenarioServiceWithGeometryDTO,
     ScenarioUrbanObjectDTO,
     ServiceTypeDTO,
     UserDTO,
+)
+from idu_api.urban_api.exceptions.logic.common import (
+    EntityAlreadyEdited,
+    EntityNotFoundById,
+    EntityNotFoundByParams,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.projects_urban_objects import get_scenario_urban_object_by_ids_from_db
@@ -664,6 +664,8 @@ async def get_services_with_geometry_by_scenario_id_from_db(
         EqFilter(union_query, "service_type_id", service_type_id),
         RecursiveFilter(union_query, "urban_function_id", urban_function_id, urban_functions_dict),
     )
+
+    print(statement)
 
     result = (await conn.execute(statement)).mappings().all()
 

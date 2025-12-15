@@ -6,6 +6,7 @@ from fastapi import Depends, HTTPException, Path, Query, Request
 from otteroad import KafkaProducerClient
 from starlette import status
 
+from idu_api.urban_api.dependencies import kafka_producer_dep
 from idu_api.urban_api.logic.indicators import IndicatorsService
 from idu_api.urban_api.schemas import (
     Indicator,
@@ -25,7 +26,6 @@ from idu_api.urban_api.schemas import (
 )
 from idu_api.urban_api.schemas.enums import DateType, ValueType
 
-from ...utils.broker import get_kafka_producer
 from .routers import indicators_router
 
 
@@ -102,7 +102,8 @@ async def add_indicators_group(request: Request, indicators_group: IndicatorsGro
     ## Create a new indicators group.
 
     ### Parameters:
-    - **indicators_group** (IndicatorsGroupPost, Body): Data for the new indicators group, including name and list of indicators.
+    - **indicators_group** (IndicatorsGroupPost, Body): Data for the new indicators group,
+    including name and list of indicators.
 
     ### Returns:
     - **IndicatorsGroup**: The created indicators group.
@@ -134,7 +135,8 @@ async def update_indicators_group(
     Otherwise, a new indicators group will be created.
 
     ### Parameters:
-    - **indicators_group** (IndicatorsGroupPost, Body): Updated data for the indicators group, including name and list of indicators.
+    - **indicators_group** (IndicatorsGroupPost, Body): Updated data for the indicators group,
+    including name and list of indicators.
 
     ### Returns:
     - **IndicatorsGroup**: The updated indicators group.
@@ -202,7 +204,8 @@ async def get_indicators_by_parent(
     **WARNING:** You only can get indicators by parent identifier or parent name.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent indicator. If skipped, it returns the highest level indicators.
+    - **parent_id** (int | None, Query): Unique identifier of the parent indicator. If skipped, it
+    returns the highest level indicators.
     - **parent_name** (str | None, Query): Full name of the parent indicator.
     - **name** (str | None, Query): Filters results by indicator name.
     - **territory_id** (int | None, Query): Filters results by territory identifier.
@@ -214,7 +217,8 @@ async def get_indicators_by_parent(
     - **list[Indicator]**: A list of indicators matching the filters.
 
     ### Errors:
-    - **400 Bad Request**: If both parent_id and parent_name or service_type_id and physical_object_type_id are provided.
+    - **400 Bad Request**: If both parent_id and parent_name or service_type_id and
+    physical_object_type_id are provided.
     - **404 Not Found**: If the indicator does not exist.
     """
     indicators_service: IndicatorsService = request.state.indicators_service
@@ -409,7 +413,7 @@ async def get_indicator_value_by_id(
 async def add_indicator_value(
     request: Request,
     indicator_value: IndicatorValuePost,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> IndicatorValue:
     """
     ## Create a new indicator value.
@@ -441,7 +445,7 @@ async def add_indicator_value(
 async def put_indicator_value(
     request: Request,
     indicator_value: IndicatorValuePut,
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> IndicatorValue:
     """
     ## Update or create an indicator value.

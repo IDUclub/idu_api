@@ -206,7 +206,8 @@ async def patch_urban_object(
 
     ### Errors:
     - **404 Not Found**: If the urban object does not exist.
-    - **409 Conflict**: If an urban object with such `physical_object_id`, `object_geometry_id` and `service_id` already exists.
+    - **409 Conflict**: If an urban object with such `physical_object_id`, `object_geometry_id`
+    and `service_id` already exists.
     """
     urban_objects_service: UrbanObjectsService = request.state.urban_objects_service
 

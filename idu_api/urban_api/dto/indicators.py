@@ -7,7 +7,7 @@ from typing import Any, Literal
 
 
 @dataclass(frozen=True)
-class IndicatorDTO:
+class IndicatorDTO:  # pylint: disable=too-many-instance-attributes
     indicator_id: int
     name_full: str
     name_short: str

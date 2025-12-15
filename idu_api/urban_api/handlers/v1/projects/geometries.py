@@ -6,6 +6,7 @@ from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -18,7 +19,6 @@ from idu_api.urban_api.schemas import (
     ScenarioObjectGeometry,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -32,7 +32,7 @@ async def get_geometries_by_scenario_id(
     physical_object_id: int | None = Query(None, description="to filter by physical object", gt=0),
     service_id: int | None = Query(None, description="to filter by service", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]]:
     """
     ## Get geometries for a given scenario in GeoJSON format.
@@ -70,7 +70,7 @@ async def get_geometries_by_scenario_id(
     response_model=GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]],
     status_code=status.HTTP_200_OK,
 )
-async def get_geometries_with_all_objects_by_scenario_id(
+async def get_geometries_with_all_objects_by_scenario_id(  # pylint: disable=too-many-arguments
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
@@ -82,12 +82,13 @@ async def get_geometries_with_all_objects_by_scenario_id(
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
     ## Get geometries with associated services and physical objects for a given scenario in GeoJSON format.
 
-    **WARNING:** You can only filter by physical object type or physical object function (and only by service type or urban function).
+    **WARNING:** You can only filter by physical object type or physical object function
+    (and only by service type or urban function).
 
     ### Parameters:
     - **scenario_id** (int, Path): Unique identifier of the scenario.
@@ -100,10 +101,12 @@ async def get_geometries_with_all_objects_by_scenario_id(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]**: A GeoJSON response containing the geometries with associated objects in properties.
+    - **GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]**: A GeoJSON response containing the
+    geometries with associated objects in properties.
 
     ### Errors:
-    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id` (or `service_type_id` and `urban_function_id`).
+    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id`
+    (or `service_type_id` and `urban_function_id`).
     - **403 Forbidden**: If the user does not have access rights.
     - **404 Not Found**: If the scenario does not exist.
 
@@ -151,7 +154,7 @@ async def get_context_geometries(
     physical_object_id: int | None = Query(None, description="to filter by physical object", gt=0),
     service_id: int | None = Query(None, description="to filter by service", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]]:
     """
     ## Get geometries for the context of a project territory in GeoJSON format.
@@ -189,7 +192,7 @@ async def get_context_geometries(
     response_model=GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]],
     status_code=status.HTTP_200_OK,
 )
-async def get_context_geometries_with_all_objects(
+async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-arguments
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
@@ -201,12 +204,14 @@ async def get_context_geometries_with_all_objects(
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
-    ## Get geometries with associated services and physical objects for the context of a project territory in GeoJSON format.
+    ## Get geometries with associated services and physical objects for the context of a project \
+territory in GeoJSON format.
 
-    **WARNING:** You can only filter by physical object type or physical object function (and only by service type or urban function).
+    **WARNING:** You can only filter by physical object type or physical object function
+    (and only by service type or urban function).
 
     ### Parameters:
     - **scenario_id** (int, Path): Unique identifier of the scenario.
@@ -219,10 +224,12 @@ async def get_context_geometries_with_all_objects(
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, AllObjects]]**: A GeoJSON response containing the geometries with associated objects.
+    - **GeoJSONResponse[Feature[Geometry, AllObjects]]**: A GeoJSON response containing the geometries
+    with associated objects.
 
     ### Errors:
-    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id` (or `service_type_id` and `urban_function_id`).
+    - **400 Bad Request**: If you set both `physical_object_type_id` and `physical_object_function_id`
+    (or `service_type_id` and `urban_function_id`).
     - **403 Forbidden**: If the user does not have access rights.
     - **404 Not Found**: If the scenario does not exist.
 
@@ -271,7 +278,7 @@ async def put_object_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioObjectGeometry:
     """
     ## Update all attributes of a scenario object geometry.
@@ -319,7 +326,7 @@ async def patch_object_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioObjectGeometry:
     """
     ## Update specific fields of a scenario object geometry.
@@ -366,7 +373,7 @@ async def delete_object_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a scenario object geometry by its identifier.

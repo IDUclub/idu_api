@@ -6,6 +6,7 @@ from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -20,7 +21,6 @@ from idu_api.urban_api.schemas import (
     ServiceType,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -32,7 +32,7 @@ async def get_service_types_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     for_context: bool = Query(False, description="to get types for context or project territory"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ServiceType]:
     """
     ## Get a list of service types for a given scenario.
@@ -71,7 +71,7 @@ async def get_services_by_scenario_id(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioService]:
     """
     ## Get a list of services for a given scenario.
@@ -123,7 +123,7 @@ async def get_services_with_geometry_by_scenario_id(
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
     """
     ## Get a list of services with geometry for a given scenario.
@@ -136,7 +136,8 @@ async def get_services_with_geometry_by_scenario_id(
     - **urban_function_id** (int | None, Query): Optional filter by urban function identifier.
 
     ### Returns:
-    - **GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]**:  A GeoJSON response containing the services.
+    - **GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]**:
+    A GeoJSON response containing the services.
 
     ### Errors:
     - **400 Bad Request**: If you set both `service_type_id` and `urban_function_id`.
@@ -174,7 +175,7 @@ async def get_context_services(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioService]:
     """
     ## Get a list of services for the context of a project territory.
@@ -221,7 +222,7 @@ async def get_context_services_with_geometry(
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
     """
     ## Get a list of services with geometry for the context of a project territory.
@@ -269,7 +270,7 @@ async def add_service(
     request: Request,
     service: ScenarioServicePost,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioUrbanObject:
     """
     ## Create a new service with geometry for a given scenario and a pair of physical object and object geometry.
@@ -307,7 +308,7 @@ async def put_service(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_id: int = Path(..., description="service identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioService:
     """
     ## Update all attributes of a service for a given scenario.
@@ -349,7 +350,7 @@ async def patch_service(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_id: int = Path(..., description="service identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioService:
     """
     ## Update specific fields of a service for a given scenario.
@@ -396,7 +397,7 @@ async def delete_service(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_id: int = Path(..., description="service identifier", gt=0),
     is_scenario_object: bool = Query(..., description="to determine scenario object"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a service by its identifier for a given scenario.

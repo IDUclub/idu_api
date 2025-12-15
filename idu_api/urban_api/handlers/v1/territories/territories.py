@@ -175,14 +175,16 @@ async def get_territories_by_parent_id(
     **WARNING:** Set `cities_only = True` only if you want to get entities from all levels.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the
+    highest level territories.
     - **get_all_levels** (bool, Query): If True, retrieves the full subtree of territories (default: false).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **territory_type_id** (int | None, Query): Filters results by territory type.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **created_at** (date | None, Query): Returns territories created at the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving territories (default: 1).
     - **page_size** (int, Query): Defines the number of territories per page (default: 10).
@@ -248,9 +250,10 @@ async def get_all_territories_by_parent_id(
     **WARNING:** Set `cities_only = True` only if you want to get entities from all levels.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped,
+    returns the highest level territories.
     - **get_all_levels** (bool, Query): If True, retrieves the full subtree of territories (default: false).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **territory_type_id** (int | None, Query): Filters results by territory type.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
@@ -258,7 +261,8 @@ async def get_all_territories_by_parent_id(
     - **centers_only** (bool, Query): If True, retrieves only center points of territories (default: false).
 
     ### Returns:
-    - **GeoJSONResponse[Feature[FeatureGeometry, TerritoryWithoutGeometry]]**: A GeoJSON response containing territories.
+    - **GeoJSONResponse[Feature[FeatureGeometry, TerritoryWithoutGeometry]]**: A GeoJSON response
+    containing territories.
 
     ### Errors:
     - **400 Bad Request**: If `cities_only` is set to True and `get_all_levels` is set to False.
@@ -317,14 +321,16 @@ async def get_territories_without_geometry_by_parent_id(
     **WARNING:** Set `cities_only = True` only if you want to get entities from all levels.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the
+    highest level territories.
     - **get_all_levels** (bool, Query): If True, retrieves the full subtree of territories (default: false).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **territory_type_id** (int | None, Query): Filters results by territory type.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **created_at** (date | None, Query): Returns territories created at the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving territories (default: 1).
     - **page_size** (int, Query): Defines the number of territories per page (default: 10).
@@ -395,14 +401,16 @@ async def get_all_territories_without_geometry_by_parent_id(
     **WARNING:** Set `cities_only = True` only if you want to get entities from all levels.
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the highest level territories.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If skipped, returns the
+    highest level territories.
     - **get_all_levels** (bool, Query): If True, retrieves the full subtree of territories (default: false).
-      Note: This can be unsafe for high-level territories due to potential performance issues.
+        Note: This can be unsafe for high-level territories due to potential performance issues.
     - **territory_type_id** (int | None, Query): Filters results by territory type.
     - **name** (str | None, Query): Filters results by a case-insensitive substring match.
     - **cities_only** (bool, Query): If True, retrieves data only for cities (default: false).
     - **created_at** (date | None, Query): Returns territories created at the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
 
     ### Returns:
@@ -458,13 +466,15 @@ async def get_all_territories_without_geometry_hierarchy(
     ## Get a list of trees of all territories without geometry by parent identifier (parent isn't included).
 
     ### Parameters:
-    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If None, returns top-level territories.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default), created_at or updated_at.
+    - **parent_id** (int | None, Query): Unique identifier of the parent territory. If None,
+    returns top-level territories.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - territory_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
 
     ### Returns:
     - **list[TerritoryTreeWithoutGeometry]**: Hierarchical tree structures of territories without geometry data.
-      Each root node contains nested children territories recursively.
+    Each root node contains nested children territories recursively.
 
     ### Errors:
     - **404 Not Found**: If specified parent territory doesn't exist.
@@ -529,7 +539,8 @@ async def intersecting_territories(
     parent_territory_id: int = Path(..., description="parent territory identifier", gt=0),
 ) -> list[Territory]:
     """
-    ## Get list of inner territories (only at level of given parent + 1) of a given parent territory which intersect with given geometry.
+    ## Get list of inner territories (only at level of given parent + 1) of a given parent territory which \
+intersect with given geometry.
 
     ### Parameters:
     - **parent_territory_id** (int, Path): Unique identifier of the parent territory.
@@ -572,7 +583,8 @@ async def get_territories_by_ids(
     - **territories_ids** (int, Path): List of unique identifiers separated by comma.
 
     ### Returns:
-    - **GeoJSONResponse[Feature[FeatureGeometry, TerritoryWithoutGeometry]]**: A list of requested territories in GeoJSON format.
+    - **GeoJSONResponse[Feature[FeatureGeometry, TerritoryWithoutGeometry]]**: A list of requested
+    territories in GeoJSON format.
 
     ### Errors:
     - **400 Bad Request**: If an invalid list of identifiers is specified.

@@ -21,8 +21,8 @@ from idu_api.common.db.entities import (
     territory_types_dict,
     urban_functions_dict,
 )
-from idu_api.common.exceptions.logic.common import EntitiesNotFoundByIds, TooManyObjectsError
 from idu_api.urban_api.dto import ScenarioUrbanObjectDTO
+from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.projects_urban_objects import get_scenario_urban_object_by_ids_from_db
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT
 from idu_api.urban_api.schemas import ScenarioUrbanObject

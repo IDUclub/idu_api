@@ -2,17 +2,21 @@
 
 import os
 from contextlib import asynccontextmanager
-from typing import Callable
+from typing import Callable, NoReturn
 
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html
 from fastapi_pagination import add_pagination
 from otteroad import KafkaProducerClient, KafkaProducerSettings
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
+from idu_api.common.exceptions.mapper import ExceptionMapper
 from idu_api.urban_api.config import UrbanAPIConfig
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep, metrics_dep
+from idu_api.urban_api.exceptions.mapper import register_exceptions
 from idu_api.urban_api.logic.impl.functional_zones import FunctionalZonesServiceImpl
 from idu_api.urban_api.logic.impl.indicators import IndicatorsServiceImpl
 from idu_api.urban_api.logic.impl.object_geometries import ObjectGeometriesServiceImpl
@@ -25,13 +29,13 @@ from idu_api.urban_api.logic.impl.soc_groups import SocGroupsServiceImpl
 from idu_api.urban_api.logic.impl.system import SystemServiceImpl
 from idu_api.urban_api.logic.impl.territories import TerritoriesServiceImpl
 from idu_api.urban_api.logic.impl.urban_objects import UrbanObjectsServiceImpl
-from idu_api.urban_api.middlewares.authentication import AuthenticationMiddleware
 from idu_api.urban_api.middlewares.dependency_injection import PassServicesDependenciesMiddleware
 from idu_api.urban_api.middlewares.exception_handler import ExceptionHandlerMiddleware
-from idu_api.urban_api.middlewares.logging import LoggingMiddleware
-from idu_api.urban_api.prometheus import server as prometheus_server
+from idu_api.urban_api.middlewares.observability import HandlerNotFoundError, ObservabilityMiddleware
+from idu_api.urban_api.observability.metrics import setup_metrics
+from idu_api.urban_api.observability.otel_agent import OpenTelemetryAgent
 from idu_api.urban_api.utils.auth_client import AuthenticationClient
-from idu_api.urban_api.utils.logging import configure_logging
+from idu_api.urban_api.utils.observability import URLsMapper, configure_logging
 
 from .handlers import list_of_routers
 from .logic.impl.buffers import BufferServiceImpl
@@ -55,7 +59,9 @@ def bind_routes(application: FastAPI, prefix: str, debug: bool) -> None:
 def get_app(prefix: str = "/api") -> FastAPI:
     """Create application and all dependable objects."""
 
-    app_config: UrbanAPIConfig = UrbanAPIConfig.from_file_or_default(os.getenv("CONFIG_PATH"))
+    if "CONFIG_PATH" not in os.environ:
+        raise ValueError("CONFIG_PATH environment variable is not set")
+    app_config: UrbanAPIConfig = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
 
     description = "This is a Digital Territories Platform API to access and manipulate basic territories data."
 
@@ -82,20 +88,20 @@ def get_app(prefix: str = "/api") -> FastAPI:
             swagger_css_url="https://unpkg.com/swagger-ui-dist@5.11.7/swagger-ui.css",
         )
 
-    origins = ["*"]
+    @application.exception_handler(404)
+    async def handle_404(request: Request, exc: Exception) -> NoReturn:
+        raise HandlerNotFoundError() from exc
 
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=app_config.app.cors.allow_origins,
+        allow_credentials=app_config.app.cors.allow_credentials,
+        allow_methods=app_config.app.cors.allow_methods,
+        allow_headers=app_config.app.cors.allow_headers,
     )
+    application.add_middleware(GZipMiddleware, minimum_size=1000, compresslevel=5)
 
     add_pagination(application)
-
-    connection_manager = PostgresConnectionManager(..., [], ...)
-    auth_client = AuthenticationClient(0, 0, False, "")
 
     def ignore_kwargs(func: Callable) -> Callable:
         def wrapped(*args, **_kwargs):
@@ -105,9 +111,34 @@ def get_app(prefix: str = "/api") -> FastAPI:
 
     application.state.config = app_config
 
+    logger = configure_logging(
+        app_config.observability.logging,
+        tracing_enabled=app_config.observability.jaeger is not None,
+    )
+    metrics = setup_metrics()
+    exception_mapper = ExceptionMapper()
+    register_exceptions(exception_mapper)
+    connection_manager = PostgresConnectionManager(
+        master=app_config.db.master,
+        replicas=app_config.db.replicas,
+        logger=logger,
+        application_name=f"urban_api_{VERSION}",
+    )
+    urls_mapper = URLsMapper(app_config.observability.prometheus.urls_mapping)
+    auth_client = AuthenticationClient(
+        app_config.auth.cache_size,
+        app_config.auth.cache_ttl,
+        app_config.auth.validate,
+        app_config.auth.url,
+    )
+
+    metrics_dep.init_dispencer(application, metrics)
+    logger_dep.init_dispencer(application, logger)
+    auth_dep.init_dispencer(application, auth_client)
+
     application.add_middleware(
         PassServicesDependenciesMiddleware,
-        connection_manager=connection_manager,  # reinitialized on startup
+        connection_manager=connection_manager,
         buffers_service=ignore_kwargs(BufferServiceImpl),
         functional_zones_service=ignore_kwargs(FunctionalZonesServiceImpl),
         indicators_service=ignore_kwargs(IndicatorsServiceImpl),
@@ -123,15 +154,15 @@ def get_app(prefix: str = "/api") -> FastAPI:
         system_service=SystemServiceImpl,
     )
     application.add_middleware(
-        LoggingMiddleware,
-    )
-    application.add_middleware(
-        AuthenticationMiddleware,
-        auth_client=auth_client,  # reinitialized on startup
+        ObservabilityMiddleware,
+        exception_mapper=exception_mapper,
+        metrics=metrics,
+        urls_mapper=urls_mapper,
     )
     application.add_middleware(
         ExceptionHandlerMiddleware,
-        debug=[False],  # reinitialized on startup
+        debug=app_config.app.debug,
+        exception_mapper=exception_mapper,
     )
 
     return application
@@ -144,38 +175,26 @@ async def lifespan(application: FastAPI):
     Initializes database connection in pass_services_dependencies middleware.
     """
     app_config: UrbanAPIConfig = application.state.config
-    loggers_dict = {logger_config.filename: logger_config.level for logger_config in app_config.logging.files}
-    logger = configure_logging(app_config.logging.level, loggers_dict)
-    application.state.logger = logger
+    logger = logger_dep.from_app(application)
+
+    config_to_log = app_config.to_order_dict()
+    config_to_log["observability"]["prometheus"][
+        "urls_mapping"
+    ] = f"(dict[str, str]{{{len(app_config.observability.prometheus.urls_mapping)}}})"
+    await logger.ainfo("application is starting", config=config_to_log)
+
     kafka_producer_settings = KafkaProducerSettings.from_custom_config(app_config.broker)
-    kafka_producer = KafkaProducerClient(kafka_producer_settings, logger=structlog.getLogger("broker"))
-    application.state.kafka_producer = kafka_producer
-
-    for middleware in application.user_middleware:
-        if middleware.cls == PassServicesDependenciesMiddleware:
-            connection_manager: PostgresConnectionManager = middleware.kwargs["connection_manager"]
-            await connection_manager.update(
-                master=app_config.db.master,
-                replicas=app_config.db.replicas,
-                logger=logger,
-                application_name=app_config.app.name,
-            )
-            await connection_manager.refresh()
-        elif middleware.cls == ExceptionHandlerMiddleware:
-            middleware.kwargs["debug"][0] = app_config.app.debug
-        elif middleware.cls == AuthenticationMiddleware:
-            auth_client: AuthenticationClient = middleware.kwargs["auth_client"]
-            auth_client.update(
-                app_config.auth.cache_size,
-                app_config.auth.cache_ttl,
-                app_config.auth.validate,
-                app_config.auth.url,
-            )
-
-    if not app_config.prometheus.disable:
-        prometheus_server.start_server(port=app_config.prometheus.port)
+    kafka_producer = KafkaProducerClient(
+        kafka_producer_settings, logger=structlog.getLogger("broker")
+    )  # required event_loop
+    kafka_producer_dep.init_dispencer(application, kafka_producer)
 
     await kafka_producer.start()
+
+    otel_agent = OpenTelemetryAgent(
+        app_config.observability.prometheus,
+        app_config.observability.jaeger,
+    )
 
     yield
 
@@ -184,10 +203,9 @@ async def lifespan(application: FastAPI):
             connection_manager: PostgresConnectionManager = middleware.kwargs["connection_manager"]
             await connection_manager.shutdown()
 
-    if not app_config.prometheus.disable:
-        prometheus_server.stop_server()
+    otel_agent.shutdown()
 
-    await application.state.kafka_producer.close()
+    await kafka_producer.close()
 
 
 app = get_app()

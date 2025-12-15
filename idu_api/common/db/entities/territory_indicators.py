@@ -11,8 +11,8 @@ from idu_api.common.db.entities.territories import territories_data
 
 func: Callable
 
-DateFieldTypeEnum = Enum(DateFieldType, name="date_field_type")
-IndicatorValueTypeEnum = Enum(IndicatorValueType, name="indicator_value_type")
+DateFieldTypeEnum = Enum(DateFieldType, name="date_field_type")  # pylint: disable=invalid-name
+IndicatorValueTypeEnum = Enum(IndicatorValueType, name="indicator_value_type")  # pylint: disable=invalid-name
 
 territory_indicators_data_id_seq = Sequence("territory_indicators_data_id_seq")
 territory_indicators_data = Table(

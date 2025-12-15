@@ -7,6 +7,7 @@ from geojson_pydantic.geometries import Geometry
 from pydantic import conlist
 from starlette import status
 
+from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -21,7 +22,6 @@ from idu_api.urban_api.schemas import (
     ScenarioFunctionalZoneWithoutGeometry,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
 
 
 @projects_router.get(
@@ -32,7 +32,7 @@ from idu_api.urban_api.utils.auth_client import get_user
 async def get_functional_zone_sources_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[FunctionalZoneSource]:
     """
     ## Get a list of functional zone sources for a given scenario.
@@ -68,7 +68,7 @@ async def get_functional_zones_by_scenario_id(
     year: int = Query(..., description="to filter by year when zones were uploaded"),
     source: str = Query(..., description="to filter by source from which zones were uploaded"),
     functional_zone_type_id: int | None = Query(None, description="functional zone type identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioFunctionalZoneWithoutGeometry]]:
     """
     ## Get functional zones in GeoJSON format for a given scenario, filtered by year and source.
@@ -106,7 +106,7 @@ async def get_functional_zones_by_scenario_id(
 async def get_context_functional_zone_sources(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[FunctionalZoneSource]:
     """
     ## Get functional zone sources for the project's context.
@@ -142,7 +142,7 @@ async def get_context_functional_zones(
     year: int = Query(..., description="to filter by year when zones were uploaded"),
     source: str = Query(..., description="to filter by source from which zones were uploaded"),
     functional_zone_type_id: int | None = Query(None, description="functional zone type identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, FunctionalZoneWithoutGeometry]]:
     """
     ## Get functional zones in GeoJSON format for the project's context, filtered by year and source.
@@ -182,7 +182,7 @@ async def add_scenario_functional_zones(
     request: Request,
     functional_zones: conlist(ScenarioFunctionalZonePost, min_length=1),
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[ScenarioFunctionalZone]:
     """
     ## Create new functional zones for a given scenario.
@@ -222,7 +222,7 @@ async def put_scenario_functional_zone(
     functional_zone: ScenarioFunctionalZonePut,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     functional_zone_id: int = Path(..., description="functional zone identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioFunctionalZone:
     """
     ## Update a functional zone by replacing all its attributes.
@@ -262,7 +262,7 @@ async def patch_scenario_functional_zone(
     functional_zone: ScenarioFunctionalZonePatch,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     functional_zone_id: int = Path(..., description="functional zone identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ScenarioFunctionalZone:
     """
     ## Partially update a functional zone by modifying only specified attributes.
@@ -300,7 +300,7 @@ async def patch_scenario_functional_zone(
 async def delete_functional_zones_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete all functional zones associated with a given scenario.

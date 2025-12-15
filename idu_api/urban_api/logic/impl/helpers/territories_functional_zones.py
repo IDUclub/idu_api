@@ -5,8 +5,8 @@ from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import functional_zone_types_dict, functional_zones_data, territories_data
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.dto import FunctionalZoneDTO, FunctionalZoneSourceDTO
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, include_child_territories_cte
 
 

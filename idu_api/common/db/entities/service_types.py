@@ -34,7 +34,7 @@ Urban functions dict:
 """
 
 service_types_dict_id_seq = Sequence("service_types_dict_id_seq")
-InfrastructureTypeEnum = Enum(InfrastructureType, name="infrastructure_type")
+InfrastructureTypeEnum = Enum(InfrastructureType, name="infrastructure_type")  # pylint: disable=invalid-name
 
 service_types_dict = Table(
     "service_types_dict",

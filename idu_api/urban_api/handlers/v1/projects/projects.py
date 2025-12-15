@@ -11,6 +11,7 @@ from otteroad import KafkaProducerClient
 from starlette import status
 from structlog.stdlib import BoundLogger
 
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
@@ -31,8 +32,6 @@ from idu_api.urban_api.schemas import (
 )
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering, ProjectPhase, ProjectType
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_api.utils.auth_client import get_user
-from idu_api.urban_api.utils.broker import get_kafka_producer
 from idu_api.urban_api.utils.pagination import paginate
 
 
@@ -44,7 +43,7 @@ from idu_api.urban_api.utils.pagination import paginate
 async def get_project_by_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Project:
     """
     ## Get the project by given identifier.
@@ -77,7 +76,7 @@ async def get_project_by_id(
 async def get_project_territory_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ProjectTerritory:
     """
     ## Get the territory of a given project.
@@ -110,7 +109,7 @@ async def get_project_territory_by_project_id(
 async def get_scenarios_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> list[Scenario]:
     """
     ## Get a list of scenarios for a given project.
@@ -143,7 +142,7 @@ async def get_scenarios_by_project_id(
 async def get_phases_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project_id which phases are needed", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ProjectPhases:
     """
     ## Get phases of project by its identifier .
@@ -177,7 +176,7 @@ async def put_phases_by_project_id(
     request: Request,
     project_phases: ProjectPhasesPut,
     project_id: int = Path(..., description="project_id which phases are needed to update", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> ProjectPhases:
     """
     ## Update all attributes of the given project phases.
@@ -208,7 +207,7 @@ async def put_phases_by_project_id(
     response_model=Page[Project],
     status_code=status.HTTP_200_OK,
 )
-async def get_projects(
+async def get_projects(  # pylint: disable=too-many-arguments
     request: Request,
     only_own: bool = Query(False, description="if True, return only user's own projects"),
     is_regional: bool = Query(False, description="to get regional projects"),
@@ -225,7 +224,7 @@ async def get_projects(
     ordering: Ordering = Query(
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Page[Project]:
     """
     ## Get a list of projects.
@@ -234,13 +233,16 @@ async def get_projects(
 
     ### Parameters:
     - **only_own** (bool, Query): If True, returns only the user's projects (default: false).
-    - **is_regional** (bool, Query): If True, returns regional projects, else returns only common projects (default: false).
-    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns only common projects (default: None).
-      NOTE: Skip to get all projects (non-regional).
+    - **is_regional** (bool, Query): If True, returns regional projects, else returns only common projects
+    (default: false).
+    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common"
+    returns only common projects (default: None).
+        NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters projects by a specific territory.
     - **name** (str | None, Query): Filters projects by a case-insensitive substring match.
     - **created_at** (date | None, Query): Returns projects created after the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving images (default: 1).
     - **page_size** (int, Query): Defines the number of project images per page (default: 10).
@@ -306,15 +308,16 @@ async def get_projects_territories(
     ),
     territory_id: int | None = Query(None, description="to filter by region"),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> GeoJSONResponse[Feature[Geometry, Project]]:
     """
     ## Get project territories in GeoJSON format.
 
     ### Parameters:
     - **only_own** (bool, Query): If True, returns only territories for the user's projects (default: false).
-    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns only common projects (default: None).
-      NOTE: Skip to get all projects (non-regional).
+    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns
+    only common projects (default: None).
+        NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters results by a specific territory.
     - **centers_only** (bool, Query): If True, retrieves only center points of project territories (default: true).
 
@@ -351,8 +354,8 @@ async def get_projects_territories(
 async def add_project(
     request: Request,
     project: ProjectPost,
-    user: UserDTO = Depends(get_user),
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    user: UserDTO = Depends(auth_dep.from_request),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
 ) -> Project:
     """
@@ -390,8 +393,8 @@ async def create_base_scenario(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     scenario_id: int = Path(..., description="regional scenario identifier", gt=0),
-    user: UserDTO = Depends(get_user),
-    kafka_producer: KafkaProducerClient = Depends(get_kafka_producer),
+    user: UserDTO = Depends(auth_dep.from_request),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
 ) -> Scenario:
     """
     ## Create a new base scenario for given project from specified regional scenario.
@@ -442,7 +445,7 @@ async def put_project(
     request: Request,
     project: ProjectPut,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Project:
     """
     ## Update all attributes of the given project.
@@ -481,7 +484,7 @@ async def patch_project(
     request: Request,
     project: ProjectPatch,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> Project:
     """
     ## Update specific fields of the given project.
@@ -516,7 +519,7 @@ async def delete_project(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete a project by its identifier. It also deletes all related objects from db and image from minio.
@@ -546,7 +549,7 @@ async def delete_project(
     response_model=Page[MinioImageURL],
     status_code=status.HTTP_200_OK,
 )
-async def get_projects_main_image_url(
+async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     request: Request,
     only_own: bool = Query(False, description="if True, return only user's own projects"),
     is_regional: bool = Query(False, description="filter to get only regional projects or not"),
@@ -564,7 +567,8 @@ async def get_projects_main_image_url(
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> Page[MinioImageURL]:
     """
     ## Get URLs for main images of projects.
@@ -574,12 +578,14 @@ async def get_projects_main_image_url(
     ### Parameters:
     - **only_own** (bool, Query): If True, returns only images url for the user's projects (default: false).
     - **is_regional** (bool, Query): If True, filters results to include only regional projects (default: false).
-    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns only common projects (default: None).
-      NOTE: Skip to get all projects (non-regional).
+    - **project_type** (ProjectType | None, Query): If "city", returns cities projects, else if "common" returns
+    only common projects (default: None).
+        NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters projects by a specific territory.
     - **name** (str | None, Query): Filters projects by a case-insensitive substring match.
     - **created_at** (date | None, Query): Returns projects created after the specified date.
-    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default), created_at or updated_at.
+    - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default),
+    created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
     - **page** (int, Query): Specifies the page number for retrieving images (default: 1).
     - **page_size** (int, Query): Defines the number of project images per page (default: 10).
@@ -595,7 +601,6 @@ async def get_projects_main_image_url(
     - The user must be authenticated to retrieve image URLs of their own projects.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     if project_type is not None and is_regional:
         raise HTTPException(
@@ -645,8 +650,9 @@ async def upload_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
     ## Upload an image for the project to MinIO file server and set it as the main one.
@@ -671,7 +677,6 @@ async def upload_project_main_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -700,8 +705,9 @@ async def upload_project_gallery_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
     ## Upload an image to gallery for the project to MinIO file server.
@@ -726,7 +732,6 @@ async def upload_project_gallery_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -750,8 +755,9 @@ async def set_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     image_id: str = Path(..., description="image identifier"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
     ## Set one of the gallery images as the main project image.
@@ -772,7 +778,6 @@ async def set_project_main_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -789,8 +794,9 @@ async def set_project_main_image(
 async def get_project_gallery_images_urls(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[str]:
     """
     ## Get a list of presigned URLs to all project's gallery images.
@@ -810,7 +816,6 @@ async def get_project_gallery_images_urls(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -829,8 +834,9 @@ async def delete_project_gallery_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     image_id: str = Path(..., description="image identifier"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete the logo of the project from MinIO file server.
@@ -850,7 +856,6 @@ async def delete_project_gallery_image(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -866,8 +871,9 @@ async def delete_project_gallery_image(
 async def get_full_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
     """
     ## Get the original image of a project.
@@ -887,7 +893,6 @@ async def get_full_project_main_image(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -907,8 +912,9 @@ async def get_full_project_main_image(
 async def get_preview_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
     """
     ## Get the preview image of a project.
@@ -928,7 +934,6 @@ async def get_preview_project_main_image(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -949,8 +954,9 @@ async def get_preview_project_main_image(
 async def get_full_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
     ## Get the URL for the original main image of a project.
@@ -970,7 +976,6 @@ async def get_full_project_main_image_url(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -991,8 +996,9 @@ async def get_full_project_main_image_url(
 async def get_preview_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
     ## Get the URL for the preview main image of a project.
@@ -1012,7 +1018,6 @@ async def get_preview_project_main_image_url(
     - The user must be the project owner or the project must be publicly available.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1033,8 +1038,9 @@ async def get_preview_project_main_image_url(
 async def get_project_logo_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
     ## Get a presigned URL to the logo of the project. Returns default if there is no logo for given project.
@@ -1054,7 +1060,6 @@ async def get_project_logo_url(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1073,8 +1078,9 @@ async def upload_project_logo(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
     ## Upload a logo for the project to MinIO file server.
@@ -1096,7 +1102,6 @@ async def upload_project_logo(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     if not file.content_type.startswith("image/"):
         raise HTTPException(
@@ -1120,8 +1125,9 @@ async def upload_project_logo(
 async def delete_project_logo(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete the logo of the project from MinIO file server.
@@ -1141,7 +1147,6 @@ async def delete_project_logo(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1159,8 +1164,9 @@ async def get_project_phase_documents_urls(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     phase: ProjectPhase = Query(..., description="phase name"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[MinioFile]:
     """
     ## Get a list of presigned URLs to all project's documents for given phase.
@@ -1181,7 +1187,6 @@ async def get_project_phase_documents_urls(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1201,8 +1206,9 @@ async def upload_phase_document(
     project_id: int = Path(..., description="project identifier", gt=0),
     phase: ProjectPhase = Query(..., description="phase name"),
     file: UploadFile = File(...),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> MinioFile:
     """
     ## Upload a document for the specified project's phase to MinIO file server.
@@ -1224,7 +1230,6 @@ async def upload_phase_document(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1248,8 +1253,9 @@ async def rename_phase_document(
     phase: ProjectPhase = Query(..., description="phase name"),
     old_key: str = Query(..., description="file name (with extension)"),
     new_key: str = Query(..., description="file name (with extension)"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> MinioFile:
     """
     ## Rename the document for the specified project's phase in MinIO file server.
@@ -1271,7 +1277,6 @@ async def rename_phase_document(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 
@@ -1291,8 +1296,9 @@ async def delete_project_phase_document(
     project_id: int = Path(..., description="project identifier", gt=0),
     phase: ProjectPhase = Query(..., description="phase name"),
     filename: str = Query(..., description="file name (with extension)"),
-    user: UserDTO = Depends(get_user),
+    user: UserDTO = Depends(auth_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
     ## Delete the document for the project's phase from MinIO file server.
@@ -1314,7 +1320,6 @@ async def delete_project_phase_document(
     - The user must be the owner of the relevant project.
     """
     user_project_service: UserProjectService = request.state.user_project_service
-    logger: BoundLogger = request.app.state.logger
 
     project = await user_project_service.get_project_by_id(project_id, user)
 

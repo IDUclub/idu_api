@@ -20,8 +20,6 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
-from idu_api.common.exceptions.logic.common import EntityNotFoundById
-from idu_api.common.exceptions.logic.projects import NotAllowedInProjectScenario
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import (
     HexagonWithIndicatorsDTO,
@@ -29,6 +27,8 @@ from idu_api.urban_api.dto import (
     ShortScenarioIndicatorValueDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInProjectScenario
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import check_scenario
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
 from idu_api.urban_api.schemas import ScenarioIndicatorValuePatch, ScenarioIndicatorValuePost, ScenarioIndicatorValuePut
@@ -391,7 +391,7 @@ async def update_all_indicators_values_by_scenario_id_to_db(
 
     scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
 
-    config = UrbanAPIConfig.from_file_or_default(os.getenv("CONFIG_PATH"))
+    config = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
 
     async with aiohttp.ClientSession() as session:
         params = {"scenario_id": scenario_id, "project_id": scenario.project_id, "background": "false"}

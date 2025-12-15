@@ -31,7 +31,6 @@ from idu_api.common.db.entities import (
     territories_data,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.dto import (
     PhysicalObjectTypeDTO,
     ScenarioPhysicalObjectDTO,
@@ -39,6 +38,7 @@ from idu_api.urban_api.dto import (
     ScenarioUrbanObjectDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     add_building_to_db,
     add_physical_object_with_geometry_to_db,
@@ -319,6 +319,7 @@ async def test_get_physical_objects_by_scenario_id_from_db(mock_conn: MockConnec
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_object"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(
@@ -424,6 +425,7 @@ async def test_get_physical_objects_by_scenario_id_from_db(mock_conn: MockConnec
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_object"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
@@ -533,11 +535,12 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
             ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(ST_Centroid(object_geometries_data.c.geometry)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_physical_object"),
             literal(False).label("is_scenario_geometry"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(
@@ -572,7 +575,7 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
         )
     )
-
+    geom_expr = coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
     scenario_urban_objects_query = (
         select(
             coalesce(
@@ -651,18 +654,13 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
                 projects_object_geometries_data.c.osm_id,
                 object_geometries_data.c.osm_id,
             ).label("osm_id"),
-            coalesce(
-                projects_object_geometries_data.c.geometry,
-                object_geometries_data.c.geometry,
-            ).label("geometry"),
-            coalesce(
-                projects_object_geometries_data.c.centre_point,
-                object_geometries_data.c.centre_point,
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_physical_object"),
             (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(

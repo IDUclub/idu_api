@@ -28,7 +28,6 @@ from idu_api.common.db.entities import (
     urban_functions_dict,
     urban_objects_data,
 )
-from idu_api.common.exceptions.logic.common import EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.dto import (
     BuildingDTO,
     ObjectGeometryDTO,
@@ -38,6 +37,7 @@ from idu_api.urban_api.dto import (
     ServiceWithGeometryDTO,
     UrbanObjectDTO,
 )
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById, TooManyObjectsError
 from idu_api.urban_api.logic.impl.helpers.physical_objects import (
     add_building_to_db,
     add_physical_object_to_object_geometry_to_db,

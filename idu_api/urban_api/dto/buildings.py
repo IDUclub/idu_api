@@ -40,7 +40,7 @@ class BuildingWithGeometryDTO:  # pylint: disable=too-many-instance-attributes
 
 
 @dataclass(frozen=True)
-class BuildingDTO:
+class BuildingDTO:  # pylint: disable=too-many-instance-attributes
     building_id: int
     physical_object_id: int
     physical_object_type_id: int

@@ -183,7 +183,8 @@ async def add_service_to_objects(
 
     ### Errors:
     - **404 Not Found**: If the service or physical object or object geometry does not exist.
-    - **409 Conflict**: If an urban object with such `physical_object_id`, `object_geometry_id` and `service_id` already exists.
+    - **409 Conflict**: If an urban object with such `physical_object_id`, `object_geometry_id` and
+    `service_id` already exists.
     """
     services_data_service: ServicesDataService = request.state.services_data_service
 
