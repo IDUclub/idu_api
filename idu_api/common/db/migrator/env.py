@@ -20,14 +20,13 @@ try_load_envfile(os.environ.get("ENVFILE", ".env"))
 config = context.config
 section = config.config_ini_section
 
-if config.get_main_option("sqlalchemy.url") is None:
-    app_settings = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
+app_settings = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
 
-    config.set_section_option(section, "POSTGRES_DB", app_settings.db.master.database)
-    config.set_section_option(section, "POSTGRES_HOST", app_settings.db.master.host)
-    config.set_section_option(section, "POSTGRES_USER", app_settings.db.master.user)
-    config.set_section_option(section, "POSTGRES_PASSWORD", app_settings.db.master.password.get_secret_value())
-    config.set_section_option(section, "POSTGRES_PORT", str(app_settings.db.master.port))
+config.set_section_option(section, "POSTGRES_DB", app_settings.db.master.database)
+config.set_section_option(section, "POSTGRES_HOST", app_settings.db.master.host)
+config.set_section_option(section, "POSTGRES_USER", app_settings.db.master.user)
+config.set_section_option(section, "POSTGRES_PASSWORD", app_settings.db.master.password.get_secret_value())
+config.set_section_option(section, "POSTGRES_PORT", str(app_settings.db.master.port))
 
 
 fileConfig(config.config_file_name, disable_existing_loggers=False)
