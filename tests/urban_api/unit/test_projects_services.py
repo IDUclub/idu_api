@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_Intersection, ST_Intersects, ST_IsEmpty
+from geoalchemy2.functions import ST_AsEWKB, ST_Centroid, ST_Intersection, ST_Intersects, ST_IsEmpty, ST_Within
 from sqlalchemy import ScalarSelect, delete, insert, literal, or_, select, union_all, update
 from sqlalchemy.sql.functions import coalesce
 
@@ -244,7 +244,6 @@ async def test_get_context_service_types_from_db(mock_conn: MockConnection):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail  # FIXME: broken test
 async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
     """Test the get_services_by_scenario_id_from_db function."""
 
@@ -283,6 +282,7 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_object"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
@@ -339,6 +339,7 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_object"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
@@ -403,7 +404,6 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail  # FIXME: broken test
 async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: MockConnection):
     """Test the get_services_with_geometry_by_scenario_id_from_db function."""
 
@@ -443,11 +443,12 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
             ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(ST_Centroid(object_geometries_data.c.geometry)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             literal(False).label("is_scenario_service"),
             literal(False).label("is_scenario_geometry"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(services_data, services_data.c.service_id == urban_objects_data.c.service_id)
@@ -478,6 +479,7 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
             object_geometries_data.c.territory_id.in_(select(territories_cte.c.territory_id)),
         )
     )
+    geom_expr = coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
     scenario_urban_objects_query = (
         select(
             coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
@@ -512,22 +514,13 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
                 projects_object_geometries_data.c.osm_id,
                 object_geometries_data.c.osm_id,
             ).label("osm_id"),
-            ST_AsEWKB(
-                coalesce(
-                    projects_object_geometries_data.c.geometry,
-                    object_geometries_data.c.geometry,
-                ),
-            ).label("geometry"),
-            ST_AsEWKB(
-                coalesce(
-                    projects_object_geometries_data.c.centre_point,
-                    object_geometries_data.c.centre_point,
-                ),
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
             (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(
@@ -580,6 +573,9 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
     )
     union_query = union_all(public_urban_objects_query, scenario_urban_objects_query).cte(name="union_query")
     statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
+
+    print(statement)
+    print()
 
     # Act
     result = await get_services_with_geometry_by_scenario_id_from_db(
@@ -862,12 +858,14 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
         .where(~ST_IsEmpty(intersected_geom))
         .distinct()
     )
-    geom_expr = ST_Intersection(
-        coalesce(
-            projects_object_geometries_data.c.geometry,
-            object_geometries_data.c.geometry,
-        ),
-        mock_geom,
+    geom_expr = (
+        ST_Intersection(
+            coalesce(
+                projects_object_geometries_data.c.geometry,
+                object_geometries_data.c.geometry,
+            ),
+            mock_geom,
+        )
     )
     scenario_services_query = (
         select(
@@ -1057,7 +1055,6 @@ async def test_get_scenario_service_by_id_from_db(mock_conn: MockConnection):
 
 @pytest.mark.asyncio
 @patch("idu_api.urban_api.logic.impl.helpers.projects_services.check_scenario")
-@pytest.mark.xfail  # FIXME: broken test
 async def test_add_service_to_db(
     mock_check: AsyncMock, mock_conn: MockConnection, scenario_service_post_req: ScenarioServicePost
 ):
@@ -1067,7 +1064,7 @@ async def test_add_service_to_db(
     scenario_id = 1
     service_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
-    check_statement = select(projects_urban_objects_data).where(
+    check_statement = select(projects_urban_objects_data.c.urban_object_id).where(
         projects_urban_objects_data.c.physical_object_id == scenario_service_post_req.physical_object_id,
         projects_urban_objects_data.c.object_geometry_id == scenario_service_post_req.object_geometry_id,
         projects_urban_objects_data.c.scenario_id == scenario_id,
@@ -1087,15 +1084,9 @@ async def test_add_service_to_db(
         .returning(services_data.c.service_id)
     )
     insert_urban_object_statement = (
-        insert(projects_urban_objects_data)
-        .values(
-            scenario_id=scenario_id,
-            service_id=service_id,
-            physical_object_id=scenario_service_post_req.physical_object_id,
-            object_geometry_id=scenario_service_post_req.object_geometry_id,
-            public_physical_object_id=None,
-            public_object_geometry_id=None,
-        )
+        update(projects_urban_objects_data)
+        .where(projects_urban_objects_data.c.urban_object_id == 1)
+        .values(service_id=service_id)
         .returning(projects_urban_objects_data.c.urban_object_id)
     )
 

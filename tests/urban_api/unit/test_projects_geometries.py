@@ -185,7 +185,6 @@ async def test_get_geometries_by_scenario_id_from_db(mock_conn: MockConnection):
 
 
 @pytest.mark.asyncio
-@pytest.mark.xfail  # FIXME: broken test
 async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn: MockConnection):
     """Test the get_geometries_with_all_objects_by_scenario_id_from_db function."""
 
@@ -219,7 +218,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
             ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
-            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            ST_AsEWKB(ST_Centroid(object_geometries_data.c.geometry)).label("centre_point"),
             services_data.c.service_id,
             services_data.c.name.label("service_name"),
             services_data.c.capacity,
@@ -233,6 +232,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             literal(False).label("is_scenario_geometry"),
             literal(False).label("is_scenario_physical_object"),
             literal(False).label("is_scenario_service"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             urban_objects_data.join(
@@ -278,6 +278,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
         for pub_col, up_col in zip(buildings_data.c, projects_buildings_data.c)
         if pub_col.name not in ("physical_object_id", "properties")
     ]
+    geom_expr = coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
     scenario_urban_objects_query = (
         select(
             coalesce(
@@ -299,13 +300,8 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             territories_data.c.name.label("territory_name"),
             coalesce(projects_object_geometries_data.c.address, object_geometries_data.c.address).label("address"),
             coalesce(projects_object_geometries_data.c.osm_id, object_geometries_data.c.osm_id).label("osm_id"),
-            coalesce(
-                ST_AsEWKB(projects_object_geometries_data.c.geometry), ST_AsEWKB(object_geometries_data.c.geometry)
-            ).label("geometry"),
-            coalesce(
-                ST_AsEWKB(projects_object_geometries_data.c.centre_point),
-                ST_AsEWKB(object_geometries_data.c.centre_point),
-            ).label("centre_point"),
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
             coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
             coalesce(projects_services_data.c.name, services_data.c.name).label("service_name"),
             coalesce(projects_services_data.c.capacity, services_data.c.capacity).label("capacity"),
@@ -321,6 +317,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
             (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
             (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_physical_object"),
             (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
+            literal(False).label("is_locked"),
         )
         .select_from(
             projects_urban_objects_data.outerjoin(

@@ -377,7 +377,6 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(
                 if project.is_regional
                 else True
             ),
-            ~ST_IsEmpty(intersected_geom),
         )
     )
 

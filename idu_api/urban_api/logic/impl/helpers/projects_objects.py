@@ -520,7 +520,7 @@ async def create_base_scenario_to_db(
     """Create base scenario object for given project from specified regional scenario."""
 
     statement = (
-        select(projects_data, ST_AsEWKB(projects_territory_data.c.geometry))
+        select(projects_data, ST_AsEWKB(projects_territory_data.c.geometry).label("geometry"))
         .select_from(
             projects_data.outerjoin(
                 projects_territory_data,

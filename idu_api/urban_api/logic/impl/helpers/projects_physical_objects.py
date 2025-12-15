@@ -623,7 +623,6 @@ async def get_physical_objects_with_geometry_by_scenario_id_from_db(
                 if scenario.is_regional
                 else True
             ),
-            ~ST_IsEmpty(intersected_geom),
         )
     )
 
