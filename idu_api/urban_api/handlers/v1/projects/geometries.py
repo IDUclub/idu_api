@@ -32,7 +32,7 @@ async def get_geometries_by_scenario_id(
     physical_object_id: int | None = Query(None, description="to filter by physical object", gt=0),
     service_id: int | None = Query(None, description="to filter by service", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]]:
     """
     ## Get geometries for a given scenario in GeoJSON format.
@@ -82,7 +82,7 @@ async def get_geometries_with_all_objects_by_scenario_id(  # pylint: disable=too
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
     ## Get geometries with associated services and physical objects for a given scenario in GeoJSON format.
@@ -154,7 +154,7 @@ async def get_context_geometries(
     physical_object_id: int | None = Query(None, description="to filter by physical object", gt=0),
     service_id: int | None = Query(None, description="to filter by service", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]]:
     """
     ## Get geometries for the context of a project territory in GeoJSON format.
@@ -204,7 +204,7 @@ async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-a
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
     """
     ## Get geometries with associated services and physical objects for the context of a project \

@@ -137,6 +137,7 @@ observability:
       "/api/v1/projects/.+/scenarios": "/api/v1/projects/*/scenarios"
       "/api/v1/projects/.+/phases": "/api/v1/projects/*/phases"
       "/api/v1/projects/.+/base_scenario/.+": "/api/v1/projects/*/base_scenario/*"
+      "/api/v1/projects/.+/cadastres": "/api/v1/projects/*/cadastres"
       "/api/v1/projects/.+/image": "/api/v1/projects/*/image"
       "/api/v1/projects/.+/gallery": "/api/v1/projects/*/gallery"
       "/api/v1/projects/.+/gallery/.+": "/api/v1/projects/*/gallery/*"

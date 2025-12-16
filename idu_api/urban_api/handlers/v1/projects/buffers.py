@@ -32,7 +32,7 @@ async def get_buffers_by_scenario_id(
     buffer_type_id: int | None = Query(None, description="buffer type identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
     service_type_id: int | None = Query(None, description="service type identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
     """
     ## Get a list of buffers in GeoJSON format for a given scenario
@@ -82,7 +82,7 @@ async def get_context_buffers(
     buffer_type_id: int | None = Query(None, description="buffer type identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
     service_type_id: int | None = Query(None, description="service type identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, BufferAttributes]]:
     """
     ## Get buffers for the context of a project territory in GeoJSON format.

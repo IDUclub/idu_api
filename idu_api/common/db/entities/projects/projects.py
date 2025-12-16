@@ -90,7 +90,7 @@ projects_phases_data = Table(
 )
 
 """
-Project data:
+Project phases data:
 - project_id foreign key int
 - actual_start_date date
 - actual_end_date date

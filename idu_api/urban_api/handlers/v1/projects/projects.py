@@ -43,7 +43,7 @@ from idu_api.urban_api.utils.pagination import paginate
 async def get_project_by_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> Project:
     """
     ## Get the project by given identifier.
@@ -76,7 +76,7 @@ async def get_project_by_id(
 async def get_project_territory_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> ProjectTerritory:
     """
     ## Get the territory of a given project.
@@ -109,7 +109,7 @@ async def get_project_territory_by_project_id(
 async def get_scenarios_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[Scenario]:
     """
     ## Get a list of scenarios for a given project.
@@ -142,7 +142,7 @@ async def get_scenarios_by_project_id(
 async def get_phases_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project_id which phases are needed", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> ProjectPhases:
     """
     ## Get phases of project by its identifier .
@@ -224,7 +224,7 @@ async def get_projects(  # pylint: disable=too-many-arguments
     ordering: Ordering = Query(
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> Page[Project]:
     """
     ## Get a list of projects.
@@ -308,7 +308,7 @@ async def get_projects_territories(
     ),
     territory_id: int | None = Query(None, description="to filter by region"),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, Project]]:
     """
     ## Get project territories in GeoJSON format.
@@ -567,7 +567,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> Page[MinioImageURL]:
     """
@@ -794,7 +794,7 @@ async def set_project_main_image(
 async def get_project_gallery_images_urls(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[str]:
@@ -871,7 +871,7 @@ async def delete_project_gallery_image(
 async def get_full_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
@@ -912,7 +912,7 @@ async def get_full_project_main_image(
 async def get_preview_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
@@ -954,7 +954,7 @@ async def get_preview_project_main_image(
 async def get_full_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
@@ -996,7 +996,7 @@ async def get_full_project_main_image_url(
 async def get_preview_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
@@ -1038,7 +1038,7 @@ async def get_preview_project_main_image_url(
 async def get_project_logo_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
@@ -1164,7 +1164,7 @@ async def get_project_phase_documents_urls(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     phase: ProjectPhase = Query(..., description="phase name"),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
     project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[MinioFile]:

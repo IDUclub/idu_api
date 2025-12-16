@@ -26,6 +26,7 @@ from .buildings import (
     ScenarioBuildingPost,
     ScenarioBuildingPut,
 )
+from .cadastres import ProjectCadastreAttributes, ProjectCadastrePut
 from .functional_zones import (
     FunctionalZone,
     FunctionalZonePatch,
@@ -318,4 +319,6 @@ __all__ = [
     "TerritoryIndicatorBindPut",
     "BinnedIndicatorValue",
     "TerritoryWithBinnedIndicators",
+    "ProjectCadastreAttributes",
+    "ProjectCadastrePut",
 ]

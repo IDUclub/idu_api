@@ -32,7 +32,7 @@ from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 async def get_functional_zone_sources_by_scenario_id(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[FunctionalZoneSource]:
     """
     ## Get a list of functional zone sources for a given scenario.
@@ -68,7 +68,7 @@ async def get_functional_zones_by_scenario_id(
     year: int = Query(..., description="to filter by year when zones were uploaded"),
     source: str = Query(..., description="to filter by source from which zones were uploaded"),
     functional_zone_type_id: int | None = Query(None, description="functional zone type identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioFunctionalZoneWithoutGeometry]]:
     """
     ## Get functional zones in GeoJSON format for a given scenario, filtered by year and source.
@@ -106,7 +106,7 @@ async def get_functional_zones_by_scenario_id(
 async def get_context_functional_zone_sources(
     request: Request,
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> list[FunctionalZoneSource]:
     """
     ## Get functional zone sources for the project's context.
@@ -142,7 +142,7 @@ async def get_context_functional_zones(
     year: int = Query(..., description="to filter by year when zones were uploaded"),
     source: str = Query(..., description="to filter by source from which zones were uploaded"),
     functional_zone_type_id: int | None = Query(None, description="functional zone type identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, FunctionalZoneWithoutGeometry]]:
     """
     ## Get functional zones in GeoJSON format for the project's context, filtered by year and source.
