@@ -17,7 +17,7 @@ from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 OBJECTS_NUMBER_LIMIT = 25_000
 
 # The maximum number of objects that can be inserted to the database at a time.
-OBJECTS_NUMBER_TO_INSERT_LIMIT = 7_000
+OBJECTS_NUMBER_TO_INSERT_LIMIT = 3_000
 
 # Spatial Reference System Identifier (SRID) for geometry fields.
 SRID = 4326
