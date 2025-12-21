@@ -51,7 +51,7 @@ async def put_project_cadastres_to_db(
         statement = insert(projects_cadastres_data).values(insert_values)
         await conn.execute(statement)
 
-    OBJECTS_NUMBER_TO_INSERT_LIMIT = 1_000
+    OBJECTS_NUMBER_TO_INSERT_LIMIT = 1_000  # pylint: disable=invalid-name
     for batch_start in range(0, len(cadastres), OBJECTS_NUMBER_TO_INSERT_LIMIT):
         batch = cadastres[batch_start : batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
         await insert_batch(batch)

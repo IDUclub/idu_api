@@ -169,7 +169,7 @@ class UrbanAPIConfig:
                     exporter=ExporterConfig("http://127.0.0.1:4317", level="INFO"),
                     files=[FileLogger(filename="logs/info.log", level="INFO")],
                 ),
-                prometheus=PrometheusConfig(host="0.0.0.0", port=9090, urls_mapping={}),
+                prometheus=PrometheusConfig(host="0.0.0.0", port=9090),
                 jaeger=JaegerConfig(endpoint="http://127.0.0.1:4318/v1/traces"),
             ),
             broker=BrokerConfig(

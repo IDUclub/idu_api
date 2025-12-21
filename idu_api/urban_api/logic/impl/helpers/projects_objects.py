@@ -75,8 +75,12 @@ from idu_api.urban_api.dto import (
 from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.exceptions.logic.projects import NotAllowedInProjectScenario, NotAllowedInRegionalProject
 from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
-from idu_api.urban_api.logic.impl.helpers.utils import SRID, check_existence, extract_values_from_model, \
-    OBJECTS_NUMBER_TO_INSERT_LIMIT
+from idu_api.urban_api.logic.impl.helpers.utils import (
+    OBJECTS_NUMBER_TO_INSERT_LIMIT,
+    SRID,
+    check_existence,
+    extract_values_from_model,
+)
 from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
     ProjectPatch,
@@ -1472,7 +1476,7 @@ async def copy_geometries(
 
     results = []
     for batch_start in range(0, len(old_geometries), OBJECTS_NUMBER_TO_INSERT_LIMIT):
-        batch = old_geometries[batch_start: batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
+        batch = old_geometries[batch_start : batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
         batch_ids = await insert_batch(batch)
         results.append(batch_ids)
     results = [new_geom_id for batch_ids in results for new_geom_id in batch_ids]

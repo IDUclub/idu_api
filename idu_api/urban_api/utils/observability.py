@@ -1,18 +1,26 @@
 """Observability helper functions are defined here."""
 
+import json
 import logging
 import platform
 import re
 import sys
+from collections import defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
+import fastapi
 import structlog
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
 from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import (
+    LoggerProvider,
+    LoggingHandler,
+    LogRecordProcessor,
+    ReadWriteLogRecord,
+)
 from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.util.types import Attributes
@@ -57,7 +65,6 @@ class PrometheusConfig:
 
     host: str
     port: int
-    urls_mapping: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -157,6 +164,7 @@ def configure_logging(
         set_logger_provider(logger_provider)
 
         otlp_exporter = OTLPLogExporter(endpoint=config.exporter.endpoint, insecure=config.exporter.tls_insecure)
+        logger_provider.add_log_record_processor(OtelLogPreparationProcessor())
         logger_provider.add_log_record_processor(BatchLogRecordProcessor(otlp_exporter))
 
         exporter_handler = AttrFilteredLoggingHandler(
@@ -179,20 +187,40 @@ class URLsMapper:
     will be placed in path "/api/debug/*" in metrics.
     """
 
-    def __init__(self, urls_map: dict[str, str]):
-        self._map: dict[re.Pattern, str] = {}
+    def __init__(self, urls_map: dict[str, dict[str, str]] | None = None):
+        self._map: dict[str, dict[re.Pattern, str]] = defaultdict(dict)
+        """[method -> [pattern -> mapped_to]]"""
 
-        for pattern, value in urls_map.items():
-            self.add(pattern, value)
+        if urls_map is not None:
+            for method, patterns in urls_map.items():
+                for pattern, value in patterns.items():
+                    self.add(method, pattern, value)
 
-    def add(self, pattern: str, mapped_to: str) -> None:
+    def add(self, method: str, pattern: str, mapped_to: str) -> None:
         """Add entry to the map. If pattern compilation is failed, ValueError is raised."""
         regexp = re.compile(pattern)
-        self._map[regexp] = mapped_to
+        self._map[method.upper()][regexp] = mapped_to
 
-    def map(self, url: str) -> str:
+    def add_routes(self, routes: list[fastapi.routing.APIRoute]) -> None:
+        """Add full route regexes to the map."""
+        logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
+        for route in routes:
+            if not hasattr(route, "path_regex") or not hasattr(route, "path"):
+                logger.warning("route has no 'path_regex' or 'path' attribute", route=route)
+                continue
+            if "{" not in route.path:  # ignore simple routes
+                continue
+            route_path = route.path
+            while "{" in route_path:
+                lbrace = route_path.index("{")
+                rbrace = route_path.index("}", lbrace + 1)
+                route_path = route_path[:lbrace] + "*" + route_path[rbrace + 1 :]
+            for method in route.methods:
+                self._map[method.upper()][route.path_regex] = route_path
+
+    def map(self, method: str, url: str) -> str:
         """Check every map entry with `re.match` and return matched value. If not found, return original string."""
-        for regexp, mapped_to in self._map.items():
+        for regexp, mapped_to in self._map[method.upper()].items():
             if regexp.match(url) is not None:
                 return mapped_to
         return url
@@ -216,3 +244,33 @@ class AttrFilteredLoggingHandler(LoggingHandler):
             if attr in attributes:
                 del attributes[attr]
         return attributes
+
+
+class OtelLogPreparationProcessor(LogRecordProcessor):
+    """Processor which moves everything except message from log record body to attributes."""
+
+    SYSTEM_FIELDS = ["config"]
+    """attributes.* for those fields is used in OpenTelemetry agent, so it should not be set like this."""
+
+    def on_emit(self, log_record: ReadWriteLogRecord) -> None:
+        if not isinstance(log_record.log_record.body, dict):
+            return
+        for key in log_record.log_record.body:
+            if key == "event":
+                continue
+            save_key = key
+            if key in log_record.log_record.attributes or key in self.SYSTEM_FIELDS:
+                save_key = f"{key}__body"
+            log_record.log_record.attributes[save_key] = self._format_value(log_record.log_record.body[key])
+        log_record.log_record.body = log_record.log_record.body["event"]
+
+    def _format_value(self, value: Any) -> str:
+        if isinstance(value, (dict, list)):
+            return json.dumps(value)
+        return str(value)
+
+    def force_flush(self, timeout_millis=30000):
+        pass
+
+    def shutdown(self):
+        pass

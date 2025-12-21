@@ -8,7 +8,7 @@ from typing import Callable
 import psutil
 from opentelemetry import metrics
 from opentelemetry.metrics import CallbackOptions, Observation
-from opentelemetry.sdk.metrics import Counter, Histogram
+from opentelemetry.sdk.metrics import Counter, Histogram, UpDownCounter
 
 from idu_api.urban_api.version import VERSION
 
@@ -23,6 +23,7 @@ class HTTPMetrics:
     """Total finished requests counter by `["method", "path", "status_code", "handler_found"]`."""
     errors: Counter
     """Total errors (exceptions) counter by `["method", "path", "error_type", "status_code"]`."""
+    inflight_requests: UpDownCounter
 
 
 @dataclass
@@ -61,6 +62,9 @@ def setup_metrics() -> Metrics:
             requests_started=meter.create_counter("requests_started_total", "1", "Total number of started requests"),
             requests_finished=meter.create_counter("request_finished_total", "1", "Total number of finished requests"),
             errors=meter.create_counter("request_errors_total", "1", "Total number of errors (exceptions) in requests"),
+            inflight_requests=meter.create_up_down_counter(
+                "inflight_requests", "1", "Current number of requests handled simultaniously"
+            ),
         )
     )
 
