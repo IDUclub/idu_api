@@ -42,12 +42,14 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
         _try_get_parent_span_id(request)
         with _tracer.start_as_current_span("http-request", record_exception=False) as span:
-            trace_id = hex(span.get_span_context().trace_id or randint(1, 1 << 63))[2:]
-            span_id = span.get_span_context().span_id or randint(1, 1 << 31)
+            trace_id = span.get_span_context().trace_id
+            span_id = span.get_span_context().span_id
             if trace_id == 0:
-                trace_id = format(randint(1, 1 << 63), "016x")
-                span_id = format(randint(1, 1 << 31), "032x")
-                logger = logger.bind(trace_id=trace_id, span_id=span_id)
+                trace_id = randint(1, 1 << 127)
+                span_id = randint(1, 1 << 63)
+                logger = logger.bind(
+                    trace_id=format(trace_id, "032x"), span_id=format(span_id, "016x"), fake_trace=True
+                )
             logger_dep.attach_to_request(request, logger)
 
             span.set_attributes(
@@ -55,7 +57,8 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                     http_attributes.HTTP_REQUEST_METHOD: request.method,
                     url_attributes.URL_PATH: request.url.path,
                     url_attributes.URL_QUERY: str(request.query_params),
-                    "request_client": request.client.host,
+                    "client_ip": request.client.host,
+                    "request_client": _get_request_client(request),
                     "user": user.id if user is not None else "",
                 }
             )
@@ -68,7 +71,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                 url=str(request.url),
             )
 
-            path_for_metric = self._urls_mapper.map(request.url.path)
+            path_for_metric = self._urls_mapper.map(request.method, request.url.path)
             self._http_metrics.requests_started.add(
                 1,
                 {
@@ -79,10 +82,11 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
             time_begin = time.monotonic()
             try:
+                self._http_metrics.inflight_requests.add(1)
                 response = await call_next(request)
                 duration_seconds = time.monotonic() - time_begin
 
-                response.headers.update({"X-Trace-Id": trace_id, "X-Span-Id": str(span_id)})
+                response.headers.update({"X-Trace-Id": format(trace_id, "032x"), "X-Span-Id": format(span_id, "016x")})
                 await self._handle_success(
                     request=request,
                     status_code=response.status_code,
@@ -120,6 +124,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                 )
                 raise ObservableException(trace_id=trace_id, span_id=span_id) from exc
             finally:
+                self._http_metrics.inflight_requests.add(-1)
                 self._http_metrics.request_processing_duration.record(
                     duration_seconds, {"method": request.method, "path": path_for_metric}
                 )
@@ -211,7 +216,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 class ObservableException(RuntimeError):
     """Runtime Error with `trace_id` and `span_id` set. Guranteed to have `.__cause__` as its parent exception."""
 
-    def __init__(self, trace_id: str, span_id: int):
+    def __init__(self, trace_id: int, span_id: int):
         super().__init__()
         self.trace_id = trace_id
         self.span_id = span_id
@@ -222,6 +227,14 @@ class HandlerNotFoundError(Exception):
 
     Guranteed to have `.__cause__` as its parent exception.
     """
+
+
+def _get_request_client(request: Request) -> str:
+    if (ip := request.headers.get("X-Real-IP")) is not None:
+        return ip
+    if (ip := request.headers.get("X-Forwarded-For")) is not None:
+        return ip
+    return request.client.host
 
 
 def _try_get_parent_span_id(request: Request) -> None:

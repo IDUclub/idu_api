@@ -42,122 +42,20 @@ external:
   hextech_api: http://localhost:8100
 observability:
   logging:
-    stderr_level: INFO
-    files:
+    root_logger_level: INFO # optional, default INFO
+    stderr_level: INFO # optional
+    files: # optional
       - filename: logs/info.log
         level: INFO
-  prometheus:
+    exporter: # optional
+      endpoint: http://localhost:4317
+      level: INFO
+      tls_insecure: true
+  prometheus: # optional
     host: localhost
-    port: 9000
-    urls_mapping:
-      "/\\.well-known/.*": /.well-known/*
-      "/api/v1/indicators_groups/.+": "/api/v1/indicators_groups/*"
-      "/api/v1/indicators/.+": "/api/v1/indicators/*"
-      "/api/v1/indicator_value/.+": "/api/v1/indicator_value/*"
-      "/api/v1/indicator/.+/values": "/api/v1/indicator/*/values"
-      "/api/v1/services/.+": "/api/v1/services/*"
-      "/api/v1/functional_zones/.+": "/api/v1/functional_zones/*"
-      "/api/v1/physical_object_types/.+": "/api/v1/physical_object_types/*"
-      "/api/v1/physical_object_functions/.+": "/api/v1/physical_object_functions/*"
-      "/api/v1/physical_object_types/.+/service_types": "/api/v1/physical_object_types/*/service_types"
-      "/api/v1/physical_object/.+": "/api/v1/physical_object/*"
-      "/api/v1/physical_objects/.+": "/api/v1/physical_objects/*"
-      "/api/v1/living_buildings/.+": "/api/v1/living_buildings/*"
-      "/api/v1/buildings/.+": "/api/v1/buildings/*"
-      "/api/v1/physical_objects/.+/living_buildings": "/api/v1/physical_objects/*/living_buildings"
-      "/api/v1/physical_objects/.+/services": "/api/v1/physical_objects/*/services"
-      "/api/v1/physical_objects/.+/services_with_geometry": "/api/v1/physical_objects/*/services_with_geometry"
-      "/api/v1/physical_objects/.+/geometries": "/api/v1/physical_objects/*/geometries"
-      "/api/v1/object_geometries/.+": "/api/v1/object_geometries/*"
-      "/api/v1/object_geometries/.+/physical_objects": "/api/v1/object_geometries/*/physical_objects"
-      "/api/v1/service_types/.+": "/api/v1/service_types/*"
-      "/api/v1/urban_functions/.+": "/api/v1/urban_functions/*"
-      "/api/v1/service_types/.+/physical_object_types": "/api/v1/service_types/*/physical_object_types"
-      "/api/v1/service_types/.+/social_values": "/api/v1/service_types/*/social_values"
-      "/api/v1/service_types/.+/social_groups": "/api/v1/service_types/*/social_groups"
-      "/api/v1/social_groups/.+": "/api/v1/social_groups/*"
-      "/api/v1/social_groups/.+/service_types": "/api/v1/social_groups/*/service_types"
-      "/api/v1/social_values/.+": "/api/v1/social_values/*"
-      "/api/v1/social_values/.+/service_types": "/api/v1/social_values/*/service_types"
-      "/api/v1/social_values/.+/service_types/.+": "/api/v1/social_values/*/service_types/*"
-      "/api/v1/social_groups/.+/values": "/api/v1/social_groups/*/values"
-      "/api/v1/social_values/.+/indicators": "/api/v1/social_values/*/indicators"
-      "/api/v1/urban_objects/.+": "/api/v1/urban_objects/*"
-      "/api/v1/territory/.+/buffers_geojson": "/api/v1/territory/*/buffers_geojson"
-      "/api/v1/territory/.+/living_buildings_with_geometry": "/api/v1/territory/*/living_buildings_with_geometry"
-      "/api/v1/territory/.+/functional_zone_sources": "/api/v1/territory/*/functional_zone_sources"
-      "/api/v1/territory/.+/functional_zones": "/api/v1/territory/*/functional_zones"
-      "/api/v1/territory/.+/functional_zones_geojson": "/api/v1/territory/*/functional_zones_geojson"
-      "/api/v1/territory/.+/hexagons": "/api/v1/territory/*/hexagons"
-      "/api/v1/territory/.+/indicators": "/api/v1/territory/*/indicators"
-      "/api/v1/territory/.+/indicator_values/geojson": "/api/v1/territory/*/indicator_values/geojson"
-      "/api/v1/territory/.+/indicator_values": "/api/v1/territory/*/indicator_values"
-      "/api/v1/territory/.+/soc_values/indicators": "/api/v1/territory/*/soc_values/indicators"
-      "/api/v1/territory/.+/normatives": "/api/v1/territory/*/normatives"
-      "/api/v1/territory/.+/physical_object_types": "/api/v1/territory/*/physical_object_types"
-      "/api/v1/territory/.+/physical_objects": "/api/v1/territory/*/physical_objects"
-      "/api/v1/territory/.+/physical_objects_with_geometry": "/api/v1/territory/*/physical_objects_with_geometry"
-      "/api/v1/territory/.+/physical_objects_geojson": "/api/v1/territory/*/physical_objects_geojson"
-      "/api/v1/territory/.+/service_types": "/api/v1/territory/*/service_types"
-      "/api/v1/territory/.+/services": "/api/v1/territory/*/services"
-      "/api/v1/territory/.+/services_with_geometry": "/api/v1/territory/*/services_with_geometry"
-      "/api/v1/territory/.+/services_geojson": "/api/v1/territory/*/services_geojson"
-      "/api/v1/territory/.+/services_capacity": "/api/v1/territory/*/services_capacity"
-      "/api/v1/territory/.+": "/api/v1/territory/*"
-      "/api/v1/territory/.+/intersecting_territories": "/api/v1/territory/*/intersecting_territories"
-      "/api/v1/territories/.+": "/api/v1/territories/*"
-      "/api/v1/scenarios/.+/buffers": "/api/v1/scenarios/*/buffers"
-      "/api/v1/scenarios/.+/context/buffers": "/api/v1/scenarios/*/context/buffers"
-      "/api/v1/scenarios/.+/functional_zone_sources": "/api/v1/scenarios/*/functional_zone_sources"
-      "/api/v1/scenarios/.+/functional_zones": "/api/v1/scenarios/*/functional_zones"
-      "/api/v1/scenarios/.+/context/functional_zone_sources": "/api/v1/scenarios/*/context/functional_zone_sources"
-      "/api/v1/scenarios/.+/context/functional_zones": "/api/v1/scenarios/*/context/functional_zones"
-      "/api/v1/scenarios/.+/functional_zones/.+": "/api/v1/scenarios/*/functional_zones/*"
-      "/api/v1/scenarios/.+/geometries": "/api/v1/scenarios/*/geometries"
-      "/api/v1/scenarios/.+/geometries_with_all_objects": "/api/v1/scenarios/*/geometries_with_all_objects"
-      "/api/v1/scenarios/.+/context/geometries": "/api/v1/scenarios/*/context/geometries"
-      "/api/v1/scenarios/.+/context/geometries_with_all_objects": "/api/v1/scenarios/*/context/geometries_with_all_objects"
-      "/api/v1/scenarios/.+/geometries/.+": "/api/v1/scenarios/*/geometries/*"
-      "/api/v1/scenarios/.+/indicators_values": "/api/v1/scenarios/*/indicators_values"
-      "/api/v1/scenarios/.+/indicators_values/.+": "/api/v1/scenarios/*/indicators_values/*"
-      "/api/v1/scenarios/.+/indicators_values/hexagons": "/api/v1/scenarios/*/indicators_values/hexagons"
-      "/api/v1/scenarios/.+/all_indicators_values/": "/api/v1/scenarios/*/all_indicators_values/"
-      "/api/v1/scenarios/.+/physical_object_types": "/api/v1/scenarios/*/physical_object_types"
-      "/api/v1/scenarios/.+/physical_objects": "/api/v1/scenarios/*/physical_objects"
-      "/api/v1/scenarios/.+/physical_objects_with_geometry": "/api/v1/scenarios/*/physical_objects_with_geometry"
-      "/api/v1/scenarios/.+/physical_objects/around": "/api/v1/scenarios/*/physical_objects/around"
-      "/api/v1/scenarios/.+/context/physical_objects": "/api/v1/scenarios/*/context/physical_objects"
-      "/api/v1/scenarios/.+/context/physical_objects_with_geometry": "/api/v1/scenarios/*/context/physical_objects_with_geometry"
-      "/api/v1/scenarios/.+/all_physical_objects": "/api/v1/scenarios/*/all_physical_objects"
-      "/api/v1/scenarios/.+/physical_objects/.+": "/api/v1/scenarios/*/physical_objects/*"
-      "/api/v1/scenarios/.+/buildings": "/api/v1/scenarios/*/buildings"
-      "/api/v1/scenarios/.+/buildings/.+": "/api/v1/scenarios/*/buildings/*"
-      "/api/v1/projects/.+": "/api/v1/projects/*"
-      "/api/v1/projects/.+/territory": "/api/v1/projects/*/territory"
-      "/api/v1/projects/.+/scenarios": "/api/v1/projects/*/scenarios"
-      "/api/v1/projects/.+/phases": "/api/v1/projects/*/phases"
-      "/api/v1/projects/.+/base_scenario/.+": "/api/v1/projects/*/base_scenario/*"
-      "/api/v1/projects/.+/cadastres": "/api/v1/projects/*/cadastres"
-      "/api/v1/projects/.+/image": "/api/v1/projects/*/image"
-      "/api/v1/projects/.+/gallery": "/api/v1/projects/*/gallery"
-      "/api/v1/projects/.+/gallery/.+": "/api/v1/projects/*/gallery/*"
-      "/api/v1/projects/.+/preview": "/api/v1/projects/*/preview"
-      "/api/v1/projects/.+/image_url": "/api/v1/projects/*/image_url"
-      "/api/v1/projects/.+/preview_url": "/api/v1/projects/*/preview_url"
-      "/api/v1/projects/.+/logo": "/api/v1/projects/*/logo"
-      "/api/v1/projects/.+/phases/documents": "/api/v1/projects/*/phases/documents"
-      "/api/v1/scenarios/.+": "/api/v1/scenarios/*"
-      "/api/v1/scenarios/.+/service_types": "/api/v1/scenarios/*/service_types"
-      "/api/v1/scenarios/.+/services": "/api/v1/scenarios/*/services"
-      "/api/v1/scenarios/.+/services_with_geometry": "/api/v1/scenarios/*/services_with_geometry"
-      "/api/v1/scenarios/.+/context/services": "/api/v1/scenarios/*/context/services"
-      "/api/v1/scenarios/.+/context/services_with_geometry": "/api/v1/scenarios/*/context/services_with_geometry"
-      "/api/v1/scenarios/.+/services/.+": "/api/v1/scenarios/*/services/*"
-      "/api/v2/territory/.+/living_buildings_with_geometry": "/api/v2/territory/*/living_buildings_with_geometry"
-      "/api/v2/territory/.+/physical_objects": "/api/v2/territory/*/physical_objects"
-      "/api/v2/territory/.+/physical_objects_with_geometry": "/api/v2/territory/*/physical_objects_with_geometry"
-      "/api/v2/territory/.+/services": "/api/v2/territory/*/services"
-      "/api/v2/territory/.+/services_with_geometry": "/api/v2/territory/*/services_with_geometry"
+    port: 9092
+  jaeger: # optional
+    endpoint: http://localhost:4318/v1/traces
 broker:
   client_id: urban-api
   bootstrap_servers: localhost:9092,localhost9093,localhost9094

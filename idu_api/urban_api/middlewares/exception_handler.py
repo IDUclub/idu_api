@@ -36,7 +36,10 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few
         except Exception as exc:  # pylint: disable=broad-except
             additional_headers: dict[str, str] | None = None
             if isinstance(exc, ObservableException):
-                additional_headers = {"X-Trace-Id": exc.trace_id, "X-Span-Id": str(exc.span_id)}
+                additional_headers = {
+                    "X-Trace-Id": format(exc.trace_id, "032x"),
+                    "X-Span-Id": format(exc.span_id, "016x"),
+                }
                 exc = exc.__cause__
             status_code = 500
             detail = "exception occured"

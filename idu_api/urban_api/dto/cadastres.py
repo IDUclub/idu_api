@@ -8,7 +8,7 @@ from shapely.wkb import loads as wkb_loads
 
 
 @dataclass
-class ProjectCadastreDTO:
+class ProjectCadastreDTO:  # pylint: disable=too-many-instance-attributes
     project_cadastre_id: int
     geometry: geom.Polygon | geom.MultiPolygon
     centre_point: geom.Point
