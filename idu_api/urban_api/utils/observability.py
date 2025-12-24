@@ -49,9 +49,9 @@ class FileLogger:
 class LoggingConfig:
     """Logger configuration."""
 
-    stderr_level: LoggingLevel | None
-    exporter: ExporterConfig | None = None
     root_logger_level: LoggingLevel = "INFO"
+    stderr_level: LoggingLevel | None = None
+    exporter: ExporterConfig | None = None
     files: list[FileLogger] = field(default_factory=list)
 
     def __post_init__(self):
