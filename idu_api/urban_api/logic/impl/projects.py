@@ -376,6 +376,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         user: UserDTO | None,
         physical_object_type_id: int | None,
         physical_object_function_id: int | None,
+        include_scenario_objects: bool,
     ) -> list[ScenarioPhysicalObjectWithGeometryDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_context_physical_objects_with_geometry_from_db(
@@ -384,6 +385,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 user,
                 physical_object_type_id,
                 physical_object_function_id,
+                include_scenario_objects,
             )
 
     async def add_physical_object_with_geometry(
@@ -541,10 +543,11 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         user: UserDTO | None,
         service_type_id: int | None,
         urban_function_id: int | None,
+        include_scenario_objects: bool,
     ) -> list[ScenarioServiceWithGeometryDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_context_services_with_geometry_from_db(
-                conn, scenario_id, user, service_type_id, urban_function_id
+                conn, scenario_id, user, service_type_id, urban_function_id, include_scenario_objects
             )
 
     async def add_service(
@@ -651,6 +654,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         urban_function_id: int | None,
         exclude_physical_object_function_id: int | None,
         exclude_urban_function_id: int | None,
+        include_scenario_objects: bool,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_context_geometries_with_all_objects_from_db(
@@ -663,6 +667,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 urban_function_id,
                 exclude_physical_object_function_id,
                 exclude_urban_function_id,
+                include_scenario_objects,
             )
 
     async def put_object_geometry(

@@ -221,6 +221,7 @@ async def get_context_services_with_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
     urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
+    include_scenario_objects: bool = Query(False, description="include scenario objects", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
@@ -233,6 +234,8 @@ async def get_context_services_with_geometry(
     - **scenario_id** (int, Path): Unique identifier of the scenario.
     - **service_type_id** (int | None, Query): Optional filter by service type identifier.
     - **urban_function_id** (int | None, Query): Optional filter by urban function identifier.
+    - **include_scenario_objects** (bool, Query): Include scenario objects from project territory
+    - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
     - **GeoJSONResponse[Feature[Geometry, Service]]**: A GeoJSON response containing the services.
@@ -254,7 +257,7 @@ async def get_context_services_with_geometry(
         )
 
     services = await user_project_service.get_context_services_with_geometry(
-        scenario_id, user, service_type_id, urban_function_id
+        scenario_id, user, service_type_id, urban_function_id, include_scenario_objects
     )
 
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in services], centers_only)

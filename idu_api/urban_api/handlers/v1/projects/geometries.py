@@ -203,6 +203,7 @@ async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-a
         None, description="exclude this physical object function", gt=0
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
+    include_scenario_objects: bool = Query(False, description="include scenario objects", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:
@@ -221,6 +222,7 @@ territory in GeoJSON format.
     - **urban_function_id** (int | None, Query): Optional filter by urban function identifier.
     - **exclude_physical_object_function_id** (int | None, Query): Exclude objects with this physical function.
     - **exclude_urban_function_id** (int | None, Query): Exclude objects with this urban function.
+    - **include_scenario_objects** (bool, Query): Include scenario objects from project territory
     - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
@@ -261,6 +263,7 @@ territory in GeoJSON format.
         urban_function_id,
         exclude_physical_object_function_id,
         exclude_urban_function_id,
+        include_scenario_objects,
     )
 
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in geometries], centers_only)
