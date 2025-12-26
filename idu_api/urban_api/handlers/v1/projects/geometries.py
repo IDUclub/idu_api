@@ -203,7 +203,7 @@ async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-a
         None, description="exclude this physical object function", gt=0
     ),
     exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
-    include_scenario_objects: bool = Query(False, description="include scenario objects", gt=0),
+    include_scenario_objects: bool = Query(False, description="include scenario objects"),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioAllObjects]]:

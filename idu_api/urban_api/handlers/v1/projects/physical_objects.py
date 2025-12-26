@@ -272,7 +272,7 @@ async def get_context_physical_objects_with_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
-    include_scenario_objects: bool = Query(False, description="include scenario objects", gt=0),
+    include_scenario_objects: bool = Query(False, description="include scenario objects"),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
