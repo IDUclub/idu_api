@@ -147,6 +147,7 @@ async def get_service_types_by_scenario_id_from_db(
 async def get_context_service_types_from_db(
     conn: AsyncConnection,
     scenario_id: int,
+
     user: UserDTO | None,
 ) -> list[ServiceTypeDTO]:
     """Get list of service types for 'context' of the project territory."""
@@ -864,17 +865,23 @@ async def get_context_services_with_geometry_from_db(
     user: UserDTO | None,
     service_type_id: int | None,
     urban_function_id: int | None,
+    include_scenario_objects: bool,
 ) -> list[ScenarioServiceWithGeometryDTO]:
     """Get list of services with geometry for 'context' of the project territory."""
 
     parent_id, context_geom, context_ids = await get_context_territories_geometry(conn, scenario_id, user)
 
     # Step 1: Get all the public_urban_object_id for a given scenario_id
-    public_urban_object_ids = (
+    project_scenario_public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == scenario_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="project_scenario_public_urban_object_ids")
+    regional_scenario_public_urban_object_ids = (
         select(projects_urban_objects_data.c.public_urban_object_id)
         .where(projects_urban_objects_data.c.scenario_id == parent_id)
         .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
-    ).cte(name="public_urban_object_ids")
+    ).cte(name="regional_scenario_public_urban_object_ids")
 
     # Step 2: Find all intersecting object geometries from public (except object from previous step)
     objects_intersecting = (
@@ -886,7 +893,12 @@ async def get_context_services_with_geometry_from_db(
             )
         )
         .where(
-            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            urban_objects_data.c.urban_object_id.not_in(select(regional_scenario_public_urban_object_ids)),
+            (
+                urban_objects_data.c.urban_object_id.not_in(select(project_scenario_public_urban_object_ids))
+                if include_scenario_objects
+                else True
+            ),
             object_geometries_data.c.territory_id.in_(context_ids)
             | ST_Intersects(object_geometries_data.c.geometry, context_geom),
         )
@@ -1045,7 +1057,6 @@ async def get_context_services_with_geometry_from_db(
             )
         )
         .where(
-            projects_urban_objects_data.c.scenario_id == parent_id,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
             (
                 projects_urban_objects_data.c.service_id.isnot(None)
@@ -1055,8 +1066,104 @@ async def get_context_services_with_geometry_from_db(
         )
         .distinct()
     )
+    regional_scenario_services_query = scenario_services_query.where(
+        projects_urban_objects_data.c.scenario_id == parent_id
+    )
 
-    union_query = union_all(public_services_query, scenario_services_query).cte(name="union_query")
+    queries = [public_services_query, regional_scenario_services_query]
+
+    if include_scenario_objects:
+        project_scenario_geoms_query = scenario_services_query.where(
+            projects_urban_objects_data.c.scenario_id == scenario_id,
+        )
+        queries.append(project_scenario_geoms_query)
+
+        scenario_objects_with_public_geoms_query = (
+            select(
+                coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
+                coalesce(projects_services_data.c.name, services_data.c.name).label("name"),
+                coalesce(projects_services_data.c.capacity, services_data.c.capacity).label("capacity"),
+                coalesce(
+                    projects_services_data.c.is_capacity_real,
+                    services_data.c.is_capacity_real,
+                ).label("is_capacity_real"),
+                coalesce(projects_services_data.c.properties, services_data.c.properties).label("properties"),
+                coalesce(projects_services_data.c.created_at, services_data.c.created_at).label("created_at"),
+                coalesce(projects_services_data.c.updated_at, services_data.c.updated_at).label("updated_at"),
+                service_types_dict.c.service_type_id,
+                service_types_dict.c.urban_function_id,
+                urban_functions_dict.c.name.label("urban_function_name"),
+                service_types_dict.c.name.label("service_type_name"),
+                service_types_dict.c.capacity_modeled.label("service_type_capacity_modeled"),
+                service_types_dict.c.code.label("service_type_code"),
+                service_types_dict.c.infrastructure_type,
+                service_types_dict.c.properties.label("service_type_properties"),
+                territory_types_dict.c.territory_type_id,
+                territory_types_dict.c.name.label("territory_type_name"),
+                projects_object_geometries_data.c.object_geometry_id,
+                projects_object_geometries_data.c.address,
+                projects_object_geometries_data.c.osm_id,
+                ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
+                ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+                territories_data.c.territory_id,
+                territories_data.c.name.label("territory_name"),
+                (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
+                (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
+            )
+            .select_from(
+                projects_urban_objects_data.join(
+                    projects_object_geometries_data,
+                    projects_object_geometries_data.c.object_geometry_id
+                    == projects_urban_objects_data.c.object_geometry_id,
+                )
+                .join(
+                    object_geometries_data,
+                    object_geometries_data.c.object_geometry_id
+                    == projects_object_geometries_data.c.public_object_geometry_id,
+                )
+                .outerjoin(
+                    territories_data,
+                    or_(
+                        territories_data.c.territory_id == projects_object_geometries_data.c.territory_id,
+                        territories_data.c.territory_id == object_geometries_data.c.territory_id,
+                    ),
+                )
+                .outerjoin(
+                    projects_services_data,
+                    projects_services_data.c.service_id == projects_urban_objects_data.c.service_id,
+                )
+                .outerjoin(services_data, services_data.c.service_id == projects_urban_objects_data.c.public_service_id)
+                .outerjoin(
+                    service_types_dict,
+                    or_(
+                        service_types_dict.c.service_type_id == projects_services_data.c.service_type_id,
+                        service_types_dict.c.service_type_id == services_data.c.service_type_id,
+                    ),
+                )
+                .outerjoin(
+                    territory_types_dict,
+                    or_(
+                        territory_types_dict.c.territory_type_id == projects_services_data.c.territory_type_id,
+                        territory_types_dict.c.territory_type_id == services_data.c.territory_type_id,
+                    ),
+                )
+                .outerjoin(
+                    urban_functions_dict,
+                    urban_functions_dict.c.urban_function_id == service_types_dict.c.urban_function_id,
+                )
+            )
+            .where(
+                projects_urban_objects_data.c.scenario_id == scenario_id,
+                projects_object_geometries_data.c.is_cut.is_(True),
+                (
+                    projects_urban_objects_data.c.service_id.isnot(None)
+                    | projects_urban_objects_data.c.public_service_id.isnot(None)
+                ),
+            )
+        )
+        queries.append(scenario_objects_with_public_geoms_query)
+
+    union_query = union_all(*queries).cte(name="union_query")
     statement = select(union_query)
 
     # Apply optional filters

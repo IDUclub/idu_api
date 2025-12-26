@@ -3,7 +3,7 @@
 from typing import Callable
 
 from geoalchemy2.types import Geometry
-from sqlalchemy import TIMESTAMP, Column, ForeignKey, Integer, Sequence, String, Table, func
+from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, Sequence, String, Table, func
 
 from idu_api.common.db import metadata
 from idu_api.common.db.entities.object_geometries import object_geometries_data
@@ -41,6 +41,7 @@ projects_object_geometries_data = Table(
     ),
     Column("address", String(300)),
     Column("osm_id", String(20)),
+    Column("is_cut", Boolean(), nullable=False, server_default="false"),
     Column("created_at", TIMESTAMP(timezone=True), server_default=func.now(), nullable=False),
     Column("updated_at", TIMESTAMP(timezone=True), server_default=func.now(), nullable=False),
     schema="user_projects",
@@ -55,6 +56,7 @@ Object geometries data:
 - centre_point geometry point
 - address string
 - osm_id string
+- is_cut boolean
 - created_at timestamp
 - updated_at timestamp
 """

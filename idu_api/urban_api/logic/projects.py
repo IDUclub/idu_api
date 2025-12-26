@@ -238,6 +238,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         user: UserDTO | None,
         physical_object_type_id: int | None,
         physical_object_function_id: int | None,
+        include_scenario_objects: bool,
     ) -> list[ScenarioPhysicalObjectWithGeometryDTO]:
         """Get list of physical objects with geometry for 'context' of the project territory."""
 
@@ -381,6 +382,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         user: UserDTO | None,
         service_type_id: int | None,
         urban_function_id: int | None,
+        include_scenario_objects: bool,
     ) -> list[ScenarioServiceWithGeometryDTO]:
         """Get list of services with geometry for 'context' of the project territory."""
 
@@ -467,6 +469,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         urban_function_id: int | None,
         exclude_physical_object_function_id: int | None,
         exclude_urban_function_id: int | None,
+        include_scenario_objects: bool,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         """Get geometries with lists of physical objects and services for 'context' of the project territory."""
 

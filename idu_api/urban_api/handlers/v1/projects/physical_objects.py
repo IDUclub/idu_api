@@ -272,6 +272,7 @@ async def get_context_physical_objects_with_geometry(
     scenario_id: int = Path(..., description="scenario identifier", gt=0),
     physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
     physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
+    include_scenario_objects: bool = Query(False, description="include scenario objects", gt=0),
     centers_only: bool = Query(False, description="display only centers"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
@@ -284,6 +285,8 @@ async def get_context_physical_objects_with_geometry(
     - **scenario_id** (int, Path): Unique identifier of the scenario.
     - **physical_object_type_id** (int | None, Query): Optional filter by physical object type identifier.
     - **physical_object_function_id** (int | None, Query): Optional filter by physical object function identifier.
+    - **include_scenario_objects** (bool, Query): Include scenario objects from project territory
+    - **centers_only** (bool, Query): If True, returns only center points of geometries (default: false).
 
     ### Returns:
     - **GeoJSONResponse[Feature[Geometry, PhysicalObject]]**: A GeoJSON response containing the physical objects.
@@ -305,7 +308,7 @@ async def get_context_physical_objects_with_geometry(
         )
 
     physical_objects = await user_project_service.get_context_physical_objects_with_geometry(
-        scenario_id, user, physical_object_type_id, physical_object_function_id
+        scenario_id, user, physical_object_type_id, physical_object_function_id, include_scenario_objects
     )
 
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in physical_objects], centers_only)

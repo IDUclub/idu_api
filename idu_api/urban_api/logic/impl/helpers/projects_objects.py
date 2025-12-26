@@ -1164,7 +1164,8 @@ async def insert_intersecting_geometries(
             ~ST_Within(object_geometries_data.c.geometry, geometry),
             ST_Area(ST_Intersection(object_geometries_data.c.geometry, geometry))
             >= area_percent * ST_Area(object_geometries_data.c.geometry),
-            ~physical_object_types_dict.c.name.ilike("%здание%"),  # Exclude buildings
+            ~physical_object_types_dict.c.name.ilike("%дом%")
+            & ~physical_object_types_dict.c.name.ilike("%здание%"),  # Exclude buildings
         )
         .distinct()
         .cte("objects_intersecting")
@@ -1182,6 +1183,7 @@ async def insert_intersecting_geometries(
                 projects_object_geometries_data.c.centre_point,
                 projects_object_geometries_data.c.address,
                 projects_object_geometries_data.c.osm_id,
+                projects_object_geometries_data.c.is_cut,
             ],
             select(
                 object_geometries_data.c.object_geometry_id.label("public_object_geometry_id"),
@@ -1192,6 +1194,7 @@ async def insert_intersecting_geometries(
                 ),
                 object_geometries_data.c.address,
                 object_geometries_data.c.osm_id,
+                literal(True).label("is_cut"),
             ).where(
                 object_geometries_data.c.object_geometry_id.in_(select(objects_intersecting_cte)),
                 ~ST_IsEmpty(func.normalize_intersection(object_geometries_data.c.geometry, geometry)),
@@ -1436,7 +1439,7 @@ async def copy_geometries(
         table = projects_object_geometries_data
         id_column = table.c.object_geometry_id
 
-    statement = (
+    old_geometries_select = (
         select(
             (
                 table.c.public_object_geometry_id
@@ -1447,39 +1450,29 @@ async def copy_geometries(
             table.c.address,
             table.c.osm_id,
             ST_Intersection(table.c.geometry, geometry).label("geometry") if geometry else table.c.geometry,
-            (
-                ST_Centroid(ST_Intersection(table.c.geometry, geometry)).label("centre_point")
-                if geometry
-                else table.c.centre_point
-            ),
+            literal(True).label("is_cut") if geometry is not None else table.c.is_cut,
         )
         .where(id_column.in_(geometry_ids))
         .order_by(id_column)
     )
 
-    old_geometries = (await conn.execute(statement)).mappings().all()
-    old_geometries = [dict(row) for row in old_geometries]
-
-    async def insert_batch(batch: list[dict[str, Any]]):
-        new_ids = (
-            (
-                await conn.execute(
-                    insert(projects_object_geometries_data)
-                    .values(batch)
-                    .returning(projects_object_geometries_data.c.object_geometry_id)
-                )
-            )
-            .scalars()
-            .all()
+    statement = (
+        insert(projects_object_geometries_data)
+        .from_select(
+            [
+                projects_object_geometries_data.c.public_object_geometry_id,
+                projects_object_geometries_data.c.territory_id,
+                projects_object_geometries_data.c.address,
+                projects_object_geometries_data.c.osm_id,
+                projects_object_geometries_data.c.geometry,
+                projects_object_geometries_data.c.is_cut,
+            ],
+            old_geometries_select,
         )
-        return new_ids
+        .returning(projects_object_geometries_data.c.object_geometry_id)
+    )
 
-    results = []
-    for batch_start in range(0, len(old_geometries), OBJECTS_NUMBER_TO_INSERT_LIMIT):
-        batch = old_geometries[batch_start : batch_start + OBJECTS_NUMBER_TO_INSERT_LIMIT]
-        batch_ids = await insert_batch(batch)
-        results.append(batch_ids)
-    results = [new_geom_id for batch_ids in results for new_geom_id in batch_ids]
+    results = (await conn.execute(statement)).scalars().all()
 
     return dict(zip(geometry_ids, results))
 
@@ -1499,15 +1492,21 @@ async def copy_physical_objects(conn, physical_ids: list[int]) -> dict[int, int]
         .where(projects_physical_objects_data.c.physical_object_id.in_(physical_ids))
         .order_by(projects_physical_objects_data.c.physical_object_id)
     )
-    old_physical_objects = (await conn.execute(statement)).mappings().all()
-    old_physical_objects = [dict(row) for row in old_physical_objects]
 
     # insert copies of old physical objects
     new_ids = (
         (
             await conn.execute(
                 insert(projects_physical_objects_data)
-                .values(old_physical_objects)
+                .from_select(
+                    [
+                        projects_physical_objects_data.c.public_physical_object_id,
+                        projects_physical_objects_data.c.physical_object_type_id,
+                        projects_physical_objects_data.c.name,
+                        projects_physical_objects_data.c.properties,
+                    ],
+                    statement,
+                )
                 .returning(projects_physical_objects_data.c.physical_object_id)
             )
         )
@@ -1536,14 +1535,24 @@ async def copy_services(conn, service_ids: list[int]) -> dict[int, int]:
         .where(projects_services_data.c.service_id.in_(service_ids))
         .order_by(projects_services_data.c.service_id)
     )
-    old_services = (await conn.execute(statement)).mappings().all()
-    old_services = [dict(row) for row in old_services]
 
     # insert copies of old services
     new_ids = (
         (
             await conn.execute(
-                insert(projects_services_data).values(old_services).returning(projects_services_data.c.service_id)
+                insert(projects_services_data)
+                .from_select(
+                    [
+                        projects_services_data.c.public_service_id,
+                        projects_services_data.c.service_type_id,
+                        projects_services_data.c.name,
+                        projects_services_data.c.capacity,
+                        projects_services_data.c.is_capacity_real,
+                        projects_services_data.c.properties,
+                    ],
+                    statement,
+                )
+                .returning(projects_services_data.c.service_id)
             )
         )
         .scalars()
