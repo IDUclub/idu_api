@@ -36,14 +36,14 @@ async def _from_request(request: Request, required: bool = True) -> UserDTO | No
             logger = await logger_dep.from_request(request)
             await logger.aerror("could not connect to authentication server")
             request.state.auth_user_dep = None
-            request.state.auth_user_reason = "Сервер аутентификации недоступен."
+            request.state.auth_user_missing_reason = "Сервер аутентификации недоступен."
         except Exception:  # pylint: disable=broad-except
             logger = await logger_dep.from_request(request)
             await logger.aexception("unexpected error in authentication process")
             if not required:
                 raise
             request.state.auth_user_dep = None
-            request.state.auth_user_reason = "Ошибка обработки JWT-токена."
+            request.state.auth_user_missing_reason = "Ошибка обработки JWT-токена."
     if required and request.state.auth_user_dep is None:
         if hasattr(request.state, "auth_user_missing_reason"):
             raise AuthorizationError(request.state.auth_user_missing_reason)
