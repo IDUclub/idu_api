@@ -24,6 +24,7 @@ class HTTPMetrics:
     errors: Counter
     """Total errors (exceptions) counter by `["method", "path", "error_type", "status_code"]`."""
     inflight_requests: UpDownCounter
+    """Current number of requests handled simultaniously."""
 
 
 @dataclass
@@ -86,31 +87,13 @@ def _setup_callback_metrics(meter: metrics.Meter) -> None:
 
 
 def _get_system_metrics_callback() -> Callable[[CallbackOptions], None]:
-    collect_num_fds = True
-    try:
-        psutil.Process().num_fds()
-    except AttributeError:
-        collect_num_fds = False
-
     def system_metrics_callback(options: CallbackOptions):  # pylint: disable=unused-argument
         """Callback function to collect system metrics"""
 
-        # Memory usage
-        memory = psutil.virtual_memory()
-        yield Observation(memory.percent, {"resource": "memory"})
-        yield Observation(memory.used, {"resource": "memory", "type": "used"})
-        yield Observation(memory.available, {"resource": "memory", "type": "available"})
-        yield Observation(memory.free, {"resource": "memory", "type": "free"})
-
-        # Process CPU time
+        # Process CPU time, a bit more information than `process_cpu_seconds_total`
         cpu_times = psutil.Process().cpu_times()
         yield Observation(cpu_times.user, {"resource": "cpu", "mode": "user"})
         yield Observation(cpu_times.system, {"resource": "cpu", "mode": "system"})
-
-        # File descriptor count (Unix-like systems)
-        if collect_num_fds:
-            num_fds = psutil.Process().num_fds()
-            yield Observation(num_fds, {"resource": "file_descriptors"})
 
     return system_metrics_callback
 

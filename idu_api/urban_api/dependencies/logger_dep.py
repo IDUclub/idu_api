@@ -31,7 +31,7 @@ def from_app(app: FastAPI) -> BoundLogger:
     return app.state.logger_dep
 
 
-async def from_request(request: Request) -> BoundLogger:
+def from_request(request: Request) -> BoundLogger:
     """Get a logger from request or app state."""
     if hasattr(request.state, "logger_dep"):
         logger = request.state.logger_dep

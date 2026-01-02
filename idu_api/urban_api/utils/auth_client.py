@@ -16,7 +16,7 @@ from idu_api.urban_api.exceptions.services.auth import (
     InvalidTokenSignature,
     JWTDecodeError,
 )
-from idu_api.urban_api.utils.observability import get_span_headers
+from idu_api.urban_api.observability.utils import get_tracing_headers
 
 _tracer = trace.get_tracer(__name__)
 
@@ -72,7 +72,7 @@ class AuthenticationClient:
                 async with aiohttp.ClientSession() as session:
                     response = await session.post(
                         self._auth_url,
-                        headers={"Authorization": f"Bearer {token}"} | get_span_headers(),
+                        headers={"Authorization": f"Bearer {token}"} | get_tracing_headers(),
                         data={"token": token, "token_type_hint": "access_token"},
                     )
                 response.raise_for_status()

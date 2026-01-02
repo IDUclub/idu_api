@@ -8,7 +8,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME, SERVICE_VERSION, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 
-from idu_api.urban_api.utils.observability import JaegerConfig, PrometheusConfig
+from idu_api.urban_api.observability.config import JaegerConfig, PrometheusConfig
 from idu_api.urban_api.version import VERSION as APP_VERSION
 
 from .metrics_server import PrometheusServer

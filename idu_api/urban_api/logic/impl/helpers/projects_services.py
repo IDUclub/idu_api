@@ -147,7 +147,6 @@ async def get_service_types_by_scenario_id_from_db(
 async def get_context_service_types_from_db(
     conn: AsyncConnection,
     scenario_id: int,
-
     user: UserDTO | None,
 ) -> list[ServiceTypeDTO]:
     """Get list of service types for 'context' of the project territory."""

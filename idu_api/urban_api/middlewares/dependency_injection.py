@@ -3,7 +3,8 @@
 from asyncio import Lock
 from typing import Any, Protocol
 
-from fastapi import FastAPI, Request
+import structlog
+from fastapi import Depends, FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
@@ -39,8 +40,9 @@ class PassServicesDependenciesMiddleware(BaseHTTPMiddleware):
         async with self._lock:
             await self._connection_manager.shutdown()
 
-    async def dispatch(self, request: Request, call_next):
-        logger = await logger_dep.from_request(request)
+    async def dispatch(
+        self, request: Request, call_next, logger: structlog.stdlib.BoundLogger = Depends(logger_dep.from_request)
+    ):
         for dependency, init in self._dependencies.items():
             setattr(request.state, dependency, init(self._connection_manager, logger=logger))
         return await call_next(request)

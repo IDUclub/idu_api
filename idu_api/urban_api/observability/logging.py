@@ -1,16 +1,12 @@
-"""Observability helper functions are defined here."""
+"""Logging-related configuration is located here."""
 
 import json
 import logging
 import platform
-import re
 import sys
-from collections import defaultdict
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
-import fastapi
 import structlog
 from opentelemetry import trace
 from opentelemetry._logs import set_logger_provider
@@ -25,62 +21,7 @@ from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
 from opentelemetry.sdk.resources import Resource
 from opentelemetry.util.types import Attributes
 
-LoggingLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-
-
-@dataclass
-class ExporterConfig:
-    """OpenTelemetry logs exporter config."""
-
-    endpoint: str
-    level: LoggingLevel = "INFO"
-    tls_insecure: bool = False
-
-
-@dataclass
-class FileLogger:
-    """File sink logger config."""
-
-    filename: str
-    level: LoggingLevel
-
-
-@dataclass
-class LoggingConfig:
-    """Logger configuration."""
-
-    root_logger_level: LoggingLevel = "INFO"
-    stderr_level: LoggingLevel | None = None
-    exporter: ExporterConfig | None = None
-    files: list[FileLogger] = field(default_factory=list)
-
-    def __post_init__(self):
-        if len(self.files) > 0 and isinstance(self.files[0], dict):
-            self.files = [FileLogger(**f) for f in self.files]
-
-
-@dataclass
-class PrometheusConfig:
-    """Config for Prometheus metrics pull-exporter."""
-
-    host: str
-    port: int
-
-
-@dataclass
-class JaegerConfig:
-    """Config for Jaeger (OpenTelemetry) traces push-exporter."""
-
-    endpoint: str
-
-
-@dataclass
-class ObservabilityConfig:
-    """Full observability config for logs, metrics and traces."""
-
-    logging: LoggingConfig
-    prometheus: PrometheusConfig | None = None
-    jaeger: JaegerConfig | None = None
+from .config import LoggingConfig
 
 
 def configure_logging(
@@ -180,60 +121,6 @@ def configure_logging(
     return logger
 
 
-class URLsMapper:
-    """Helper to change URL from given regex pattern to the given static value.
-
-    For example, with map {"/api/debug/.*": "/api/debug/*"} all requests with URL starting with "/api/debug/"
-    will be placed in path "/api/debug/*" in metrics.
-    """
-
-    def __init__(self, urls_map: dict[str, dict[str, str]] | None = None):
-        self._map: dict[str, dict[re.Pattern, str]] = defaultdict(dict)
-        """[method -> [pattern -> mapped_to]]"""
-
-        if urls_map is not None:
-            for method, patterns in urls_map.items():
-                for pattern, value in patterns.items():
-                    self.add(method, pattern, value)
-
-    def add(self, method: str, pattern: str, mapped_to: str) -> None:
-        """Add entry to the map. If pattern compilation is failed, ValueError is raised."""
-        regexp = re.compile(pattern)
-        self._map[method.upper()][regexp] = mapped_to
-
-    def add_routes(self, routes: list[fastapi.routing.APIRoute]) -> None:
-        """Add full route regexes to the map."""
-        logger: structlog.stdlib.BoundLogger = structlog.get_logger(__name__)
-        for route in routes:
-            if not hasattr(route, "path_regex") or not hasattr(route, "path"):
-                logger.warning("route has no 'path_regex' or 'path' attribute", route=route)
-                continue
-            if "{" not in route.path:  # ignore simple routes
-                continue
-            route_path = route.path
-            while "{" in route_path:
-                lbrace = route_path.index("{")
-                rbrace = route_path.index("}", lbrace + 1)
-                route_path = route_path[:lbrace] + "*" + route_path[rbrace + 1 :]
-            for method in route.methods:
-                self._map[method.upper()][route.path_regex] = route_path
-
-    def map(self, method: str, url: str) -> str:
-        """Check every map entry with `re.match` and return matched value. If not found, return original string."""
-        for regexp, mapped_to in self._map[method.upper()].items():
-            if regexp.match(url) is not None:
-                return mapped_to
-        return url
-
-
-def get_span_headers() -> dict[str, str]:
-    ctx = trace.get_current_span().get_span_context()
-    return {
-        "X-Span-Id": str(ctx.span_id),
-        "X-Trace-Id": str(ctx.trace_id),
-    }
-
-
 class AttrFilteredLoggingHandler(LoggingHandler):
     DROP_ATTRIBUTES = ["_logger"]
 
@@ -249,9 +136,6 @@ class AttrFilteredLoggingHandler(LoggingHandler):
 class OtelLogPreparationProcessor(LogRecordProcessor):
     """Processor which moves everything except message from log record body to attributes."""
 
-    SYSTEM_FIELDS = ["config"]
-    """attributes.* for those fields is used in OpenTelemetry agent, so it should not be set like this."""
-
     def on_emit(self, log_record: ReadWriteLogRecord) -> None:
         if not isinstance(log_record.log_record.body, dict):
             return
@@ -259,7 +143,7 @@ class OtelLogPreparationProcessor(LogRecordProcessor):
             if key == "event":
                 continue
             save_key = key
-            if key in log_record.log_record.attributes or key in self.SYSTEM_FIELDS:
+            if key in log_record.log_record.attributes:
                 save_key = f"{key}__body"
             log_record.log_record.attributes[save_key] = self._format_value(log_record.log_record.body[key])
         log_record.log_record.body = log_record.log_record.body["event"]

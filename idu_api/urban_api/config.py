@@ -1,7 +1,7 @@
 """Application configuration class is defined here."""
 
 from collections import OrderedDict
-from dataclasses import asdict, dataclass, fields
+from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from types import NoneType, UnionType
 from typing import Any, Literal, TextIO, Type, Union, get_origin
@@ -10,7 +10,7 @@ import yaml
 
 from idu_api.common.db.config import DBConfig, MultipleDBsConfig
 from idu_api.common.utils.secrets import SecretStr, representSecretStrYAML
-from idu_api.urban_api.utils.observability import (
+from idu_api.urban_api.observability.config import (
     ExporterConfig,
     FileLogger,
     JaegerConfig,
@@ -29,9 +29,16 @@ class CORSConfig:
 
 
 @dataclass
-class AppConfig:
+class UvicornConfig:
     host: str
     port: int
+    reload: bool = False
+    forwarded_allow_ips: list[str] = field(default_factory=list)
+
+
+@dataclass
+class AppConfig:
+    uvicorn: UvicornConfig
     debug: bool
     cors: CORSConfig
 
@@ -127,7 +134,11 @@ class UrbanAPIConfig:
         """Generate an example of configuration."""
 
         return cls(
-            app=AppConfig(host="0.0.0.0", port=8000, debug=False, cors=CORSConfig(["*"], ["*"], ["*"], True)),
+            app=AppConfig(
+                uvicorn=UvicornConfig(host="0.0.0.0", port=8000, reload=True, forwarded_allow_ips=["127.0.0.1"]),
+                debug=True,
+                cors=CORSConfig(["*"], ["*"], ["*"], True),
+            ),
             db=MultipleDBsConfig(
                 master=DBConfig(
                     host="localhost",

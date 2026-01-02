@@ -30,12 +30,13 @@ from idu_api.urban_api.logic.impl.system import SystemServiceImpl
 from idu_api.urban_api.logic.impl.territories import TerritoriesServiceImpl
 from idu_api.urban_api.logic.impl.urban_objects import UrbanObjectsServiceImpl
 from idu_api.urban_api.middlewares.dependency_injection import PassServicesDependenciesMiddleware
-from idu_api.urban_api.middlewares.exception_handler import ExceptionHandlerMiddleware
-from idu_api.urban_api.middlewares.observability import HandlerNotFoundError, ObservabilityMiddleware
+from idu_api.urban_api.middlewares.exception_handler import ExceptionHandlerMiddleware, HandlerNotFoundError
+from idu_api.urban_api.middlewares.observability import ObservabilityMiddleware
+from idu_api.urban_api.observability.logging import configure_logging
 from idu_api.urban_api.observability.metrics import setup_metrics
 from idu_api.urban_api.observability.otel_agent import OpenTelemetryAgent
+from idu_api.urban_api.observability.utils import URLsMapper
 from idu_api.urban_api.utils.auth_client import AuthenticationClient
-from idu_api.urban_api.utils.observability import URLsMapper, configure_logging
 
 from .handlers import list_of_routers
 from .logic.impl.buffers import BufferServiceImpl
@@ -155,15 +156,16 @@ def get_app(prefix: str = "/api") -> FastAPI:
         system_service=SystemServiceImpl,
     )
     application.add_middleware(
-        ObservabilityMiddleware,
-        exception_mapper=exception_mapper,
-        metrics=metrics,
-        urls_mapper=urls_mapper,
-    )
-    application.add_middleware(
         ExceptionHandlerMiddleware,
         debug=app_config.app.debug,
         exception_mapper=exception_mapper,
+        urls_mapper=urls_mapper,
+        errors_metric=metrics.http.errors,
+    )
+    application.add_middleware(
+        ObservabilityMiddleware,
+        metrics=metrics,
+        urls_mapper=urls_mapper,
     )
 
     return application
@@ -184,7 +186,7 @@ async def lifespan(application: FastAPI):
     kafka_producer_settings = KafkaProducerSettings.from_custom_config(app_config.broker)
     kafka_producer = KafkaProducerClient(
         kafka_producer_settings, logger=structlog.getLogger("broker")
-    )  # required event_loop
+    )  # requires event_loop
     kafka_producer_dep.init_dispencer(application, kafka_producer)
 
     await kafka_producer.start()
