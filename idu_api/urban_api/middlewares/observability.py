@@ -82,7 +82,8 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             )
             self._http_metrics.inflight_requests.add(-1)
 
-            span.set_status(trace.StatusCode.OK)
+            if result.status_code // 100 == 2:
+                span.set_status(trace.StatusCode.OK)
             span.set_attribute(http_attributes.HTTP_RESPONSE_STATUS_CODE, result.status_code)
             self._http_metrics.request_processing_duration.record(
                 duration_seconds, {"method": request.method, "path": path_for_metric}

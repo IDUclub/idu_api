@@ -33,7 +33,7 @@ class Metrics:
 
 
 def setup_metrics() -> Metrics:
-    meter = metrics.get_meter("{{project_name}}")
+    meter = metrics.get_meter("urban_api")
 
     _setup_callback_metrics(meter)
 
