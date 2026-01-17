@@ -1232,7 +1232,7 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
     ) as mock_get_context:
         mock_get_context.return_value = 1, mock_geom, [1]
         result = await get_context_physical_objects_with_geometry_from_db(
-            mock_conn, project_id, user, physical_object_type_id, physical_object_function_id
+            mock_conn, project_id, user, physical_object_type_id, physical_object_function_id, True
         )
     geojson_result = await GeoJSONResponse.from_list([r.to_geojson_dict() for r in result])
 

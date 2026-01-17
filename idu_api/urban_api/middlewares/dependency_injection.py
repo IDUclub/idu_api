@@ -41,8 +41,8 @@ class PassServicesDependenciesMiddleware(BaseHTTPMiddleware):
             await self._connection_manager.shutdown()
 
     async def dispatch(
-        self, request: Request, call_next, logger: structlog.stdlib.BoundLogger = Depends(logger_dep.from_request)
+        self, request: Request, call_next
     ):
         for dependency, init in self._dependencies.items():
-            setattr(request.state, dependency, init(self._connection_manager, logger=logger))
+            setattr(request.state, dependency, init(self._connection_manager, logger=logger_dep.from_request(request)))
         return await call_next(request)

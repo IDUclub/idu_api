@@ -42,9 +42,9 @@ def config(database) -> UrbanAPIConfig:
     s.bind(("", 0))
     port: int = s.getsockname()[1]
     config = UrbanAPIConfig.load(os.environ["TEST_CONFIG_PATH"])
-    config.app.port = port
+    config.app.uvicorn.port = port
     config.db = database
-    config.app.debug = False
+    config.app.uvicorn.reload = False
     return config
 
 
@@ -52,7 +52,7 @@ def config(database) -> UrbanAPIConfig:
 def urban_api_host(config) -> Iterator[str]:  # pylint: disable=redefined-outer-name
     """Fixture to start the urban_api HTTP server on random port with poetry command."""
 
-    host = f"http://localhost:{config.app.port}"
+    host = f"http://localhost:{config.app.uvicorn.port}"
     with tempfile.NamedTemporaryFile(delete=False) as temp_file:
         temp_yaml_config_path = temp_file.name
         config.dump(temp_yaml_config_path)
@@ -69,6 +69,7 @@ def urban_api_host(config) -> Iterator[str]:  # pylint: disable=redefined-outer-
             attempts = 15
             success = False
             for _ in range(attempts):
+                attempt_started_at = time.monotonic()
                 try:
                     with httpx.Client() as client:
                         if client.get(f"{host}/health_check/ping", timeout=1).is_success:
@@ -76,14 +77,17 @@ def urban_api_host(config) -> Iterator[str]:  # pylint: disable=redefined-outer-
                             break
                 except Exception:  # pylint: disable=broad-except
                     pass
-                time.sleep(1)
+                time.sleep(max(0, 1.0 - (time.monotonic() - attempt_started_at)))
             if success:
                 yield host
             else:
                 pytest.fail(f"Failed to start urban_api server in {attempts} attempts with a second interval")
         finally:
-            for child in psutil.Process(process.pid).children(recursive=True):
-                child.terminate()
+            try:
+                for child in psutil.Process(process.pid).children(recursive=True):
+                    child.terminate()
+            except psutil.NoSuchProcess:
+                pass
             process.terminate()
 
             try:
