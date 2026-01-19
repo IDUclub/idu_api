@@ -561,17 +561,22 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
     """Test the get_geometries_by_scenario_id_from_db function."""
 
     # Arrange
-    project_id = 1
+    scenario_id = 1
     user = UserDTO(id="mock_string", is_superuser=False)
     physical_object_type_id = 1
     service_type_id = 1
     mock_geom = str(MagicMock(spec=ScalarSelect))
 
-    public_urban_object_ids = (
+    project_scenario_public_urban_object_ids = (
+        select(projects_urban_objects_data.c.public_urban_object_id)
+        .where(projects_urban_objects_data.c.scenario_id == scenario_id)
+        .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
+    ).cte(name="project_scenario_public_urban_object_ids")
+    regional_scenario_public_urban_object_ids = (
         select(projects_urban_objects_data.c.public_urban_object_id)
         .where(projects_urban_objects_data.c.scenario_id == 1)
         .where(projects_urban_objects_data.c.public_urban_object_id.isnot(None))
-    ).cte(name="public_urban_object_ids")
+    ).cte(name="regional_scenario_public_urban_object_ids")
     objects_intersecting = (
         select(object_geometries_data.c.object_geometry_id)
         .select_from(
@@ -581,7 +586,8 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             )
         )
         .where(
-            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
+            urban_objects_data.c.urban_object_id.not_in(select(regional_scenario_public_urban_object_ids)),
+            urban_objects_data.c.urban_object_id.not_in(select(project_scenario_public_urban_object_ids)),
             object_geometries_data.c.territory_id.in_([1])
             | ST_Intersects(object_geometries_data.c.geometry, mock_geom),
         )
@@ -669,7 +675,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
         ),
         mock_geom,
     )
-    regional_scenario_geoms_query = (
+    scenario_geoms_query = (
         select(
             coalesce(
                 projects_physical_objects_data.c.physical_object_id, physical_objects_data.c.physical_object_id
@@ -770,13 +776,129 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             )
         )
         .where(
-            projects_urban_objects_data.c.scenario_id == 1,
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
+            projects_object_geometries_data.c.is_cut.is_(False) | projects_object_geometries_data.c.is_cut.is_(None),
             ~ST_IsEmpty(geom_expr),
         )
     )
+    regional_scenario_geoms_query = scenario_geoms_query.where(projects_urban_objects_data.c.scenario_id == 1)
+    project_scenario_geoms_query = scenario_geoms_query.where(
+        projects_urban_objects_data.c.scenario_id == scenario_id,
+    )
+    scenario_objects_with_public_geoms_query = (
+        select(
+            coalesce(
+                projects_physical_objects_data.c.physical_object_id, physical_objects_data.c.physical_object_id
+            ).label("physical_object_id"),
+            physical_object_types_dict.c.physical_object_type_id,
+            physical_object_types_dict.c.physical_object_function_id,
+            physical_object_types_dict.c.name.label("physical_object_type_name"),
+            coalesce(projects_physical_objects_data.c.name, physical_objects_data.c.name).label(
+                "physical_object_name"
+            ),
+            coalesce(projects_physical_objects_data.c.properties, physical_objects_data.c.properties).label(
+                "physical_object_properties"
+            ),
+            *coalesce_building_columns,
+            coalesce(projects_buildings_data.c.properties, buildings_data.c.properties).label(
+                "building_properties"
+            ),
+            projects_object_geometries_data.c.object_geometry_id,
+            territories_data.c.territory_id,
+            territories_data.c.name.label("territory_name"),
+            projects_object_geometries_data.c.address,
+            projects_object_geometries_data.c.osm_id,
+            ST_AsEWKB(object_geometries_data.c.geometry).label("geometry"),
+            ST_AsEWKB(object_geometries_data.c.centre_point).label("centre_point"),
+            coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
+            coalesce(projects_services_data.c.name, services_data.c.name).label("service_name"),
+            coalesce(projects_services_data.c.capacity, services_data.c.capacity).label("capacity"),
+            coalesce(projects_services_data.c.is_capacity_real, services_data.c.is_capacity_real).label(
+                "is_capacity_real"
+            ),
+            coalesce(projects_services_data.c.properties, services_data.c.properties).label("service_properties"),
+            service_types_dict.c.service_type_id,
+            service_types_dict.c.urban_function_id,
+            service_types_dict.c.name.label("service_type_name"),
+            territory_types_dict.c.territory_type_id,
+            territory_types_dict.c.name.label("territory_type_name"),
+            (projects_urban_objects_data.c.object_geometry_id.isnot(None)).label("is_scenario_geometry"),
+            (projects_urban_objects_data.c.physical_object_id.isnot(None)).label("is_scenario_physical_object"),
+            (projects_urban_objects_data.c.service_id.isnot(None)).label("is_scenario_service"),
+        )
+        .select_from(
+            projects_urban_objects_data.outerjoin(
+                projects_physical_objects_data,
+                projects_physical_objects_data.c.physical_object_id
+                == projects_urban_objects_data.c.physical_object_id,
+            )
+            .join(
+                projects_object_geometries_data,
+                projects_object_geometries_data.c.object_geometry_id
+                == projects_urban_objects_data.c.object_geometry_id,
+            )
+            .outerjoin(
+                projects_services_data,
+                projects_services_data.c.service_id == projects_urban_objects_data.c.service_id,
+            )
+            .outerjoin(
+                physical_objects_data,
+                physical_objects_data.c.physical_object_id
+                == projects_urban_objects_data.c.public_physical_object_id,
+            )
+            .join(
+                object_geometries_data,
+                object_geometries_data.c.object_geometry_id
+                == projects_object_geometries_data.c.public_object_geometry_id,
+            )
+            .outerjoin(services_data, services_data.c.service_id == projects_urban_objects_data.c.public_service_id)
+            .outerjoin(
+                physical_object_types_dict,
+                or_(
+                    physical_object_types_dict.c.physical_object_type_id
+                    == projects_physical_objects_data.c.physical_object_type_id,
+                    physical_object_types_dict.c.physical_object_type_id
+                    == physical_objects_data.c.physical_object_type_id,
+                ),
+            )
+            .outerjoin(
+                service_types_dict,
+                or_(
+                    service_types_dict.c.service_type_id == projects_services_data.c.service_type_id,
+                    service_types_dict.c.service_type_id == services_data.c.service_type_id,
+                ),
+            )
+            .outerjoin(
+                territory_types_dict,
+                or_(
+                    territory_types_dict.c.territory_type_id == projects_services_data.c.territory_type_id,
+                    territory_types_dict.c.territory_type_id == services_data.c.territory_type_id,
+                ),
+            )
+            .outerjoin(
+                territories_data,
+                or_(
+                    territories_data.c.territory_id == projects_object_geometries_data.c.territory_id,
+                    territories_data.c.territory_id == object_geometries_data.c.territory_id,
+                ),
+            )
+            .outerjoin(
+                buildings_data,
+                buildings_data.c.physical_object_id == physical_objects_data.c.physical_object_id,
+            )
+            .outerjoin(
+                projects_buildings_data,
+                projects_buildings_data.c.physical_object_id == projects_physical_objects_data.c.physical_object_id,
+            )
+        )
+        .where(
+            projects_urban_objects_data.c.scenario_id == scenario_id,
+            projects_object_geometries_data.c.is_cut.is_(True),
+        )
+    )
 
-    union_query = union_all(public_geoms_query, regional_scenario_geoms_query).cte(name="union_query")
+    queries = [public_geoms_query, regional_scenario_geoms_query, project_scenario_geoms_query, scenario_objects_with_public_geoms_query]
+    union_query = union_all(*queries).cte(name="union_query")
     statement = select(union_query).where(
         union_query.c.physical_object_type_id == physical_object_type_id,
         union_query.c.service_type_id == service_type_id,
@@ -789,7 +911,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
     ) as mock_get_context:
         mock_get_context.return_value = 1, mock_geom, [1]
         result = await get_context_geometries_with_all_objects_from_db(
-            mock_conn, project_id, user, physical_object_type_id, service_type_id, None, None, None, None, True
+            mock_conn, scenario_id, user, physical_object_type_id, service_type_id, None, None, None, None, True
         )
 
     # Assert

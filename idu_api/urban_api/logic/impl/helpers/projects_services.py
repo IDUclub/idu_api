@@ -1057,6 +1057,7 @@ async def get_context_services_with_geometry_from_db(
         )
         .where(
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
+            projects_object_geometries_data.c.is_cut.is_(False) | projects_object_geometries_data.c.is_cut.is_(None),
             (
                 projects_urban_objects_data.c.service_id.isnot(None)
                 | projects_urban_objects_data.c.public_service_id.isnot(None)

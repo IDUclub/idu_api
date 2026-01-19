@@ -29,7 +29,7 @@ try:
     config.set_section_option(section, "POSTGRES_PASSWORD", app_settings.db.master.password.get_secret_value())
     config.set_section_option(section, "POSTGRES_PORT", str(app_settings.db.master.port))
 except ValueError:
-    print("error on reading config gile for migration (assuming run from tests)")
+    print("error on reading config file for migration (assuming run from tests)")
 
 
 fileConfig(config.config_file_name, disable_existing_loggers=False)
