@@ -1593,6 +1593,7 @@ async def get_context_physical_objects_with_geometry_from_db(
         )
         .where(
             projects_urban_objects_data.c.public_urban_object_id.is_(None),
+            projects_object_geometries_data.c.is_cut.is_(False) | projects_object_geometries_data.c.is_cut.is_(None),
             ~ST_IsEmpty(geom_expr),
         )
         .distinct()

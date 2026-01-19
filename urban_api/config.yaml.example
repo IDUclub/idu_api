@@ -1,7 +1,10 @@
 app:
-  host: 0.0.0.0
-  port: 8000
-  debug: false
+  uvicorn: # only used when server is started via command
+    host: 0.0.0.0
+    port: 8080
+    reload: true
+    forwarded_allow_ips:
+      - 127.0.0.1
   cors:
     allow_origins: ["*"]
     allow_methods: ["*"]

@@ -1,21 +1,18 @@
 """Observability middleware is defined here."""
 
 import time
-from random import randint
+import uuid
 
-import structlog
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, Request
 from opentelemetry import context as tracing_context
 from opentelemetry import trace
-from opentelemetry.semconv.attributes import exception_attributes, http_attributes, url_attributes
-from opentelemetry.trace import NonRecordingSpan, Span, SpanContext, TraceFlags
-from starlette import status
+from opentelemetry.semconv.attributes import http_attributes, url_attributes
+from opentelemetry.trace import NonRecordingSpan, SpanContext, TraceFlags
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from idu_api.urban_api.dependencies import auth_dep, logger_dep
-from idu_api.urban_api.exceptions.mapper import ExceptionMapper
 from idu_api.urban_api.observability.metrics import Metrics
-from idu_api.urban_api.utils.observability import URLsMapper
+from idu_api.urban_api.observability.utils import URLsMapper, get_tracing_headers
 
 _tracer = trace.get_tracer_provider().get_tracer(__name__)
 
@@ -23,33 +20,26 @@ _tracer = trace.get_tracer_provider().get_tracer(__name__)
 class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-public-methods
     """Middleware for global observability requests.
 
-    - Generate tracing span and adds response header 'X-Trace-Id' and X-Span-Id'
+    - Generate tracing span and adds response headers
+    'X-Trace-Id', 'X-Span-Id' (if tracing is configured) and 'X-Request-Id'
     - Binds trace_id it to logger passing it in request state (`request.state.logger`)
     - Collects metrics for Prometheus
 
-    In case when jaeger is not enabled, trace_id and span_id are generated randomly.
     """
 
-    def __init__(self, app: FastAPI, exception_mapper: ExceptionMapper, metrics: Metrics, urls_mapper: URLsMapper):
+    def __init__(self, app: FastAPI, metrics: Metrics, urls_mapper: URLsMapper):
         super().__init__(app)
-        self._exception_mapper = exception_mapper
         self._http_metrics = metrics.http
         self._urls_mapper = urls_mapper
 
     async def dispatch(self, request: Request, call_next):
-        logger = await logger_dep.from_request(request)
+        logger = logger_dep.from_request(request)
         user = await auth_dep.from_request_optional(request)
 
         _try_get_parent_span_id(request)
-        with _tracer.start_as_current_span("http-request", record_exception=False) as span:
-            trace_id = span.get_span_context().trace_id
-            span_id = span.get_span_context().span_id
-            if trace_id == 0:
-                trace_id = randint(1, 1 << 127)
-                span_id = randint(1, 1 << 63)
-                logger = logger.bind(
-                    trace_id=format(trace_id, "032x"), span_id=format(span_id, "016x"), fake_trace=True
-                )
+        with _tracer.start_as_current_span("http request") as span:
+            request_id = str(uuid.uuid4())
+            logger = logger.bind(request_id=request_id)
             logger_dep.attach_to_request(request, logger)
 
             span.set_attributes(
@@ -57,14 +47,14 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                     http_attributes.HTTP_REQUEST_METHOD: request.method,
                     url_attributes.URL_PATH: request.url.path,
                     url_attributes.URL_QUERY: str(request.query_params),
-                    "client_ip": request.client.host,
-                    "request_client": _get_request_client(request),
+                    "request_client": request.client.host,
+                    "request_id": request_id,
                     "user": user.id if user is not None else "",
                 }
             )
 
             await logger.ainfo(
-                "handling request",
+                "http begin",
                 client=request.client.host,
                 path_params=request.path_params,
                 method=request.method,
@@ -72,169 +62,33 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
             )
 
             path_for_metric = self._urls_mapper.map(request.method, request.url.path)
-            self._http_metrics.requests_started.add(
-                1,
-                {
-                    "method": request.method,
-                    "path": path_for_metric,
-                },
-            )
+            self._http_metrics.requests_started.add(1, {"method": request.method, "path": path_for_metric})
+            self._http_metrics.inflight_requests.add(1)
 
             time_begin = time.monotonic()
-            try:
-                self._http_metrics.inflight_requests.add(1)
-                response = await call_next(request)
-                duration_seconds = time.monotonic() - time_begin
+            result = await call_next(request)
+            duration_seconds = time.monotonic() - time_begin
 
-                response.headers.update({"X-Trace-Id": format(trace_id, "032x"), "X-Span-Id": format(span_id, "016x")})
-                await self._handle_success(
-                    request=request,
-                    status_code=response.status_code,
-                    logger=logger,
-                    span=span,
-                    path_for_metric=path_for_metric,
-                    duration_seconds=duration_seconds,
-                    handler_found=True,
-                    body_size=response.headers.get("Content-Length"),
-                )
-                return response
-            except HandlerNotFoundError as exc:  # hack to filter requests without handlers
-                duration_seconds = time.monotonic() - time_begin
-                if isinstance(exc, HandlerNotFoundError):
-                    exc = exc.__cause__
-                await self._handle_success(
-                    request=request,
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    logger=logger,
-                    span=span,
-                    path_for_metric=path_for_metric,
-                    duration_seconds=duration_seconds,
-                    handler_found=False,
-                )
-                raise ObservableException(trace_id=trace_id, span_id=span_id) from exc
-            except Exception as exc:
-                duration_seconds = time.monotonic() - time_begin
-                await self._handle_exception(
-                    request=request,
-                    exc=exc,
-                    logger=logger,
-                    span=span,
-                    path_for_metric=path_for_metric,
-                    duration_seconds=duration_seconds,
-                )
-                raise ObservableException(trace_id=trace_id, span_id=span_id) from exc
-            finally:
-                self._http_metrics.inflight_requests.add(-1)
-                self._http_metrics.request_processing_duration.record(
-                    duration_seconds, {"method": request.method, "path": path_for_metric}
-                )
+            result.headers.update({"X-Request-Id": request_id} | get_tracing_headers())
 
-    async def _handle_success(  # pylint: disable=too-many-arguments
-        self,
-        *,
-        request: Request,
-        status_code: int,
-        logger: structlog.stdlib.BoundLogger,
-        span: Span,
-        path_for_metric: str,
-        duration_seconds: float,
-        handler_found: bool,
-        body_size: int | None = None,
-    ) -> None:
-        await logger.ainfo("request handled successfully", time_consumed=round(duration_seconds, 3))
-        self._http_metrics.requests_finished.add(
-            1,
-            {
-                "method": request.method,
-                "path": path_for_metric,
-                "status_code": status_code,
-                "handler_found": handler_found,
-            },
-        )
+            await logger.ainfo("http end", time_consumed=round(duration_seconds, 3), status_code=result.status_code)
+            self._http_metrics.requests_finished.add(
+                1,
+                {
+                    http_attributes.HTTP_REQUEST_METHOD: request.method,
+                    url_attributes.URL_PATH: path_for_metric,
+                    http_attributes.HTTP_RESPONSE_STATUS_CODE: result.status_code,
+                },
+            )
+            self._http_metrics.inflight_requests.add(-1)
 
-        span.set_attribute(http_attributes.HTTP_RESPONSE_STATUS_CODE, status_code)
-        if not handler_found:
-            span.set_attribute("handler_found", False)
-        if body_size is not None:
-            span.set_attribute("body_size", body_size)
-
-    async def _handle_exception(  # pylint: disable=too-many-arguments
-        self,
-        *,
-        request: Request,
-        exc: Exception,
-        logger: structlog.stdlib.BoundLogger,
-        span: Span,
-        path_for_metric: str,
-        duration_seconds: float,
-    ) -> None:
-
-        cause = exc
-        status_code = self._exception_mapper.get_status_code(exc)
-        if isinstance(exc, HTTPException):
-            if exc.__cause__ is not None:
-                cause = exc.__cause__
-        is_known = self._exception_mapper.is_known(exc)
-
-        self._http_metrics.requests_finished.add(
-            1,
-            {
-                "method": request.method,
-                "path": path_for_metric,
-                "status_code": status_code,
-                "handler_found": True,
-            },
-        )
-        self._http_metrics.errors.add(
-            1,
-            {
-                "method": request.method,
-                "path": path_for_metric,
-                "error_type": type(cause).__qualname__,
-                "status_code": status_code,
-            },
-        )
-
-        span.record_exception(exc, {"is_known": is_known})
-        if is_known:
-            log_func = logger.aerror
-        else:
-            log_func = logger.aexception
-        await log_func(
-            "failed to handle request", time_consumed=round(duration_seconds, 3), error_type=type(exc).__qualname__
-        )
-
-        span.set_attributes(
-            {
-                exception_attributes.EXCEPTION_TYPE: type(exc).__qualname__,
-                exception_attributes.EXCEPTION_MESSAGE: repr(exc),
-                http_attributes.HTTP_RESPONSE_STATUS_CODE: status_code,
-            }
-        )
-
-
-class ObservableException(RuntimeError):
-    """Runtime Error with `trace_id` and `span_id` set. Guranteed to have `.__cause__` as its parent exception."""
-
-    def __init__(self, trace_id: int, span_id: int):
-        super().__init__()
-        self.trace_id = trace_id
-        self.span_id = span_id
-
-
-class HandlerNotFoundError(Exception):
-    """Exception to raise on FastAPI 404 handler (only for situation when no handler was found for request).
-
-    Guranteed to have `.__cause__` as its parent exception.
-    """
-
-
-def _get_request_client(request: Request) -> str:
-    if (ip := request.headers.get("X-Real-IP")) is not None:
-        return ip
-    if (ip := request.headers.get("X-Forwarded-For")) is not None:
-        return ip
-    return request.client.host
+            if result.status_code // 100 == 2:
+                span.set_status(trace.StatusCode.OK)
+            span.set_attribute(http_attributes.HTTP_RESPONSE_STATUS_CODE, result.status_code)
+            self._http_metrics.request_processing_duration.record(
+                duration_seconds, {"method": request.method, "path": path_for_metric}
+            )
+            return result
 
 
 def _try_get_parent_span_id(request: Request) -> None:
@@ -244,11 +98,14 @@ def _try_get_parent_span_id(request: Request) -> None:
     if trace_id_str is None or span_id_str is None:
         return
 
-    if not trace_id_str.isnumeric() or not span_id_str.isnumeric():
+    if not trace_id_str.isalnum() or not span_id_str.isalnum():
         return
 
-    span_context = SpanContext(
-        trace_id=int(trace_id_str), span_id=int(span_id_str), is_remote=True, trace_flags=TraceFlags(0x01)
-    )
+    try:
+        span_context = SpanContext(
+            trace_id=int(trace_id_str, 16), span_id=int(span_id_str, 16), is_remote=True, trace_flags=TraceFlags(0x01)
+        )
+    except Exception:  # pylint: disable=broad-except
+        return
     ctx = trace.set_span_in_context(NonRecordingSpan(span_context))
     tracing_context.attach(ctx)

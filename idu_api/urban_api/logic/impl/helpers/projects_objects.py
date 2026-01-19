@@ -76,7 +76,6 @@ from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, Entit
 from idu_api.urban_api.exceptions.logic.projects import NotAllowedInProjectScenario, NotAllowedInRegionalProject
 from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.logic.impl.helpers.utils import (
-    OBJECTS_NUMBER_TO_INSERT_LIMIT,
     SRID,
     check_existence,
     extract_values_from_model,
