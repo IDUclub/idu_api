@@ -1,7 +1,8 @@
 app:
+  debug: true
   uvicorn: # only used when server is started via command
     host: 0.0.0.0
-    port: 8080
+    port: 8000
     reload: true
     forwarded_allow_ips:
       - 127.0.0.1
@@ -28,10 +29,12 @@ db:
       pool_size: 8
       debug: false
 auth:
-  url: http://localhost:8086/introspect
-  validate: false
-  cache_size: 100
-  cache_ttl: 1800
+  verify: true
+  server_url: https://localhost:3000/realms/myrealm
+  client_id: urban-api-swagger
+  verify_aud: true
+  valid_audiences:
+    - urban-api
 fileserver:
   url: http://localhost:9000
   projects_bucket: projects.images
@@ -40,9 +43,6 @@ fileserver:
   region_name: us-west-rack-2
   connect_timeout: 1
   read_timeout: 20
-external:
-  gen_planner_api: http://localhost:8101
-  hextech_api: http://localhost:8100
 observability:
   logging:
     root_logger_level: INFO # optional, default INFO
@@ -56,12 +56,12 @@ observability:
       tls_insecure: true
   prometheus: # optional
     host: localhost
-    port: 9092
+    port: 9090
   jaeger: # optional
     endpoint: http://localhost:4318/v1/traces
 broker:
   client_id: urban-api
-  bootstrap_servers: localhost:9092,localhost9093,localhost9094
-  schema_registry_url: http://localhost:8081
+  bootstrap_servers: localhost:9092,localhost:9093,localhost:9094
+  schema_registry_url: http://localhost:8080
   enable_idempotence: true
   max_in_flight: 5

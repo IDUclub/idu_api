@@ -1,6 +1,8 @@
+"""Projects handlers logic of getting entities from the database is defined here."""
+
 import abc
 from datetime import date
-from typing import Any, Literal, Protocol
+from typing import Literal, Protocol
 
 from otteroad import KafkaProducerClient
 
@@ -41,7 +43,6 @@ from idu_api.urban_api.schemas import (
     ProjectPatch,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ScenarioBufferDelete,
     ScenarioBufferPut,
     ScenarioBuildingPatch,
@@ -49,13 +50,11 @@ from idu_api.urban_api.schemas import (
     ScenarioBuildingPut,
     ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePost,
-    ScenarioFunctionalZonePut,
     ScenarioIndicatorValuePatch,
     ScenarioIndicatorValuePost,
     ScenarioIndicatorValuePut,
     ScenarioPatch,
     ScenarioPost,
-    ScenarioPut,
     ScenarioServicePost,
     ServicePatch,
     ServicePut,
@@ -122,10 +121,6 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Create base scenario for given project from regional scenario."""
 
     @abc.abstractmethod
-    async def put_project(self, project: ProjectPut, project_id: int, user: UserDTO) -> ProjectDTO:
-        """Update project object by all its attributes."""
-
-    @abc.abstractmethod
     async def patch_project(self, project: ProjectPatch, project_id: int, user: UserDTO) -> ProjectDTO:
         """Update project object by only given attributes."""
 
@@ -159,16 +154,8 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Get scenario object by id."""
 
     @abc.abstractmethod
-    async def add_scenario(self, scenario: ScenarioPost, user: UserDTO) -> ScenarioDTO:
-        """Create scenario object from base scenario."""
-
-    @abc.abstractmethod
     async def copy_scenario(self, scenario: ScenarioPost, scenario_id: int, user: UserDTO) -> ScenarioDTO:
         """Create a new scenario from another scenario (copy) by its identifier."""
-
-    @abc.abstractmethod
-    async def put_scenario(self, scenario: ScenarioPut, scenario_id: int, user: UserDTO) -> ScenarioDTO:
-        """Put project object."""
 
     @abc.abstractmethod
     async def patch_scenario(self, scenario: ScenarioPatch, scenario_id: int, user: UserDTO) -> ScenarioDTO:
@@ -250,17 +237,6 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         user: UserDTO,
     ) -> ScenarioUrbanObjectDTO:
         """Create scenario physical object with geometry."""
-
-    @abc.abstractmethod
-    async def update_physical_objects_by_function_id(
-        self,
-        physical_object: list[PhysicalObjectWithGeometryPost],
-        scenario_id: int,
-        user: UserDTO,
-        physical_object_function_id: int,
-    ) -> list[ScenarioUrbanObjectDTO]:
-        """Delete all physical objects by physical object function identifier
-        and upload new objects with the same function for given scenario."""
 
     @abc.abstractmethod
     async def put_physical_object(
@@ -459,7 +435,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Get list of geometries for 'context' of the project territory."""
 
     @abc.abstractmethod
-    async def get_context_geometries_with_all_objects(
+    async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-arguments
         self,
         scenario_id: int,
         user: UserDTO | None,
@@ -570,10 +546,6 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         """Get project's indicators values for given regional scenario with hexagons."""
 
     @abc.abstractmethod
-    async def update_all_indicators_values_by_scenario_id(self, scenario_id: int, user: UserDTO) -> dict[str, Any]:
-        """Update all indicators values for given scenario."""
-
-    @abc.abstractmethod
     async def get_functional_zones_sources_by_scenario_id(
         self, scenario_id: int, user: UserDTO | None
     ) -> list[FunctionalZoneSourceDTO]:
@@ -612,16 +584,6 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         self, profiles: list[ScenarioFunctionalZonePost], scenario_id: int, user: UserDTO
     ) -> list[ScenarioFunctionalZoneDTO]:
         """Add list of scenario functional zone objects."""
-
-    @abc.abstractmethod
-    async def put_scenario_functional_zone(
-        self,
-        profile: ScenarioFunctionalZonePut,
-        scenario_id: int,
-        functional_zone_id: int,
-        user: UserDTO,
-    ) -> ScenarioFunctionalZoneDTO:
-        """Update scenario functional zone object by all its attributes."""
 
     @abc.abstractmethod
     async def patch_scenario_functional_zone(

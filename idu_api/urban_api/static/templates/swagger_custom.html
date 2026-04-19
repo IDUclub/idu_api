@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ API_TITLE }}</title>
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
+    <link rel="icon" type="image/svg+xml" href="/static/icon.svg">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300..700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist/swagger-ui.css">
+    {% raw %}
+    <style>
+        :root {
+            --bg-gradient-start: #f8fafc;
+            --bg-gradient-end: #eef2ff;
+            --bg-card: #ffffff;
+            --border-light: #e2e8f0;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --accent-dark: #334155;
+            --accent-hover: #1e293b;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.06);
+            --radius-md: 14px;
+            --radius-sm: 8px;
+            --transition: all 0.2s ease;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            background-attachment: fixed;
+            font-family: "Inter", system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            color: var(--text-primary);
+            position: relative;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: radial-gradient(#cbd5e1 1px, transparent 1px);
+            background-size: 32px 32px;
+            opacity: 0.3;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .topbar {
+            display: none !important;
+        }
+
+        /* Скрываем стандартный блок информации Swagger */
+        .swagger-ui .info {
+            display: none !important;
+        }
+
+        /* КАСТОМНЫЙ ХЕДЕР */
+        .custom-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 16px 32px;
+            background: rgba(255, 255, 255, 0.75);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+        }
+
+        .custom-header img {
+            height: 64px;
+            width: auto;
+            object-fit: contain;
+            transition: transform 0.2s ease;
+        }
+
+        .custom-header img:hover {
+            transform: scale(1.02);
+        }
+
+        .api-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .api-title {
+            font-size: 1.4rem;
+            font-weight: 600;
+            letter-spacing: -0.01em;
+            background: linear-gradient(135deg, #0f172a 0%, #334155 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            display: inline-flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .api-version {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .api-badge {
+            display: inline-block;
+            background: rgba(51, 65, 85, 0.1);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 500;
+            line-height: 1;
+        }
+
+        .header-links {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header-links a, .header-links span {
+            color: var(--accent-dark);
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.9rem;
+            transition: var(--transition);
+            border-bottom: 1px solid transparent;
+        }
+
+        .header-links a:hover {
+            color: var(--accent-hover);
+            border-bottom-color: var(--accent-dark);
+        }
+
+        /* Контейнер для описания API */
+        .api-description-container {
+            max-width: 1400px;
+            margin: 24px auto 0 auto;
+            padding: 0 40px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .api-description-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            padding: 24px 32px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 16px;
+        }
+
+        .api-description-card p {
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .api-description-card ul {
+            margin-left: 24px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .api-description-card li {
+            margin: 6px 0;
+        }
+
+        /* Swagger UI контейнер */
+        #swagger-ui {
+            padding: 16px 40px 32px 40px;
+            max-width: 1400px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Общие переопределения Swagger */
+        .swagger-ui {
+            font-family: "Inter", system-ui, sans-serif;
+        }
+
+        /* Улучшаем читаемость описаний методов (markdown) */
+        .swagger-ui .markdown,
+        .swagger-ui .renderedMarkdown {
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+        .swagger-ui .markdown p,
+        .swagger-ui .renderedMarkdown p {
+            margin-bottom: 12px;
+        }
+        .swagger-ui .markdown h1, .swagger-ui .markdown h2, .swagger-ui .markdown h3,
+        .swagger-ui .renderedMarkdown h1, .swagger-ui .renderedMarkdown h2, .swagger-ui .renderedMarkdown h3 {
+            font-weight: 600;
+            margin-top: 16px;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        .swagger-ui .markdown ul, .swagger-ui .markdown ol,
+        .swagger-ui .renderedMarkdown ul, .swagger-ui .renderedMarkdown ol {
+            margin-left: 24px;
+            margin-bottom: 12px;
+        }
+        .swagger-ui .markdown li,
+        .swagger-ui .renderedMarkdown li {
+            margin: 4px 0;
+        }
+        .swagger-ui .markdown code,
+        .swagger-ui .renderedMarkdown code {
+            background: #f1f5f9;
+            padding: 2px 4px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+
+        /* Таблицы параметров и ответов */
+        .swagger-ui .parameters-container,
+        .swagger-ui .response-col_description {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+        .swagger-ui .parameters-container .parameter__name,
+        .swagger-ui .response-col_description .response-col_description__inner {
+            font-weight: 500;
+        }
+
+        /* Карточки эндпоинтов */
+        .swagger-ui .opblock {
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border-light);
+            background: var(--bg-card);
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+            margin-bottom: 16px;
+        }
+
+        .swagger-ui .opblock:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .swagger-ui .opblock.opblock-get,
+        .swagger-ui .opblock.opblock-post,
+        .swagger-ui .opblock.opblock-put,
+        .swagger-ui .opblock.opblock-delete,
+        .swagger-ui .opblock.opblock-patch,
+        .swagger-ui .opblock.opblock-options {
+            border-left: 4px solid var(--accent-dark) !important;
+        }
+
+        .swagger-ui .opblock-summary-method {
+            background: var(--accent-dark) !important;
+            color: white !important;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            padding: 4px 12px;
+        }
+
+        .swagger-ui .opblock-summary-path {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .swagger-ui .opblock-summary-description {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .swagger-ui .btn {
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-light);
+            background: white;
+            font-weight: 500;
+            transition: var(--transition);
+            padding: 8px 16px;
+        }
+
+        .swagger-ui .btn:hover {
+            background: #f8fafc;
+            transform: translateY(-1px);
+        }
+
+        .swagger-ui .btn.execute {
+            background-color: var(--accent-dark);
+            color: white;
+            border: none;
+        }
+
+        .swagger-ui .btn.execute:hover {
+            background-color: var(--accent-hover);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .swagger-ui input,
+        .swagger-ui textarea,
+        .swagger-ui select {
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border-light);
+            background: white;
+            transition: var(--transition);
+        }
+
+        .swagger-ui input:focus,
+        .swagger-ui textarea:focus {
+            border-color: var(--accent-dark);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(51,65,85,0.1);
+        }
+
+        /* Блок Schemas (модели) */
+        .swagger-ui .models {
+            display: block !important;
+        }
+
+        /* Кнопка Authorize */
+        .auth-wrapper {
+            background: transparent !important;
+            padding: 0 !important;
+        }
+
+        .scheme-container {
+            background: transparent !important;
+            box-shadow: none !important;
+            border: none !important;
+            padding: 0 0 20px 0 !important;
+            margin: 0 !important;
+        }
+
+        .swagger-ui .authorize {
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--accent-dark);
+            background: white;
+            color: var(--accent-dark);
+            transition: var(--transition);
+        }
+
+        .swagger-ui .authorize:hover {
+            background: #f1f5f9;
+            border-color: var(--accent-hover);
+            color: var(--accent-hover);
+            transform: translateY(-1px);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        @media (max-width: 768px) {
+            .custom-header {
+                padding: 12px 20px;
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .custom-header img {
+                height: 48px;
+            }
+            .api-title {
+                font-size: 1.2rem;
+            }
+            .api-description-container {
+                padding: 0 20px;
+            }
+            .api-description-card {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+            }
+            }
+            #swagger-ui {
+                padding: 16px 20px 32px 20px;
+            }
+            .swagger-ui .opblock-summary-method {
+                font-size: 0.7rem;
+                padding: 2px 8px;
+            }
+            .swagger-ui .model-container {
+                padding: 12px 16px;
+            }
+            .swagger-ui .models h4 {
+                font-size: 1rem;
+            }
+        }
+    </style>
+    {% endraw %}
+</head>
+<body>
+
+    <div class="custom-header">
+        <div class="header-left">
+            <a href="/" class="logo-link">
+                <img src="/static/logo.svg" alt="Logo" />
+            </a>
+            <div class="api-meta">
+                <div class="api-title">
+                    {{ API_TITLE }}
+                    <span class="api-badge">OAS 3.1</span>
+                </div>
+                <div class="api-version">{{ API_VERSION }}</div>
+            </div>
+        </div>
+        <div class="header-links">
+            <a href="openapi" target="_blank">OpenAPI JSON</a>
+            <a href="{{ TERMS_URL }}" target="_blank">Terms of service</a>
+            <a href="mailto:{{ CONTACT_EMAIL }}" target="_blank">Contact</a>
+            {% if LICENSE_URL %}
+                <a href="{{ LICENSE_URL }}" target="_blank">{{ LICENSE_NAME }}</a>
+            {% else %}
+                <span>{{ LICENSE_NAME }}</span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="api-description-container">
+        <div class="api-description-card">
+            <h2>What is this API?</h2>
+            {{ API_DESCRIPTION_HTML|safe }}
+        </div>
+    </div>
+
+    <div id="swagger-ui"></div>
+
+    <script src="https://unpkg.com/swagger-ui-dist/swagger-ui-bundle.js"></script>
+    <script>
+        const ui = SwaggerUIBundle({
+            url: "{{ OPENAPI_URL }}",
+            dom_id: '#swagger-ui',
+            deepLinking: true,
+            displayRequestDuration: true,
+            docExpansion: "none",
+            presets: [SwaggerUIBundle.presets.apis],
+            layout: "BaseLayout",
+        });
+        ui.initOAuth({
+            clientId: "{{ SWAGGER_CLIENT_ID }}",
+            usePkceWithAuthorizationCodeGrant: true,
+            scopes: "openid profile email",
+         });
+    </script>
+</body>
+</html>

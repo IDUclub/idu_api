@@ -1,3 +1,5 @@
+"""Translate DB errors functions are defined here."""
+
 from typing import Any
 
 from asyncpg import exceptions as apg_exc
@@ -52,7 +54,7 @@ def _decode_if_bytes(val: Any) -> str | None:
     return str(val)
 
 
-def _extract_info(  # pylint: disable=too-many-branches
+def _extract_info(
     exc: Exception,
 ) -> tuple[list[str], list[str], list[str], list[str]]:
     """Extracts texts, sqlstates, details, and statements from nested exceptions.
@@ -111,7 +113,7 @@ def _extract_info(  # pylint: disable=too-many-branches
     return texts, sqlstates, details, statements
 
 
-def translate_db_constraint_error(  # pylint: disable=too-many-return-statements
+def translate_db_constraint_error(
     exc: IntegrityError | DBAPIError,
 ) -> Exception:
     """

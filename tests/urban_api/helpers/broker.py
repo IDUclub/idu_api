@@ -2,7 +2,6 @@
 
 import uuid
 from typing import Any, AsyncGenerator
-from unittest.mock import AsyncMock
 
 import pytest_asyncio
 import structlog

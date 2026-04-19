@@ -1,4 +1,5 @@
-from datetime import datetime
+"""Unit tests for scenario project cadastre objects are defined here."""
+
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -24,7 +25,7 @@ async def test_get_cadastres_by_project_id_from_db(mock_conn: MockConnection):
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     exclude_columns = ("project_id", "geometry", "centre_point")
     cadastre_columns = [col for col in projects_cadastres_data.c if col.name not in exclude_columns]
     statement = select(
@@ -55,7 +56,7 @@ async def test_put_project_cadastres_to_db(
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_cadastres_data).where(projects_cadastres_data.c.project_id == project_id)
     insert_statement = insert(projects_cadastres_data).values(
         [{"project_id": project_id, **extract_values_from_model(project_cadastre_put_req)}]
@@ -79,7 +80,7 @@ async def test_delete_cadastres_by_project_id_from_db(mock_check: AsyncMock, moc
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_cadastres_data).where(projects_cadastres_data.c.project_id == project_id)
 
     # Act

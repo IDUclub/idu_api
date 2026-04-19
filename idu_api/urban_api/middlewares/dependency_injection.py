@@ -3,8 +3,7 @@
 from asyncio import Lock
 from typing import Any, Protocol
 
-import structlog
-from fastapi import Depends, FastAPI, Request
+from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
@@ -12,6 +11,8 @@ from idu_api.urban_api.dependencies import logger_dep
 
 
 class DependencyInitializer(Protocol):  # pylint: disable=too-few-public-methods
+    """Protocol for dependency factory callables receiving a DB connection."""
+
     def __call__(self, conn: PostgresConnectionManager, **kwargs: Any) -> Any: ...
 
 
@@ -27,22 +28,24 @@ class PassServicesDependenciesMiddleware(BaseHTTPMiddleware):
         connection_manager: PostgresConnectionManager,
         **dependencies: DependencyInitializer,
     ):
+        """Initialize middleware with connection pool and dependency factories."""
         super().__init__(app)
         self._connection_manager = connection_manager
         self._dependencies = dependencies
         self._lock = Lock()
 
     async def refresh(self):
+        """Refresh database connection pool."""
         async with self._lock:
             await self._connection_manager.refresh()
 
     async def shutdown(self):
+        """Shutdown database connection pool."""
         async with self._lock:
             await self._connection_manager.shutdown()
 
-    async def dispatch(
-        self, request: Request, call_next
-    ):
+    async def dispatch(self, request: Request, call_next):
+        """Attach service dependencies to request state and process request."""
         for dependency, init in self._dependencies.items():
             setattr(request.state, dependency, init(self._connection_manager, logger=logger_dep.from_request(request)))
         return await call_next(request)

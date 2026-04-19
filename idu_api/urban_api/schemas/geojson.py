@@ -20,6 +20,8 @@ _logger: structlog.stdlib.BoundLogger = structlog.get_logger("geometry_schemas")
 
 
 class GeoJSONResponse(FeatureCollection):
+    """GeoJSON model representation."""
+
     type: Literal["FeatureCollection"] = "FeatureCollection"
 
     @classmethod

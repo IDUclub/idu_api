@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import (
     PhysicalObjectFunction,
@@ -35,8 +35,8 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def physical_object_function(urban_api_host) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def physical_object_function(client) -> dict[str, Any]:
     """Returns created physical object function."""
     physical_object_function_post_req = PhysicalObjectFunctionPost(
         name="Test Function",
@@ -44,23 +44,23 @@ def physical_object_function(urban_api_host) -> dict[str, Any]:
         code="1",
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/physical_object_functions", json=physical_object_function_post_req.model_dump())
+    response = await client.post(
+        "/api/v1/physical_object_functions", json=physical_object_function_post_req.model_dump()
+    )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def physical_object_type(urban_api_host, physical_object_function) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def physical_object_type(client, physical_object_function) -> dict[str, Any]:
     """Returns created physical object type."""
     physical_object_type_post_req = PhysicalObjectTypePost(
         name="Test Type",
         physical_object_function_id=physical_object_function["physical_object_function_id"],
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/physical_object_types", json=physical_object_type_post_req.model_dump())
+    response = await client.post("/api/v1/physical_object_types", json=physical_object_type_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()

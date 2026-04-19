@@ -38,7 +38,6 @@ from idu_api.urban_api.dto import (
     UserDTO,
 )
 from idu_api.urban_api.exceptions.logic.common import (
-    EntitiesNotFoundByIds,
     EntityAlreadyEdited,
     EntityAlreadyExists,
     EntityNotFoundById,
@@ -271,7 +270,7 @@ async def get_context_physical_object_types_from_db(
     return [PhysicalObjectTypeDTO(**pot) for pot in physical_object_types]
 
 
-async def get_physical_objects_by_scenario_id_from_db(
+async def get_physical_objects_by_scenario_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -523,7 +522,7 @@ async def get_physical_objects_by_scenario_id_from_db(
     return [ScenarioPhysicalObjectDTO(**row) for row in grouped_objects.values()]
 
 
-async def get_physical_objects_with_geometry_by_scenario_id_from_db(
+async def get_physical_objects_with_geometry_by_scenario_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -811,7 +810,7 @@ async def get_physical_objects_with_geometry_by_scenario_id_from_db(
     return [ScenarioPhysicalObjectWithGeometryDTO(**group) for group in grouped_objects.values()]
 
 
-async def get_physical_objects_around_geometry_by_scenario_id_from_db(
+async def get_physical_objects_around_geometry_by_scenario_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -1102,7 +1101,7 @@ async def get_physical_objects_around_geometry_by_scenario_id_from_db(
     return [ScenarioPhysicalObjectWithGeometryDTO(**group) for group in grouped_objects.values()]
 
 
-async def get_context_physical_objects_from_db(
+async def get_context_physical_objects_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -1343,7 +1342,7 @@ async def get_context_physical_objects_from_db(
     return [ScenarioPhysicalObjectDTO(**row) for row in grouped_data.values()]
 
 
-async def get_context_physical_objects_with_geometry_from_db(
+async def get_context_physical_objects_with_geometry_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -2281,205 +2280,6 @@ async def delete_physical_object_from_db(
     await conn.commit()
 
     return {"status": "ok"}
-
-
-async def update_physical_objects_by_function_id_to_db(
-    conn: AsyncConnection,
-    physical_objects: list[PhysicalObjectWithGeometryPost],
-    scenario_id: int,
-    user: UserDTO,
-    physical_object_function_id: int,
-) -> list[ScenarioUrbanObjectDTO]:
-    """Delete all physical objects by physical object function identifier
-    and upload new objects with the same function for given scenario."""
-
-    scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
-
-    territories = {phys_obj.territory_id for phys_obj in physical_objects}
-    statement = select(territories_data.c.territory_id).where(territories_data.c.territory_id.in_(territories))
-    result = (await conn.execute(statement)).scalars().all()
-    if len(territories) > len(list(result)):
-        raise EntitiesNotFoundByIds("territory")
-
-    physical_object_types = {phys_obj.physical_object_type_id for phys_obj in physical_objects}
-    statement = select(physical_object_types_dict.c.physical_object_function_id).where(
-        physical_object_types_dict.c.physical_object_type_id.in_(physical_object_types)
-    )
-    result = (await conn.execute(statement)).scalars().all()
-    if len(physical_object_types) > len(list(result)):
-        raise EntitiesNotFoundByIds("physical object type")
-    if any(physical_object_function_id != function_id for function_id in result):
-        raise ValueError("Вы можете загружать физические объекты только с заданной функцией физического объекта.")
-
-    project_geometry = (
-        select(projects_territory_data.c.geometry)
-        .where(projects_territory_data.c.project_id == scenario.project_id)
-        .scalar_subquery()
-    )
-
-    objects_intersecting = (
-        select(object_geometries_data.c.object_geometry_id)
-        .where(ST_Intersects(object_geometries_data.c.geometry, project_geometry))
-        .cte(name="objects_intersecting")
-    )
-
-    # Шаг 1: Получить все public_urban_object_id для данного scenario_id
-    public_urban_object_ids = (
-        select(projects_urban_objects_data.c.public_urban_object_id).where(
-            projects_urban_objects_data.c.scenario_id == scenario_id,
-            projects_urban_objects_data.c.public_urban_object_id.isnot(None),
-        )
-    ).cte(name="public_urban_object_ids")
-
-    # Шаг 2: Собрать все записи из public.urban_objects_data по собранным public_urban_object_id
-    public_urban_objects_query = (
-        select(urban_objects_data.c.urban_object_id)
-        .select_from(
-            urban_objects_data.join(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
-            )
-            .join(
-                physical_object_types_dict,
-                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
-            )
-            .join(
-                object_geometries_data,
-                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
-            )
-        )
-        .where(
-            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
-            object_geometries_data.c.object_geometry_id.in_(select(objects_intersecting)),
-            physical_object_types_dict.c.physical_object_function_id == physical_object_function_id,
-        )
-        .cte(name="public_urban_objects_query")
-    )
-
-    await conn.execute(
-        insert(projects_urban_objects_data).from_select(
-            (
-                projects_urban_objects_data.c.scenario_id,
-                projects_urban_objects_data.c.public_urban_object_id,
-            ),
-            select(
-                literal(scenario_id).label("scenario_id"),
-                public_urban_objects_query.c.urban_object_id,
-            ),
-        )
-    )
-
-    scenario_urban_objects_query = (
-        select(
-            projects_urban_objects_data.c.urban_object_id,
-            projects_urban_objects_data.c.physical_object_id,
-            projects_urban_objects_data.c.object_geometry_id,
-            projects_urban_objects_data.c.public_physical_object_id,
-        )
-        .select_from(
-            projects_urban_objects_data.outerjoin(
-                projects_physical_objects_data,
-                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
-            )
-            .outerjoin(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
-            )
-            .outerjoin(
-                physical_object_types_dict,
-                or_(
-                    physical_object_types_dict.c.physical_object_type_id
-                    == projects_physical_objects_data.c.physical_object_type_id,
-                    physical_object_types_dict.c.physical_object_type_id
-                    == physical_objects_data.c.physical_object_type_id,
-                ),
-            )
-        )
-        .where(
-            projects_urban_objects_data.c.scenario_id == scenario_id,
-            projects_urban_objects_data.c.public_urban_object_id.is_(None),
-            physical_object_types_dict.c.physical_object_function_id == physical_object_function_id,
-        )
-    )
-    result = (await conn.execute(scenario_urban_objects_query)).mappings().all()
-
-    scenario_physical_objects = set(obj.physical_object_id for obj in result if obj.physical_object_id is not None)
-    scenario_object_geometries = set(obj.object_geometry_id for obj in result if obj.object_geometry_id is not None)
-    scenario_urban_objects = set(obj.urban_object_id for obj in result if obj.public_physical_object_id is not None)
-
-    await conn.execute(
-        delete(projects_physical_objects_data).where(
-            projects_physical_objects_data.c.physical_object_id.in_(scenario_physical_objects)
-        )
-    )
-    await conn.execute(
-        delete(projects_object_geometries_data).where(
-            projects_object_geometries_data.c.object_geometry_id.in_(scenario_object_geometries)
-        )
-    )
-
-    await conn.execute(
-        delete(projects_urban_objects_data).where(
-            projects_urban_objects_data.c.urban_object_id.in_(scenario_urban_objects)
-        )
-    )
-
-    statement = (
-        insert(projects_physical_objects_data)
-        .values(
-            [
-                {
-                    "public_physical_object_id": None,
-                    "physical_object_type_id": physical_object.physical_object_type_id,
-                    "name": physical_object.name,
-                    "properties": physical_object.properties,
-                }
-                for physical_object in physical_objects
-            ]
-        )
-        .returning(projects_physical_objects_data.c.physical_object_id)
-    )
-    physical_object_ids = list((await conn.execute(statement)).scalars().all())
-
-    statement = (
-        insert(projects_object_geometries_data)
-        .values(
-            [
-                {
-                    "public_object_geometry_id": None,
-                    "territory_id": physical_object.territory_id,
-                    "geometry": ST_GeomFromWKB(physical_object.geometry.as_shapely_geometry().wkb, text(str(SRID))),
-                    "centre_point": ST_GeomFromWKB(
-                        physical_object.centre_point.as_shapely_geometry().wkb, text(str(SRID))
-                    ),
-                    "address": physical_object.address,
-                    "osm_id": physical_object.osm_id,
-                }
-                for physical_object in physical_objects
-            ]
-        )
-        .returning(projects_object_geometries_data.c.object_geometry_id)
-    )
-    object_geometry_ids = list((await conn.execute(statement)).scalars().all())
-
-    statement = (
-        insert(projects_urban_objects_data)
-        .values(
-            [
-                {
-                    "scenario_id": scenario_id,
-                    "physical_object_id": physical_object_ids[i],
-                    "object_geometry_id": object_geometry_ids[i],
-                }
-                for i in range(len(physical_objects))
-            ]
-        )
-        .returning(urban_objects_data.c.urban_object_id)
-    )
-    urban_object_ids = (await conn.execute(statement)).scalars().all()
-    await conn.commit()
-
-    return await get_scenario_urban_object_by_ids_from_db(conn, list(urban_object_ids))
 
 
 async def add_building_to_db(

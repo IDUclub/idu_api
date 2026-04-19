@@ -54,6 +54,7 @@ class TerritoryDTO:  # pylint: disable=too-many-instance-attributes
     updated_at: datetime
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -62,6 +63,7 @@ class TerritoryDTO:  # pylint: disable=too-many-instance-attributes
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         territory = asdict(self)
         territory["territory_type"] = {
             "id": territory.pop("territory_type_id"),
@@ -136,6 +138,7 @@ class TerritoryWithIndicatorsDTO:
     indicators: list[IndicatorValueDTO]
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -144,6 +147,7 @@ class TerritoryWithIndicatorsDTO:
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         territory = asdict(self)
         territory["territory_type"] = {
             "id": territory.pop("territory_type_id"),
@@ -174,6 +178,7 @@ class TerritoryWithBinnedIndicatorsDTO(TerritoryWithIndicatorsDTO):
     indicators: list[BinnedIndicatorValueDTO]
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         territory = asdict(self)
         territory["territory_type"] = {
             "id": territory.pop("territory_type_id"),
@@ -213,6 +218,7 @@ class TerritoryWithNormativesDTO:
     normatives: list[NormativeDTO]
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -221,6 +227,7 @@ class TerritoryWithNormativesDTO:
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         territory = asdict(self)
         territory["territory_type"] = {
             "id": territory.pop("territory_type_id"),

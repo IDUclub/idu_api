@@ -4,7 +4,7 @@ from collections import OrderedDict
 from dataclasses import asdict, dataclass, field, fields
 from pathlib import Path
 from types import NoneType, UnionType
-from typing import Any, Literal, TextIO, Type, Union, get_origin
+from typing import Any, Literal, TextIO, Union, get_origin
 
 import yaml
 
@@ -22,6 +22,8 @@ from idu_api.urban_api.observability.config import (
 
 @dataclass
 class CORSConfig:
+    """CORS settings for allowed origins, methods, headers, and credentials."""
+
     allow_origins: list[str]
     allow_methods: list[str]
     allow_headers: list[str]
@@ -30,6 +32,8 @@ class CORSConfig:
 
 @dataclass
 class UvicornConfig:
+    """Configuration for the Uvicorn server."""
+
     host: str
     port: int
     reload: bool = False
@@ -38,6 +42,8 @@ class UvicornConfig:
 
 @dataclass
 class AppConfig:
+    """General application configuration."""
+
     uvicorn: UvicornConfig
     debug: bool
     cors: CORSConfig
@@ -45,14 +51,48 @@ class AppConfig:
 
 @dataclass
 class AuthConfig:
-    url: str
-    validate: bool
-    cache_size: int
-    cache_ttl: int
+    """Authentication and token validation settings."""
+
+    verify: bool  # проверять ли токен вообще
+
+    server_url: str  # https://.../realms/<realm>
+
+    client_id: str
+
+    verify_aud: bool = True
+    valid_audiences: list[str] = field(default_factory=list)
+
+    user_cache_ttl: int = 300  # TTL кеша пользователей (сек)
+    user_cache_size: int = 10_000  # размер кеша пользователей
+    jwks_cache_ttl: int = 600  # TTL кеша JWKS (сек)
+
+    timeout: int = 5
+
+    def __post_init__(self):
+        """Ensure server URL has a valid scheme."""
+        if not self.server_url.startswith("http"):
+            self.server_url = "http://" + self.server_url
+
+    @property
+    def authorization_url(self) -> str:
+        """Keycloak /auth URL."""
+        return f"{self.server_url}/protocol/openid-connect/auth"
+
+    @property
+    def token_url(self) -> str:
+        """Keycloak /token URL."""
+        return f"{self.server_url}/protocol/openid-connect/token"
+
+    @property
+    def jwks_url(self) -> str:
+        """Keycloak /certs URL."""
+        return f"{self.server_url}/protocol/openid-connect/certs"
 
 
 @dataclass
 class FileServerConfig:
+    """Configuration for S3 storage service connection."""
+
     url: str
     projects_bucket: str
     access_key: str
@@ -62,19 +102,16 @@ class FileServerConfig:
     read_timeout: int
 
     def __post_init__(self):
+        """Normalize URL and wrap secret key."""
         if not self.url.startswith("http"):
             self.url = "http://" + self.url
         self.secret_key = SecretStr(self.secret_key)
 
 
 @dataclass
-class ExternalServicesConfig:
-    gen_planner_api: str
-    hextech_api: str
-
-
-@dataclass
 class BrokerConfig:
+    """Message broker (Kafka) configuration."""
+
     client_id: str
     bootstrap_servers: str
     schema_registry_url: str
@@ -84,11 +121,12 @@ class BrokerConfig:
 
 @dataclass
 class UrbanAPIConfig:
+    """Root configuration aggregating all service settings."""
+
     app: AppConfig
     db: MultipleDBsConfig
     auth: AuthConfig
     fileserver: FileServerConfig
-    external: ExternalServicesConfig
     observability: ObservabilityConfig
     broker: BrokerConfig
 
@@ -114,10 +152,14 @@ class UrbanAPIConfig:
         """Export current configuration to a file"""
 
         class OrderedDumper(yaml.SafeDumper):
+            """YAML dumper that preserves dictionary order during serialization."""
+
             def represent_dict_preserve_order(self, data):
+                """Represent a dictionary while preserving key order."""
                 return self.represent_dict(data.items())
 
             def increase_indent(self, flow=False, indentless=False):
+                """Override indentation behavior to ensure consistent YAML formatting."""
                 return super().increase_indent(flow, False)
 
         OrderedDumper.add_representer(OrderedDict, OrderedDumper.represent_dict_preserve_order)
@@ -161,7 +203,13 @@ class UrbanAPIConfig:
                     )
                 ],
             ),
-            auth=AuthConfig(url="http://localhost:8086/introspect", validate=False, cache_size=100, cache_ttl=1800),
+            auth=AuthConfig(
+                verify=True,
+                server_url="http:/localhost:3000/realms/myrealm",
+                client_id="urban-api",
+                verify_aud=True,
+                valid_audiences=["urban-api"],
+            ),
             fileserver=FileServerConfig(
                 url="http://localhost:9000",
                 projects_bucket="projects.images",
@@ -170,9 +218,6 @@ class UrbanAPIConfig:
                 region_name="us-west-rack-2",
                 connect_timeout=5,
                 read_timeout=20,
-            ),
-            external=ExternalServicesConfig(
-                hextech_api="http://localhost:8100", gen_planner_api="http://localhost:8101"
             ),
             observability=ObservabilityConfig(
                 logging=LoggingConfig(
@@ -211,11 +256,11 @@ class UrbanAPIConfig:
             raise RuntimeError(f"Could not initialize dependency configs: {e}") from e
 
     @staticmethod
-    def _initialize_from_dict(t: Type, data: Any) -> Any:
+    def _initialize_from_dict(t: type, data: Any) -> Any:
         """Try to initialize given type field-by-field recursively with data from dictionary substituting {} and None
         if no value provided.
         """
-        if get_origin(t) is Union or get_origin(t) is UnionType:  # both actually required
+        if get_origin(t) is Union or get_origin(t) is UnionType:  # pylint: disable=consider-alternative-union-syntax
             for inner_type in t.__args__:
                 if inner_type is NoneType and data is None:
                     return None

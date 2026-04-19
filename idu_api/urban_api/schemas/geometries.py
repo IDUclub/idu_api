@@ -50,6 +50,7 @@ class AllPossibleGeometry(BaseModel):
 
     @model_validator(mode="after")
     def validate_geometry(self) -> "AllPossibleGeometry":
+        """Validate geometry type and coordinates."""
         if self.type == "GeometryCollection":
             if self.geometries is None:
                 raise ValueError("GeometryCollection must have 'geometries'.")
@@ -63,6 +64,7 @@ class AllPossibleGeometry(BaseModel):
         return self
 
     def as_shapely_geometry(self) -> geom.base.BaseGeometry:
+        """Convert geometry into shapely object."""
         if self._shapely_geom is None:
             if self.type == "GeometryCollection":
                 geometries = [AllPossibleGeometry(**g).as_shapely_geometry() for g in self.geometries]
@@ -75,6 +77,7 @@ class AllPossibleGeometry(BaseModel):
 
     @classmethod
     def from_shapely_geometry(cls, geometry: _BaseGeomTypes | geom.GeometryCollection | None) -> "AllPossibleGeometry":
+        """Convert shapely geometry to pydantic model."""
         if geometry is None:
             return None
         return cls(**geom.mapping(geometry))

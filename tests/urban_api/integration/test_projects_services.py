@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
@@ -36,7 +36,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success_common", "success_context", "forbidden", "not_found"],
 )
 async def test_get_service_types_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
     valid_token: str,
@@ -54,9 +54,8 @@ async def test_get_service_types_by_scenario_id(
     params = {"for_context": for_context_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/service_types", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/service_types", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -80,7 +79,7 @@ async def test_get_service_types_by_scenario_id(
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
 async def test_get_services_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
     valid_token: str,
@@ -99,9 +98,8 @@ async def test_get_services_by_scenario_id(
         params["urban_function_id"] = scenario_service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/services", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/services", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -126,7 +124,7 @@ async def test_get_services_by_scenario_id(
     ids=["success_common", "success_regional", "bad_request", "forbidden", "not_found"],
 )
 async def test_get_services_with_geometry_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     scenario_service: dict[str, Any],
@@ -149,9 +147,10 @@ async def test_get_services_with_geometry_by_scenario_id(
         params["urban_function_id"] = scenario_service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/services_with_geometry", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(
+        f"/api/v1/scenarios/{scenario_id}/services_with_geometry", headers=headers, params=params
+    )
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -176,7 +175,7 @@ async def test_get_services_with_geometry_by_scenario_id(
     ids=["success", "bad_request", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_services(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     service: dict[str, Any],
@@ -199,9 +198,8 @@ async def test_get_context_services(
         params["urban_function_id"] = service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/context/services", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/services", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -226,7 +224,7 @@ async def test_get_context_services(
     ids=["success", "bad_request", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_services_with_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     service: dict[str, Any],
@@ -249,11 +247,10 @@ async def test_get_context_services_with_geometry(
         params["urban_function_id"] = service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(
-            f"/scenarios/{scenario_id}/context/services_with_geometry", headers=headers, params=params
-        )
-        result = response.json()
+    response = await client.get(
+        f"/scenarios/{scenario_id}/context/services_with_geometry", headers=headers, params=params
+    )
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -277,7 +274,7 @@ async def test_get_context_services_with_geometry(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_add_service(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_service_post_req: ScenarioServicePost,
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
@@ -306,9 +303,8 @@ async def test_add_service(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     new_service = scenario_service_post_req.model_dump()
     new_service["object_geometry_id"] = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
@@ -323,12 +319,11 @@ async def test_add_service(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(
-            f"/scenarios/{scenario_id}/services",
-            json=new_service,
-            headers=headers,
-        )
+    response = await client.post(
+        f"/scenarios/{scenario_id}/services",
+        json=new_service,
+        headers=headers,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioUrbanObject, error_message)
@@ -347,7 +342,7 @@ async def test_add_service(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_put_scenario_service(
-    urban_api_host: str,
+    client: AsyncClient,
     service_put_req: ServicePut,
     project: dict[str, Any],
     scenario: dict[str, Any],
@@ -373,9 +368,8 @@ async def test_put_scenario_service(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     service_id = scenario_service["service_id"] if is_scenario_param else service["service_id"]
     new_service = service_put_req.model_dump()
     new_service["service_type_id"] = scenario_service["service_type"]["service_type_id"]
@@ -384,13 +378,12 @@ async def test_put_scenario_service(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/scenarios/{scenario_id}/services/{service_id}",
-            json=new_service,
-            headers=headers,
-            params=params,
-        )
+    response = await client.put(
+        f"/scenarios/{scenario_id}/services/{service_id}",
+        json=new_service,
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioService, error_message)
@@ -409,7 +402,7 @@ async def test_put_scenario_service(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_patch_scenario_service(
-    urban_api_host: str,
+    client: AsyncClient,
     service_put_req: ServicePut,
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
@@ -435,9 +428,8 @@ async def test_patch_scenario_service(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     service_id = scenario_service["service_id"] if is_scenario_param else service["service_id"]
     new_service = service_put_req.model_dump()
     new_service["service_type_id"] = scenario_service["service_type"]["service_type_id"]
@@ -446,13 +438,12 @@ async def test_patch_scenario_service(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/scenarios/{scenario_id}/services/{service_id}",
-            json=new_service,
-            headers=headers,
-            params=params,
-        )
+    response = await client.patch(
+        f"/scenarios/{scenario_id}/services/{service_id}",
+        json=new_service,
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioService, error_message)
@@ -470,7 +461,7 @@ async def test_patch_scenario_service(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_delete_service(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_service_post_req: ScenarioServicePost,
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
@@ -498,9 +489,8 @@ async def test_delete_service(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     new_service = scenario_service_post_req.model_dump()
     new_service["object_geometry_id"] = scenario_geometry["object_geometry_id"]
     new_service["is_scenario_geometry"] = True
@@ -512,32 +502,31 @@ async def test_delete_service(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if expected_status == 200 and is_scenario_param:
-            response = await client.post(
-                f"scenarios/{scenario_id}/services",
-                json=new_service,
-                headers=headers,
-            )
-            service_id = response.json()["service"]["service_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/services/{service_id}",
-                headers=headers,
-                params=params,
-            )
-        elif not is_scenario_param:
-            service_id = service["service_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/services/{service_id}",
-                headers=headers,
-                params=params,
-            )
-        else:
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/services/1",
-                headers=headers,
-                params=params,
-            )
+    if expected_status == 200 and is_scenario_param:
+        response = await client.post(
+            f"scenarios/{scenario_id}/services",
+            json=new_service,
+            headers=headers,
+        )
+        service_id = response.json()["service"]["service_id"]
+        response = await client.delete(
+            f"/scenarios/{scenario_id}/services/{service_id}",
+            headers=headers,
+            params=params,
+        )
+    elif not is_scenario_param:
+        service_id = service["service_id"]
+        response = await client.delete(
+            f"/scenarios/{scenario_id}/services/{service_id}",
+            headers=headers,
+            params=params,
+        )
+    else:
+        response = await client.delete(
+            f"/scenarios/{scenario_id}/services/1",
+            headers=headers,
+            params=params,
+        )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

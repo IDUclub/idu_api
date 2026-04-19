@@ -65,7 +65,7 @@ async def test_get_service_types_by_scenario_id_from_db(mock_conn: MockConnectio
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     territories_cte = include_child_territories_cte(1)
     public_urban_object_ids = (
@@ -147,7 +147,7 @@ async def test_get_context_service_types_from_db(mock_conn: MockConnection):
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     mock_geom = str(MagicMock(spec=ScalarSelect))
 
     public_urban_object_ids = (
@@ -249,7 +249,7 @@ async def test_get_services_by_scenario_id_from_db(mock_conn: MockConnection):
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     service_type_id = 1
     urban_function_id = None
 
@@ -409,7 +409,7 @@ async def test_get_services_with_geometry_by_scenario_id_from_db(mock_conn: Mock
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     service_type_id = 1
     urban_function_id = None
 
@@ -598,7 +598,7 @@ async def test_get_context_services_from_db(mock_conn: MockConnection):
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     service_type_id = 1
     urban_function_id = None
     mock_geom = str(MagicMock(spec=ScalarSelect))
@@ -770,7 +770,7 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     service_type_id = 1
     urban_function_id = None
     mock_geom = str(MagicMock(spec=ScalarSelect))
@@ -960,9 +960,7 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
         )
         .distinct()
     )
-    regional_scenario_services_query = scenario_services_query.where(
-        projects_urban_objects_data.c.scenario_id == 1
-    )
+    regional_scenario_services_query = scenario_services_query.where(projects_urban_objects_data.c.scenario_id == 1)
     project_scenario_geoms_query = scenario_services_query.where(
         projects_urban_objects_data.c.scenario_id == scenario_id,
     )
@@ -1044,13 +1042,18 @@ async def test_get_context_services_with_geometry_from_db(mock_conn: MockConnect
             projects_urban_objects_data.c.scenario_id == scenario_id,
             projects_object_geometries_data.c.is_cut.is_(True),
             (
-                    projects_urban_objects_data.c.service_id.isnot(None)
-                    | projects_urban_objects_data.c.public_service_id.isnot(None)
+                projects_urban_objects_data.c.service_id.isnot(None)
+                | projects_urban_objects_data.c.public_service_id.isnot(None)
             ),
         )
     )
 
-    queries = [public_services_query, regional_scenario_services_query, project_scenario_geoms_query, scenario_objects_with_public_geoms_query]
+    queries = [
+        public_services_query,
+        regional_scenario_services_query,
+        project_scenario_geoms_query,
+        scenario_objects_with_public_geoms_query,
+    ]
     union_query = union_all(*queries).cte(name="union_query")
     statement = select(union_query).where(union_query.c.service_type_id == service_type_id)
 
@@ -1155,7 +1158,7 @@ async def test_add_service_to_db(
     # Arrange
     scenario_id = 1
     service_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     check_statement = select(projects_urban_objects_data.c.urban_object_id).where(
         projects_urban_objects_data.c.physical_object_id == scenario_service_post_req.physical_object_id,
         projects_urban_objects_data.c.object_geometry_id == scenario_service_post_req.object_geometry_id,
@@ -1210,7 +1213,7 @@ async def test_put_scenario_service_to_db(mock_conn: MockConnection, service_put
     scenario_id = 1
     service_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_services_data)
         .where(projects_services_data.c.service_id == service_id)
@@ -1242,7 +1245,7 @@ async def test_patch_scenario_service_to_db(mock_conn: MockConnection, service_p
     scenario_id = 1
     service_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_services_data)
         .where(projects_services_data.c.service_id == service_id)
@@ -1268,7 +1271,7 @@ async def test_delete_public_service_from_db(mock_conn: MockConnection):
     scenario_id = 1
     service_id = 1
     is_scenario_object = False
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_urban_objects_data).where(
         projects_urban_objects_data.c.public_service_id == service_id
     )
@@ -1323,7 +1326,7 @@ async def test_delete_scenario_service_from_db(mock_conn: MockConnection):
     scenario_id = 1
     service_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_services_data).where(projects_services_data.c.service_id == service_id)
 
     # Act

@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import FunctionalZone, FunctionalZoneSource, FunctionalZoneWithoutGeometry, OkResponse
@@ -26,7 +26,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_functional_zone_sources_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     region: dict[str, Any],
     functional_zone: dict[str, Any],
     expected_status: int,
@@ -43,9 +43,8 @@ async def test_get_functional_zone_sources_by_territory_id(
         params = {"include_child_territories": True, "cities_only": False}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/functional_zone_sources", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/functional_zone_sources", params=params)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -69,7 +68,7 @@ async def test_get_functional_zone_sources_by_territory_id(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_functional_zones_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     region: dict[str, Any],
     functional_zone: dict[str, Any],
     expected_status: int,
@@ -88,9 +87,8 @@ async def test_get_functional_zones_by_territory_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/functional_zones", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/functional_zones", params=params)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -113,7 +111,7 @@ async def test_get_functional_zones_by_territory_id(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_functional_zones_geojson_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     region: dict[str, Any],
     functional_zone: dict[str, Any],
     expected_status: int,
@@ -132,9 +130,8 @@ async def test_get_functional_zones_geojson_by_territory_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/functional_zones_geojson", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/functional_zones_geojson", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -160,7 +157,7 @@ async def test_get_functional_zones_geojson_by_territory_id(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_delete_all_functional_zones_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     region: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -176,8 +173,7 @@ async def test_delete_all_functional_zones_by_territory_id(
         params = {"include_child_territories": False, "cities_only": False}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/territory/{territory_id}/functional_zones", params=params)
+    response = await client.delete(f"/api/v1/territory/{territory_id}/functional_zones", params=params)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

@@ -8,6 +8,8 @@ from typing import Any, Literal
 
 @dataclass(frozen=True)
 class IndicatorDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing an indicator with metadata and hierarchy information."""
+
     indicator_id: int
     name_full: str
     name_short: str
@@ -25,11 +27,14 @@ class IndicatorDTO:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys()
 
 
 @dataclass(frozen=True)
 class IndicatorValueDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a time-based indicator value for a territory."""
+
     indicator_value_id: int
     indicator_id: int
     parent_id: int
@@ -50,27 +55,35 @@ class IndicatorValueDTO:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys()
 
 
 @dataclass(frozen=True)
 class BinnedIndicatorValueDTO(IndicatorValueDTO):
+    """DTO for indicator values with optional binned range information."""
+
     binned_min_value: float | None
     binned_max_value: float | None
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys() | super().__annotations__.keys()
 
 
 @dataclass(frozen=True)
 class MeasurementUnitDTO:
+    """DTO describing a measurement unit."""
+
     measurement_unit_id: int
     name: str
 
 
 @dataclass(frozen=True)
 class IndicatorsGroupDTO:
+    """DTO grouping multiple indicators under a common category."""
+
     indicators_group_id: int
     name: str
     indicators: list[IndicatorDTO]
@@ -78,6 +91,8 @@ class IndicatorsGroupDTO:
 
 @dataclass(frozen=True)
 class ShortScenarioIndicatorValueDTO:
+    """Compact DTO for scenario indicator value with optional comment."""
+
     indicator_id: int
     name_full: str
     measurement_unit_name: str | None
@@ -87,6 +102,8 @@ class ShortScenarioIndicatorValueDTO:
 
 @dataclass(frozen=True)
 class ScenarioIndicatorValueDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing indicator values within a scenario context."""
+
     indicator_value_id: int
     indicator_id: int
     parent_id: int

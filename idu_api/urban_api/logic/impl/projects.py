@@ -1,7 +1,7 @@
 """Projects handlers logic is defined here."""
 
 from datetime import date
-from typing import Any, Literal
+from typing import Literal
 
 import structlog
 from otteroad import KafkaProducerClient
@@ -51,7 +51,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_functional_zones import (
     get_functional_zones_by_scenario_id_from_db,
     get_functional_zones_sources_by_scenario_id_from_db,
     patch_scenario_functional_zone_to_db,
-    put_scenario_functional_zone_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
     delete_object_geometry_from_db,
@@ -70,7 +69,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_indicators import (
     get_scenario_indicators_values_by_scenario_id_from_db,
     patch_scenario_indicator_value_to_db,
     put_scenario_indicator_value_to_db,
-    update_all_indicators_values_by_scenario_id_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_objects import (
     add_project_to_db,
@@ -84,7 +82,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_objects import (
     get_projects_territories_from_db,
     patch_project_to_db,
     put_project_phases_to_db,
-    put_project_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     add_building_to_db,
@@ -102,17 +99,14 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     patch_physical_object_to_db,
     put_building_to_db,
     put_physical_object_to_db,
-    update_physical_objects_by_function_id_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_scenarios import (
-    add_new_scenario_to_db,
     copy_scenario_to_db,
     delete_scenario_from_db,
     get_scenario_by_id_from_db,
     get_scenarios_by_project_id_from_db,
     get_scenarios_from_db,
     patch_scenario_to_db,
-    put_scenario_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.projects_services import (
     add_service_to_db,
@@ -139,7 +133,6 @@ from idu_api.urban_api.schemas import (
     ProjectPatch,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ScenarioBufferDelete,
     ScenarioBufferPut,
     ScenarioBuildingPatch,
@@ -147,13 +140,11 @@ from idu_api.urban_api.schemas import (
     ScenarioBuildingPut,
     ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePost,
-    ScenarioFunctionalZonePut,
     ScenarioIndicatorValuePatch,
     ScenarioIndicatorValuePost,
     ScenarioIndicatorValuePut,
     ScenarioPatch,
     ScenarioPost,
-    ScenarioPut,
     ScenarioServicePost,
     ServicePatch,
     ServicePut,
@@ -239,11 +230,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         kafka_producer: KafkaProducerClient,
     ) -> ScenarioDTO:
         async with self._connection_manager.get_connection() as conn:
-            return await create_base_scenario_to_db(conn, project_id, scenario_id, kafka_producer, self._logger)
-
-    async def put_project(self, project: ProjectPut, project_id: int, user: UserDTO) -> ProjectDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await put_project_to_db(conn, project, project_id, user)
+            return await create_base_scenario_to_db(conn, project_id, scenario_id, kafka_producer)
 
     async def patch_project(self, project: ProjectPatch, project_id: int, user: UserDTO) -> ProjectDTO:
         async with self._connection_manager.get_connection() as conn:
@@ -278,17 +265,9 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_scenario_by_id_from_db(conn, scenario_id, user)
 
-    async def add_scenario(self, scenario: ScenarioPost, user: UserDTO) -> ScenarioDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await add_new_scenario_to_db(conn, scenario, user)
-
     async def copy_scenario(self, scenario: ScenarioPost, scenario_id: int, user: UserDTO) -> ScenarioDTO:
         async with self._connection_manager.get_connection() as conn:
             return await copy_scenario_to_db(conn, scenario, scenario_id, user)
-
-    async def put_scenario(self, scenario: ScenarioPut, scenario_id: int, user) -> ScenarioDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await put_scenario_to_db(conn, scenario, scenario_id, user)
 
     async def patch_scenario(self, scenario: ScenarioPatch, scenario_id: int, user: UserDTO) -> ScenarioDTO:
         async with self._connection_manager.get_connection() as conn:
@@ -396,18 +375,6 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
     ) -> ScenarioUrbanObjectDTO:
         async with self._connection_manager.get_connection() as conn:
             return await add_physical_object_with_geometry_to_db(conn, physical_object, scenario_id, user)
-
-    async def update_physical_objects_by_function_id(
-        self,
-        physical_object: list[PhysicalObjectWithGeometryPost],
-        scenario_id: int,
-        user: UserDTO,
-        physical_object_function_id: int,
-    ) -> list[ScenarioUrbanObjectDTO]:
-        async with self._connection_manager.get_connection() as conn:
-            return await update_physical_objects_by_function_id_to_db(
-                conn, physical_object, scenario_id, user, physical_object_function_id
-            )
 
     async def put_physical_object(
         self,
@@ -644,7 +611,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 service_id,
             )
 
-    async def get_context_geometries_with_all_objects(
+    async def get_context_geometries_with_all_objects(  # pylint: disable=too-many-arguments
         self,
         scenario_id: int,
         user: UserDTO | None,
@@ -775,10 +742,6 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 conn, scenario_id, indicator_ids, indicators_group_id, user
             )
 
-    async def update_all_indicators_values_by_scenario_id(self, scenario_id: int, user: UserDTO) -> dict[str, Any]:
-        async with self._connection_manager.get_connection() as conn:
-            return await update_all_indicators_values_by_scenario_id_to_db(conn, scenario_id, user, logger=self._logger)
-
     async def get_functional_zones_sources_by_scenario_id(
         self, scenario_id: int, user: UserDTO | None
     ) -> list[FunctionalZoneSourceDTO]:
@@ -822,16 +785,6 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
     ) -> list[ScenarioFunctionalZoneDTO]:
         async with self._connection_manager.get_connection() as conn:
             return await add_scenario_functional_zones_to_db(conn, profiles, scenario_id, user)
-
-    async def put_scenario_functional_zone(
-        self,
-        profile: ScenarioFunctionalZonePut,
-        scenario_id: int,
-        functional_zone_id: int,
-        user: UserDTO,
-    ) -> ScenarioFunctionalZoneDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await put_scenario_functional_zone_to_db(conn, profile, scenario_id, functional_zone_id, user)
 
     async def patch_scenario_functional_zone(
         self,

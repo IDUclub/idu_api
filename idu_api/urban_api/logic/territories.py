@@ -9,7 +9,6 @@ from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, P
 from idu_api.urban_api.dto import (
     BinnedIndicatorValueDTO,
     BufferDTO,
-    BuildingWithGeometryDTO,
     FunctionalZoneDTO,
     FunctionalZoneSourceDTO,
     HexagonDTO,
@@ -41,7 +40,6 @@ from idu_api.urban_api.schemas import (
     TargetCityTypePost,
     TerritoryPatch,
     TerritoryPost,
-    TerritoryPut,
     TerritoryTypePost,
 )
 
@@ -79,10 +77,6 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
     @abc.abstractmethod
     async def add_territory(self, territory: TerritoryPost) -> TerritoryDTO:
         """Create territory object."""
-
-    @abc.abstractmethod
-    async def put_territory(self, territory_id: int, territory: TerritoryPut) -> TerritoryDTO:
-        """Update territory object (put, update all the fields)."""
 
     @abc.abstractmethod
     async def patch_territory(self, territory_id: int, territory: TerritoryPatch) -> TerritoryDTO:
@@ -262,15 +256,6 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
     ) -> list[PhysicalObjectWithGeometryDTO] | PageDTO[PhysicalObjectWithGeometryDTO]:
         """Get physical objects with geometry by territory id,
         optional physical object type and physical object function and for cities only."""
-
-    @abc.abstractmethod
-    async def get_buildings_with_geometry_by_territory_id(
-        self,
-        territory_id: int,
-        include_child_territories: bool,
-        cities_only: bool,
-    ) -> PageDTO[BuildingWithGeometryDTO]:
-        """Get living buildings with geometry by territory id."""
 
     @abc.abstractmethod
     async def get_functional_zones_sources_by_territory_id(

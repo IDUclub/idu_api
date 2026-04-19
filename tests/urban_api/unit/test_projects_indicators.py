@@ -3,14 +3,9 @@
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
-import aiohttp
 import pytest
-import structlog
-from aioresponses import aioresponses
-from aioresponses.core import merge_params, normalize_url
 from geoalchemy2.functions import ST_AsEWKB
 from otteroad import KafkaProducerClient
-from otteroad.models import RegionalScenarioIndicatorsUpdated
 from sqlalchemy import delete, insert, select, update
 
 from idu_api.common.db.entities import (
@@ -22,9 +17,8 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
-from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import HexagonWithIndicatorsDTO, ScenarioIndicatorValueDTO, UserDTO
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_indicators import (
     add_scenario_indicator_value_to_db,
     delete_scenario_indicator_value_by_id_from_db,
@@ -34,7 +28,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_indicators import (
     get_scenario_indicators_values_by_scenario_id_from_db,
     patch_scenario_indicator_value_to_db,
     put_scenario_indicator_value_to_db,
-    update_all_indicators_values_by_scenario_id_to_db,
 )
 from idu_api.urban_api.schemas import (
     ScenarioIndicatorValue,
@@ -103,7 +96,7 @@ async def test_get_scenario_indicators_values_by_scenario_id_from_db(mock_check:
     indicators_group_id = 1
     territory_id = 1
     hexagon_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(
             projects_indicators_data,
@@ -168,7 +161,7 @@ async def test_add_scenario_indicator_value_to_db(
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     insert_statement = (
         insert(projects_indicators_data)
         .values(**scenario_indicator_value_post_req.model_dump())
@@ -205,7 +198,7 @@ async def test_put_scenario_indicator_value_to_db(
         return True
 
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_indicators_data)
         .where(
@@ -261,7 +254,7 @@ async def test_patch_scenario_indicator_value_to_db(
     # Arrange
     indicator_value_id = 1
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_indicators_data)
         .where(projects_indicators_data.c.indicator_value_id == indicator_value_id)
@@ -308,7 +301,7 @@ async def test_delete_scenario_indicators_values_by_scenario_id_from_db(
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_indicators_data).where(projects_indicators_data.c.scenario_id == scenario_id)
 
     # Act
@@ -329,7 +322,7 @@ async def test_delete_scenario_indicator_value_by_id_from_db(mock_check: AsyncMo
     # Arrange
     indicator_value_id = 1
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_indicators_data).where(
         projects_indicators_data.c.indicator_value_id == indicator_value_id
     )
@@ -357,7 +350,7 @@ async def test_get_hexagons_with_indicators_by_scenario_id_from_db(mock_check: A
     scenario_id = 1
     indicator_ids = [1]
     indicators_group_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(
             projects_indicators_data.c.value,
@@ -404,34 +397,3 @@ async def test_get_hexagons_with_indicators_by_scenario_id_from_db(mock_check: A
     ), "Each item should be a HexagonWithIndicatorsDTO."
     mock_conn.execute_mock.assert_any_call(str(statement))
     mock_check.assert_called_once_with(mock_conn, scenario_id, user, return_value=True)
-
-
-@pytest.mark.asyncio
-async def test_update_all_indicators_values_by_scenario_id_to_db(config: UrbanAPIConfig, mock_conn: MockConnection):
-    """Test the update_all_indicators_values_by_scenario_id_to_db function."""
-
-    # Arrange
-    scenario_id = 1
-    project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
-    logger: structlog.stdlib.BoundLogger = structlog.get_logger()
-    api_url = f"{config.external.hextech_api}/hextech/indicators_saving/save_all"
-    params = {"scenario_id": scenario_id, "project_id": project_id, "background": "false"}
-    normal_api_url = normalize_url(merge_params(api_url, params))
-
-    # Act
-    with aioresponses() as mocked:
-        mocked.put(normal_api_url, status=200)
-        mocked.put(normal_api_url, status=400)
-        result = await update_all_indicators_values_by_scenario_id_to_db(mock_conn, scenario_id, user, logger)
-        with pytest.raises(aiohttp.ClientResponseError):
-            await update_all_indicators_values_by_scenario_id_to_db(mock_conn, scenario_id, user, logger)
-
-    # Assert
-    assert result == {"status": "ok"}, "Result should be {'status': 'ok'}."
-    mocked.assert_any_call(
-        url=api_url,
-        method="PUT",
-        params=params,
-    )
-    assert mocked.requests[("PUT", normal_api_url)][0].kwargs["params"] == params, "Request params do not match."

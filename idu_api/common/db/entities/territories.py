@@ -1,6 +1,6 @@
 """Territories data table is defined here."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from geoalchemy2.types import Geometry
 from sqlalchemy import TIMESTAMP, Boolean, Column, ForeignKey, Integer, Sequence, String, Table, Text, false, func, text

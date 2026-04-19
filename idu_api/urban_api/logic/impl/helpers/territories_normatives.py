@@ -36,7 +36,7 @@ func: Callable
 ####################################################################################
 
 
-async def get_normatives_by_territory_id_from_db(
+async def get_normatives_by_territory_id_from_db(  # pylint: disable=too-many-locals
     conn: "AsyncConnection",
     territory_id: int,
     year: int | None,
@@ -411,7 +411,7 @@ async def delete_normatives_by_territory_id_in_db(
     return {"status": "ok"}
 
 
-async def get_normatives_values_by_parent_id_from_db(
+async def get_normatives_values_by_parent_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     parent_id: int | None,
     year: int | None,
@@ -770,6 +770,7 @@ def _set_normative(
 
 
 class TerritoryNode:
+    """Tree node representing a territory with hierarchical normative resolution."""
 
     def __init__(self, territory):
         # territory is a RowMapping object with the fields: territory_id, name, parent_id, is_city, level, etc.

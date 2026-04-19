@@ -3,6 +3,7 @@
 from typing import Any
 
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPost, ObjectGeometryPut
 from idu_api.urban_api.schemas.geometries import Geometry, Point
@@ -21,14 +22,14 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def object_geometry(urban_object) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def object_geometry(urban_object) -> dict[str, Any]:
     """Returns created object geometry."""
     return urban_object["object_geometry"]
 
 
-@pytest.fixture(scope="session")
-def scenario_geometry(scenario_urban_object) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def scenario_geometry(scenario_urban_object) -> dict[str, Any]:
     """Returns created object geometry."""
     return scenario_urban_object["object_geometry"]
 

@@ -20,7 +20,7 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
     get_context_territories_geometry,
     include_child_territories_cte,
 )
-from idu_api.urban_api.schemas import TerritoryPatch, TerritoryPost, TerritoryPut
+from idu_api.urban_api.schemas import TerritoryPatch, TerritoryPost
 from tests.urban_api.helpers.connection import MockConnection, MockResult, MockRow
 
 
@@ -95,48 +95,34 @@ def test_include_child_territories_cte():
 
 def test_extract_values_from_model(
     territory_post_req: TerritoryPost,
-    territory_put_req: TerritoryPut,
     territory_patch_req: TerritoryPatch,
 ):
     """Test the extract_values_from_model function."""
 
     # Arrange
     expected_post_result = territory_post_req.model_dump()
-    expected_put_result = territory_put_req.model_dump()
     expected_patch_result = territory_patch_req.model_dump(exclude_unset=True)
     for field in ("geometry", "centre_point"):
         expected_post_result[field] = ST_GeomFromWKB(
             getattr(territory_post_req, field).as_shapely_geometry().wkb, text(str(SRID))
         )
-        expected_put_result[field] = ST_GeomFromWKB(
-            getattr(territory_put_req, field).as_shapely_geometry().wkb, text(str(SRID))
-        )
-    expected_put_result["updated_at"] = datetime.now(timezone.utc)
     expected_patch_result["updated_at"] = datetime.now(timezone.utc)
 
     # Act
     post_result = extract_values_from_model(territory_post_req, False, False)
-    put_result = extract_values_from_model(territory_put_req, False, True)
     patch_result = extract_values_from_model(territory_patch_req, True, True)
 
     # Assert
     assert isinstance(post_result, dict), "Result should be a dictionary."
-    assert isinstance(put_result, dict), "Result should be a dictionary."
     assert isinstance(patch_result, dict), "Result should be a dictionary."
     assert post_result.keys() == expected_post_result.keys(), "Expected set of keys not found."
-    assert put_result.keys() == expected_put_result.keys(), "Expected set of keys not found."
     assert patch_result.keys() == expected_patch_result.keys(), "Expected set of keys not found."
     for field in ("geometry", "centre_point"):
         if field in post_result:
             assert str(post_result[field]) == str(expected_post_result[field]), f"Post {field} mismatch."
-        if field in put_result:
-            assert str(put_result[field]) == str(expected_put_result[field]), f"Put {field} mismatch."
     for key in expected_post_result:
         if key not in ("geometry", "centre_point", "updated_at"):
             assert post_result[key] == expected_post_result[key], f"Post {key} mismatch."
-    for key in expected_put_result:
-        if key not in ("geometry", "centre_point", "updated_at"):
-            assert put_result[key] == expected_put_result[key], f"Put {key} mismatch."
     for key in expected_patch_result:
         if key != "updated_at":
             assert patch_result[key] == expected_patch_result[key], f"Patch {key} mismatch."
@@ -148,7 +134,7 @@ async def test_get_all_context_territories(mock_conn: MockConnection):
 
     # Arrange
     project_id = 1
-    user = UserDTO("mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(projects_data, scenarios_data.c.parent_id)
         .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))

@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 
 from idu_api.urban_api.schemas import (
     Buffer,
@@ -25,12 +25,11 @@ from tests.urban_api.helpers.utils import assert_response
 
 
 @pytest.mark.asyncio
-async def test_get_buffer_types(urban_api_host: str, buffer_type: dict[str, Any]):
+async def test_get_buffer_types(client: AsyncClient, buffer_type: dict[str, Any]):
     """Test GET /buffer_types method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/buffer_types")
+    response = await client.get("/api/v1/buffer_types")
 
     # Assert
     assert_response(response, 200, BufferType, result_type="list")
@@ -50,7 +49,7 @@ async def test_get_buffer_types(urban_api_host: str, buffer_type: dict[str, Any]
     ids=["success", "conflict"],
 )
 async def test_add_buffer_type(
-    urban_api_host: str,
+    client: AsyncClient,
     buffer_type_post_req: BufferTypePost,
     expected_status: int,
     error_message: str | None,
@@ -62,20 +61,18 @@ async def test_add_buffer_type(
     new_zone_type["name"] = "new name"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/buffer_types", json=new_zone_type)
+    response = await client.post("/api/v1/buffer_types", json=new_zone_type)
 
     # Assert
     assert_response(response, expected_status, BufferType, error_message)
 
 
 @pytest.mark.asyncio
-async def test_get_all_default_buffer_values(urban_api_host: str, default_buffer_value: dict[str, Any]):
+async def test_get_all_default_buffer_values(client: AsyncClient, default_buffer_value: dict[str, Any]):
     """Test GET /buffer_types/defaults method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/buffer_types/defaults")
+    response = await client.get("/api/v1/buffer_types/defaults")
 
     # Assert
     assert_response(response, 200, DefaultBufferValue, result_type="list")
@@ -96,7 +93,7 @@ async def test_get_all_default_buffer_values(urban_api_host: str, default_buffer
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_default_buffer_values(
-    urban_api_host,
+    client,
     default_buffer_value_post_req: DefaultBufferValuePost,
     buffer_type: dict[str, Any],
     service_type: dict[str, Any],
@@ -113,8 +110,7 @@ async def test_add_default_buffer_values(
     new_default_value["service_type_id"] = type_id_param or service_type["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/buffer_types/defaults", json=new_default_value)
+    response = await client.post("/api/v1/buffer_types/defaults", json=new_default_value)
 
     # Assert
     assert_response(response, expected_status, DefaultBufferValue, error_message)
@@ -130,7 +126,7 @@ async def test_add_default_buffer_values(
     ids=["success", "not_found"],
 )
 async def test_put_default_buffer_values(
-    urban_api_host,
+    client,
     default_buffer_value_put_req: DefaultBufferValuePut,
     buffer_type: dict[str, Any],
     service_type: dict[str, Any],
@@ -147,8 +143,7 @@ async def test_put_default_buffer_values(
     new_default_value["service_type_id"] = type_id_param or service_type["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/buffer_types/defaults", json=new_default_value)
+    response = await client.put("/api/v1/buffer_types/defaults", json=new_default_value)
 
     # Assert
     assert_response(response, expected_status, DefaultBufferValue, error_message)
@@ -165,7 +160,7 @@ async def test_put_default_buffer_values(
     ids=["custom_success", "default_success", "not_found"],
 )
 async def test_put_buffer(
-    urban_api_host,
+    client,
     buffer_put_req: BufferPut,
     buffer_type: dict[str, Any],
     urban_object: dict[str, Any],
@@ -183,8 +178,7 @@ async def test_put_buffer(
     new_buffer["geometry"] = geom_param.model_dump() if geom_param else None
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/buffers", json=new_buffer)
+    response = await client.put("/api/v1/buffers", json=new_buffer)
 
     # Assert
     assert_response(response, expected_status, Buffer, error_message)
@@ -204,7 +198,7 @@ async def test_put_buffer(
     ids=["success", "not_found"],
 )
 async def test_delete_buffer(
-    urban_api_host: str,
+    client: AsyncClient,
     buffer_put_req: BufferPut,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     buffer_type: dict[str, Any],
@@ -220,25 +214,23 @@ async def test_delete_buffer(
     new_object = physical_object_with_geometry_post_req.model_dump()
     new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
     new_object["territory_id"] = city["territory_id"]
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/physical_objects", json=new_object)
+    response = await client.post("/api/v1/physical_objects", json=new_object)
     new_buffer = buffer_put_req.model_dump()
     new_buffer["buffer_type_id"] = buffer_type["buffer_type_id"]
     new_buffer["urban_object_id"] = response.json()["urban_object_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if buffer_id_param is None:
-            response = await client.put("/buffers", json=new_buffer)
-            buffer_type_id, urban_object_id = (
-                response.json()["buffer_type"]["id"],
-                response.json()["urban_object"]["id"],
-            )
-            params = {"buffer_type_id": buffer_type_id, "urban_object_id": urban_object_id}
-            response = await client.delete("/buffers", params=params)
-        else:
-            params = {"buffer_type_id": buffer_id_param, "urban_object_id": buffer_id_param}
-            response = await client.delete("/buffers", params=params)
+    if buffer_id_param is None:
+        response = await client.put("/api/v1/buffers", json=new_buffer)
+        buffer_type_id, urban_object_id = (
+            response.json()["buffer_type"]["id"],
+            response.json()["urban_object"]["id"],
+        )
+        params = {"buffer_type_id": buffer_type_id, "urban_object_id": urban_object_id}
+        response = await client.delete("/api/v1/buffers", params=params)
+    else:
+        params = {"buffer_type_id": buffer_id_param, "urban_object_id": buffer_id_param}
+        response = await client.delete("/api/v1/buffers", params=params)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

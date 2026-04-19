@@ -12,6 +12,8 @@ Geom = geom.Polygon | geom.MultiPolygon | geom.Point | geom.LineString | geom.Mu
 
 @dataclass
 class ObjectGeometryDTO:
+    """DTO representing a spatial object geometry with metadata and location info."""
+
     object_geometry_id: int
     territory_id: int
     territory_name: str
@@ -23,6 +25,7 @@ class ObjectGeometryDTO:
     updated_at: datetime
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -31,6 +34,7 @@ class ObjectGeometryDTO:
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         geometry = asdict(self)
         geometry["territory"] = {"id": geometry.pop("territory_id"), "name": geometry.pop("territory_name")}
         return geometry
@@ -38,12 +42,16 @@ class ObjectGeometryDTO:
 
 @dataclass
 class ScenarioGeometryDTO(ObjectGeometryDTO):
+    """DTO representing an object geometry within a scenario context."""
+
     is_scenario_object: bool
     is_locked: bool = False
 
 
 @dataclass
 class GeometryWithAllObjectsDTO:
+    """DTO representing geometry enriched with related physical objects and services."""
+
     object_geometry_id: int
     territory_id: int
     territory_name: str
@@ -55,6 +63,7 @@ class GeometryWithAllObjectsDTO:
     services: list[dict[str, Any]]
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -63,6 +72,7 @@ class GeometryWithAllObjectsDTO:
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         obj = asdict(self)
         obj["territory"] = {"id": obj.pop("territory_id"), "name": obj.pop("territory_name")}
         return obj
@@ -70,6 +80,8 @@ class GeometryWithAllObjectsDTO:
 
 @dataclass
 class ScenarioGeometryWithAllObjectsDTO(GeometryWithAllObjectsDTO):
+    """DTO representing scenario geometry with associated objects and services."""
+
     is_scenario_object: bool
     physical_objects: list[dict[str, Any]]
     services: list[dict[str, Any]]

@@ -1,7 +1,6 @@
 """Indicator values projects-related endpoints are defined here."""
 
-from fastapi import Depends, HTTPException, Path, Query, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, HTTPException, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from otteroad import KafkaProducerClient
@@ -79,7 +78,6 @@ async def get_indicators_values_by_scenario_id(
     "/scenarios/{scenario_id}/indicators_values",
     response_model=ScenarioIndicatorValue,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def add_scenario_indicator_value(
     request: Request,
@@ -123,7 +121,6 @@ async def add_scenario_indicator_value(
     "/scenarios/{scenario_id}/indicators_values",
     response_model=ScenarioIndicatorValue,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def put_scenario_indicator_value(
     request: Request,
@@ -167,7 +164,6 @@ async def put_scenario_indicator_value(
     "/scenarios/{scenario_id}/indicators_values/{indicator_value_id}",
     response_model=ScenarioIndicatorValue,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_scenario_indicator_value(
     request: Request,
@@ -210,7 +206,6 @@ async def patch_scenario_indicator_value(
     "/scenarios/{scenario_id}/indicators_values",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_indicators_values_by_scenario_id(
     request: Request,
@@ -244,7 +239,6 @@ async def delete_indicators_values_by_scenario_id(
     "/scenarios/{scenario_id}/indicators_values/{indicator_value_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_scenario_indicator_value_by_id(
     request: Request,
@@ -326,37 +320,3 @@ async def get_hexagons_with_indicators_values_by_scenario_id(
     )
 
     return await GeoJSONResponse.from_list([hexagon.to_geojson_dict() for hexagon in hexagons], centers_only)
-
-
-@projects_router.put(
-    "/scenarios/{scenario_id}/all_indicators_values/",
-    response_model=OkResponse,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-)
-async def update_all_indicators_values_by_scenario_id(
-    request: Request,
-    scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
-) -> OkResponse:
-    """
-    ## Update all indicator values for a given scenario.
-
-    ### Parameters:
-    - **scenario_id** (int, Path): Unique identifier of the scenario.
-
-    ### Returns:
-    - **OkResponse**: A confirmation message of the update.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    await user_project_service.update_all_indicators_values_by_scenario_id(scenario_id, user)
-
-    return OkResponse()

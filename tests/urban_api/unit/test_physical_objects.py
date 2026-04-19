@@ -29,7 +29,6 @@ from idu_api.common.db.entities import (
     urban_objects_data,
 )
 from idu_api.urban_api.dto import (
-    BuildingDTO,
     ObjectGeometryDTO,
     PhysicalObjectDTO,
     PhysicalObjectWithGeometryDTO,
@@ -44,7 +43,6 @@ from idu_api.urban_api.logic.impl.helpers.physical_objects import (
     add_physical_object_with_geometry_to_db,
     delete_building_from_db,
     delete_physical_object_from_db,
-    get_buildings_by_physical_object_id_from_db,
     get_physical_object_by_id_from_db,
     get_physical_object_geometries_from_db,
     get_physical_objects_around_from_db,
@@ -54,11 +52,9 @@ from idu_api.urban_api.logic.impl.helpers.physical_objects import (
     patch_building_to_db,
     patch_physical_object_to_db,
     put_building_to_db,
-    put_physical_object_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT, SRID
 from idu_api.urban_api.schemas import (
-    Building,
     BuildingPatch,
     BuildingPost,
     BuildingPut,
@@ -66,7 +62,6 @@ from idu_api.urban_api.schemas import (
     PhysicalObject,
     PhysicalObjectPatch,
     PhysicalObjectPost,
-    PhysicalObjectPut,
     PhysicalObjectWithGeometry,
     PhysicalObjectWithGeometryPost,
     Service,
@@ -306,28 +301,6 @@ async def test_add_physical_object_with_geometry_to_db(
 
 
 @pytest.mark.asyncio
-async def test_put_physical_object_to_db(mock_conn: MockConnection, physical_object_put_req: PhysicalObjectPut):
-    """Test the put_physical_object_to_db function."""
-
-    # Arrange
-    physical_object_id = 1
-    statement_update = (
-        update(physical_objects_data)
-        .where(physical_objects_data.c.physical_object_id == physical_object_id)
-        .values(**physical_object_put_req.model_dump(), updated_at=datetime.now(timezone.utc))
-    )
-
-    # Act
-    result = await put_physical_object_to_db(mock_conn, physical_object_put_req, physical_object_id)
-
-    # Assert
-    assert isinstance(result, PhysicalObjectDTO), "Result should be a PhysicalObjectDTO."
-    assert isinstance(PhysicalObject.from_dto(result), PhysicalObject), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    mock_conn.commit_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
 async def test_patch_physical_object_to_db(mock_conn: MockConnection, physical_object_patch_req: PhysicalObjectPatch):
     """Test the patch_physical_object_to_db function."""
 
@@ -465,47 +438,6 @@ async def test_delete_building_from_db(mock_conn: MockConnection):
     assert result == {"status": "ok"}, "Result should be {'status': 'ok'}."
     mock_conn.execute_mock.assert_called_once_with(str(statement_delete))
     mock_conn.commit_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_get_buildings_by_physical_object_id_from_db(mock_conn: MockConnection):
-    """Test the get_buildings_by_physical_object_id_from_db function."""
-
-    # Arrange
-    physical_object_id = 1
-    statement = (
-        select(
-            buildings_data,
-            physical_objects_data.c.name.label("physical_object_name"),
-            physical_objects_data.c.properties.label("physical_object_properties"),
-            physical_object_types_dict.c.physical_object_type_id,
-            physical_object_types_dict.c.name.label("physical_object_type_name"),
-        )
-        .select_from(
-            buildings_data.join(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == buildings_data.c.physical_object_id,
-            ).join(
-                physical_object_types_dict,
-                physical_objects_data.c.physical_object_type_id == physical_object_types_dict.c.physical_object_type_id,
-            )
-        )
-        .where(buildings_data.c.physical_object_id == physical_object_id)
-        .distinct()
-    )
-
-    # Act
-    with patch("idu_api.urban_api.logic.impl.helpers.physical_objects.check_existence") as mock_check_existence:
-        result = await get_buildings_by_physical_object_id_from_db(mock_conn, physical_object_id)
-        mock_check_existence.return_value = False
-        with pytest.raises(EntityNotFoundById):
-            await get_buildings_by_physical_object_id_from_db(mock_conn, physical_object_id)
-
-    # Assert
-    assert isinstance(result, list), "Result should be a list."
-    assert all(isinstance(obj, BuildingDTO) for obj in result), "Each item should be a BuildingDTO."
-    assert isinstance(Building.from_dto(result[0]), Building), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_called_once_with(str(statement))
 
 
 @pytest.mark.asyncio

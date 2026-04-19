@@ -99,7 +99,6 @@ class Territory(BaseModel):
     @classmethod
     def from_dto(cls, dto: TerritoryDTO) -> "Territory":
         """Construct from DTO."""
-
         return cls(
             territory_id=dto.territory_id,
             territory_type=TerritoryTypeBasic(id=dto.territory_type_id, name=dto.territory_type_name),
@@ -151,26 +150,6 @@ class TerritoryPost(GeometryValidationModel):
     target_city_type_id: int | None = Field(None, examples=[1])
     okato_code: str | None = Field(None, examples=["1"])
     oktmo_code: str | None = Field(None, examples=["1"])
-    is_city: bool = Field(..., description="boolean parameter to determine cities")
-
-
-class TerritoryPut(GeometryValidationModel):
-    """Territory schema for PUT request."""
-
-    territory_type_id: int = Field(..., examples=[1])
-    parent_id: int | None = Field(..., examples=[1])
-    name: str = Field(..., description="territory name", examples=["--"])
-    geometry: Geometry
-    properties: dict[str, Any] = Field(
-        ...,
-        description="territory additional properties",
-        examples=[{"additional_attribute_name": "additional_attribute_value"}],
-    )
-    centre_point: Point
-    admin_center_id: int | None = Field(..., examples=[1])
-    target_city_type_id: int | None = Field(..., examples=[1])
-    okato_code: str | None = Field(..., examples=["1"])
-    oktmo_code: str | None = Field(..., examples=["1"])
     is_city: bool = Field(..., description="boolean parameter to determine cities")
 
 
@@ -263,9 +242,7 @@ class TerritoryWithoutGeometry(BaseModel):
 
 
 class TerritoryTreeWithoutGeometry(TerritoryWithoutGeometry):
-    """
-    Territory with all its attributes, but without center and geometry
-
+    """Territory with all its attributes, but without center and geometry
     which also contains child territories."""
 
     children: list["TerritoryTreeWithoutGeometry"] = Field(default_factory=list)

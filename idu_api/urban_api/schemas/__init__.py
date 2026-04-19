@@ -17,11 +17,9 @@ from .buffers import (
     ScenarioBufferPut,
 )
 from .buildings import (
-    Building,
     BuildingPatch,
     BuildingPost,
     BuildingPut,
-    BuildingWithGeometry,
     ScenarioBuildingPatch,
     ScenarioBuildingPost,
     ScenarioBuildingPut,
@@ -31,7 +29,6 @@ from .functional_zones import (
     FunctionalZone,
     FunctionalZonePatch,
     FunctionalZonePost,
-    FunctionalZonePut,
     FunctionalZoneSource,
     FunctionalZoneType,
     FunctionalZoneTypePost,
@@ -39,7 +36,6 @@ from .functional_zones import (
     ScenarioFunctionalZone,
     ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePost,
-    ScenarioFunctionalZonePut,
     ScenarioFunctionalZoneWithoutGeometry,
 )
 from .health_check import PingResponse
@@ -109,11 +105,10 @@ from .projects import (
     ProjectPhases,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ProjectTerritory,
     ProjectTerritoryPost,
 )
-from .scenarios import Scenario, ScenarioPatch, ScenarioPost, ScenarioPut
+from .scenarios import Scenario, ScenarioPatch, ScenarioPost
 from .service_types import (
     ServiceType,
     ServiceTypePatch,
@@ -154,7 +149,6 @@ from .territories import (
     Territory,
     TerritoryPatch,
     TerritoryPost,
-    TerritoryPut,
     TerritoryTreeWithoutGeometry,
     TerritoryType,
     TerritoryTypePost,
@@ -173,7 +167,6 @@ __all__ = [
     "Territory",
     "TerritoryPost",
     "TerritoryPatch",
-    "TerritoryPut",
     "TerritoryWithIndicator",
     "TerritoryWithIndicators",
     "TerritoryWithNormatives",
@@ -181,7 +174,6 @@ __all__ = [
     "Scenario",
     "ScenarioPatch",
     "ScenarioPost",
-    "ScenarioPut",
     "ServicesCountCapacity",
     "Service",
     "ServicePatch",
@@ -226,14 +218,11 @@ __all__ = [
     "PhysicalObjectsTypesHierarchy",
     "PhysicalObjectTypePatch",
     "PhysicalObjectTypePost",
-    "Building",
     "BuildingPatch",
     "BuildingPost",
     "BuildingPut",
-    "BuildingWithGeometry",
     "FunctionalZone",
     "FunctionalZonePost",
-    "FunctionalZonePut",
     "FunctionalZonePatch",
     "FunctionalZoneType",
     "FunctionalZoneTypePost",
@@ -246,7 +235,6 @@ __all__ = [
     "ProjectPhases",
     "ProjectPhasesPut",
     "ProjectPost",
-    "ProjectPut",
     "ProjectPatch",
     "ProjectTerritory",
     "ProjectTerritoryPost",
@@ -276,7 +264,6 @@ __all__ = [
     "ScenarioFunctionalZone",
     "ScenarioFunctionalZonePatch",
     "ScenarioFunctionalZonePost",
-    "ScenarioFunctionalZonePut",
     "ScenarioFunctionalZoneWithoutGeometry",
     "FunctionalZoneWithoutGeometry",
     "FunctionalZoneSource",
@@ -321,4 +308,5 @@ __all__ = [
     "TerritoryWithBinnedIndicators",
     "ProjectCadastreAttributes",
     "ProjectCadastrePut",
+    "TerritoryTreeWithoutGeometry",
 ]

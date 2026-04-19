@@ -1,12 +1,10 @@
 """Projects internal logic is defined here."""
 
 import asyncio
-import os
 from collections.abc import Callable
 from datetime import date
 from typing import Any, Literal
 
-import aiohttp
 import structlog
 from geoalchemy2 import Geography, Geometry
 from geoalchemy2.functions import (
@@ -62,7 +60,6 @@ from idu_api.common.db.entities import (
     territory_types_dict,
     urban_objects_data,
 )
-from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import (
     PageDTO,
     ProjectDTO,
@@ -85,7 +82,6 @@ from idu_api.urban_api.schemas import (
     ProjectPatch,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
 )
 from idu_api.urban_api.utils.pagination import paginate_dto
 from idu_api.urban_api.utils.query_filters import CustomFilter, EqFilter, ILikeFilter, apply_filters
@@ -498,16 +494,18 @@ async def add_project_to_db(
 
     await insert_functional_zones(conn, scenario_id, given_geometry)
 
-    await save_indicators(project_id, scenario_id, logger)  # TODO: remove this call
-
     new_project = await get_project_by_id_from_db(conn, project_id, user)
 
     await project_storage_manager.init_project(project_id, logger)
 
-    event = ProjectCreated(project_id=project_id, base_scenario_id=scenario_id, territory_id=project.territory_id)
-    await kafka_producer.send(event)
-    event = BaseScenarioCreated(project_id=project_id, base_scenario_id=scenario_id, regional_scenario_id=parent_id)
-    await kafka_producer.send(event)
+    project_event = ProjectCreated(
+        project_id=project_id, base_scenario_id=scenario_id, territory_id=project.territory_id
+    )
+    await kafka_producer.send(project_event)
+    scenario_event = BaseScenarioCreated(
+        project_id=project_id, base_scenario_id=scenario_id, regional_scenario_id=parent_id
+    )
+    await kafka_producer.send(scenario_event)
 
     await conn.commit()
 
@@ -519,7 +517,6 @@ async def create_base_scenario_to_db(
     project_id: int,
     scenario_id: int,
     kafka_producer: KafkaProducerClient,
-    logger: structlog.stdlib.BoundLogger,
 ) -> ScenarioDTO:
     """Create base scenario object for given project from specified regional scenario."""
 
@@ -575,8 +572,6 @@ async def create_base_scenario_to_db(
 
     await insert_functional_zones(conn, base_scenario_id, project_geometry)
 
-    await save_indicators(project_id, base_scenario_id, logger)
-
     scenarios_data_parents = scenarios_data.alias("scenarios_data_parents")
     statement = (
         select(
@@ -616,23 +611,6 @@ async def create_base_scenario_to_db(
     await conn.commit()
 
     return ScenarioDTO(**result)
-
-
-async def put_project_to_db(conn: AsyncConnection, project: ProjectPut, project_id: int, user: UserDTO) -> ProjectDTO:
-    """Update project object by all its attributes."""
-
-    await check_project(conn, project_id, user, to_edit=True)
-
-    statement = (
-        update(projects_data)
-        .where(projects_data.c.project_id == project_id)
-        .values(**extract_values_from_model(project, to_update=True))
-    )
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return await get_project_by_id_from_db(conn, project_id, user)
 
 
 async def patch_project_to_db(
@@ -725,6 +703,7 @@ async def delete_project_from_db(
 
 
 async def insert_project(conn: AsyncConnection, project: ProjectPost, user: UserDTO) -> int:
+    """Insert a new project and return its generated ID."""
     statement = (
         insert(projects_data)
         .values(**project.model_dump(exclude={"territory"}), user_id=user.id)
@@ -1026,6 +1005,7 @@ async def create_project_base_scenario(
 async def copy_urban_objects_from_regional_scenario(
     conn: AsyncConnection, scenario_id: int, geometry: ScalarSelect[Any] | BaseRow, new_scenario_id: int
 ):
+    """Copy urban objects from a regional scenario into a new scenario within a geometry filter."""
     regional_urban_objects_cte = (
         select(
             projects_urban_objects_data.c.public_urban_object_id,
@@ -1378,56 +1358,13 @@ async def insert_functional_zones(conn: AsyncConnection, scenario_id: int, geome
     )
 
 
-async def save_indicators(project_id: int, scenario_id: int, logger: structlog.stdlib.BoundLogger) -> None:
-    """
-    Update all indicators for the specified project via the external Hextech service.
-
-    This function interacts with the Hextech API to save indicators related to a specific project and scenario.
-    It handles different exceptions and logs relevant information in case of errors.
-
-    Args:
-        project_id (int): The ID of the project for which indicators are being saved.
-        scenario_id (int): The ID of the scenario within the project.
-        logger (structlog.stdlib.BoundLogger): The logger used to record warning and error logs.
-    """
-
-    # Load configuration settings from a file or default environment variables
-    config = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
-    params = {"scenario_id": scenario_id, "project_id": project_id, "background": "true"}
-
-    # Create an asynchronous HTTP client session
-    async with aiohttp.ClientSession() as session:
-        try:
-            response = await session.put(
-                f"{config.external.hextech_api}/hextech/indicators_saving/save_all", params=params
-            )
-            response.raise_for_status()
-
-        # Handle errors related to the response (e.g., 4xx or 5xx errors)
-        except aiohttp.ClientResponseError as exc:
-            await logger.awarning(
-                "Failed to save indicators",
-                status=exc.status,
-                message=exc.message,
-                url=exc.request_info.url,
-                params=params,
-            )
-
-        # Handle connection errors (e.g., network issues)
-        except aiohttp.ClientConnectorError as exc:
-            await logger.awarning("Request failed due to connection error", reason=str(exc), params=params)
-
-        # Handle any other unexpected exceptions
-        except Exception:  # pylint: disable=broad-exception-caught
-            await logger.aexception("Unexpected error occurred while saving indicators")
-
-
 async def copy_geometries(
     conn,
     geometry_ids: list[int],
     geometry: ScalarSelect[Any] | BaseRow | None = None,
     is_from_public: bool = False,
 ) -> dict[int, int]:
+    """Copy geometries and return mapping from old IDs to new IDs."""
     if not geometry_ids:
         return {}
 
@@ -1477,6 +1414,7 @@ async def copy_geometries(
 
 
 async def copy_physical_objects(conn, physical_ids: list[int]) -> dict[int, int]:
+    """Copy physical objects and return mapping from old IDs to new IDs."""
     if not physical_ids:
         return {}
 
@@ -1518,6 +1456,7 @@ async def copy_physical_objects(conn, physical_ids: list[int]) -> dict[int, int]
 
 
 async def copy_services(conn, service_ids: list[int]) -> dict[int, int]:
+    """Copy services and return mapping from old IDs to new IDs."""
     if not service_ids:
         return {}
 

@@ -59,10 +59,11 @@ async def fix_geojson_by_postgis(
     batches = [
         geoms[i : i + OBJECTS_NUMBER_TO_INSERT_LIMIT] for i in range(0, len(geoms), OBJECTS_NUMBER_TO_INSERT_LIMIT)
     ]
-    iterator = enumerate(batches)
-    if show_progress:
 
-        iterator = tqdm(iterator, total=len(batches), desc="Fixing geometries")
+    if show_progress:
+        iterator = tqdm(enumerate(batches), total=len(batches), desc="Fixing geometries")
+    else:
+        iterator = enumerate(batches)
 
     for batch_idx, batch in iterator:
         try:

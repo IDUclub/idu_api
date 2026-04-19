@@ -4,7 +4,7 @@ import abc
 from typing import Protocol
 
 from idu_api.urban_api.dto import ServiceDTO, UrbanObjectDTO
-from idu_api.urban_api.schemas import ServicePatch, ServicePost, ServicePut
+from idu_api.urban_api.schemas import ServicePatch, ServicePost
 
 
 class ServicesDataService(Protocol):
@@ -17,10 +17,6 @@ class ServicesDataService(Protocol):
     @abc.abstractmethod
     async def add_service(self, service: ServicePost) -> ServiceDTO:
         """Create service object."""
-
-    @abc.abstractmethod
-    async def put_service(self, service: ServicePut, service_id: int) -> ServiceDTO:
-        """Put service object."""
 
     @abc.abstractmethod
     async def patch_service(self, service: ServicePatch, service_id: int) -> ServiceDTO:

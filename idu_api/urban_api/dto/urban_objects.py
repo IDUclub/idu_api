@@ -12,6 +12,8 @@ Geom = geom.Polygon | geom.MultiPolygon | geom.Point | geom.LineString | geom.Mu
 
 @dataclass
 class UrbanObjectDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a full urban object with physical, geometry, and service data."""
+
     urban_object_id: int
     physical_object_id: int
     physical_object_type_id: int
@@ -60,6 +62,7 @@ class UrbanObjectDTO:  # pylint: disable=too-many-instance-attributes
     service_updated_at: datetime | None
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -70,6 +73,8 @@ class UrbanObjectDTO:  # pylint: disable=too-many-instance-attributes
 
 @dataclass
 class ScenarioUrbanObjectDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing an urban object within a scenario context, including overrides."""
+
     urban_object_id: int
     scenario_id: int
     public_urban_object_id: int | None
@@ -123,6 +128,7 @@ class ScenarioUrbanObjectDTO:  # pylint: disable=too-many-instance-attributes
     is_scenario_service: bool | None
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:

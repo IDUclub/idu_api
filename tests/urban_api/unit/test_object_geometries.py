@@ -24,14 +24,12 @@ from idu_api.urban_api.logic.impl.helpers.object_geometries import (
     get_object_geometry_by_ids_from_db,
     get_physical_objects_by_object_geometry_id_from_db,
     patch_object_geometry_to_db,
-    put_object_geometry_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT, SRID
 from idu_api.urban_api.schemas import (
     ObjectGeometry,
     ObjectGeometryPatch,
     ObjectGeometryPost,
-    ObjectGeometryPut,
     PhysicalObject,
     UrbanObject,
 )
@@ -151,37 +149,6 @@ async def test_get_object_geometry_by_ids_from_db(mock_conn: MockConnection):
     assert all(isinstance(item, ObjectGeometryDTO) for item in result), "Each item should be an ObjectGeometryDTO."
     assert isinstance(ObjectGeometry.from_dto(result[0]), ObjectGeometry), "Couldn't create pydantic model from DTO."
     mock_conn.execute_mock.assert_any_call(str(statement))
-
-
-@pytest.mark.asyncio
-async def test_put_object_geometry_to_db(mock_conn: MockConnection, object_geometries_put_req: ObjectGeometryPut):
-    """Test the put_object_geometry_to_db function."""
-
-    # Arrange
-    object_geometry_id = 1
-    statement_update = (
-        update(object_geometries_data)
-        .where(object_geometries_data.c.object_geometry_id == object_geometry_id)
-        .values(
-            territory_id=object_geometries_put_req.territory_id,
-            geometry=ST_GeomFromWKB(object_geometries_put_req.geometry.as_shapely_geometry().wkb, text(str(SRID))),
-            centre_point=ST_GeomFromWKB(
-                object_geometries_put_req.centre_point.as_shapely_geometry().wkb, text(str(SRID))
-            ),
-            address=object_geometries_put_req.address,
-            osm_id=object_geometries_put_req.osm_id,
-            updated_at=datetime.now(timezone.utc),
-        )
-    )
-
-    # Act
-    result = await put_object_geometry_to_db(mock_conn, object_geometries_put_req, object_geometry_id)
-
-    # Assert
-    assert isinstance(result, ObjectGeometryDTO), "Result should be an ObjectGeometryDTO."
-    assert isinstance(ObjectGeometry.from_dto(result), ObjectGeometry), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
-    mock_conn.commit_mock.assert_called_once()
 
 
 @pytest.mark.asyncio

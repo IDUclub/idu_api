@@ -25,7 +25,7 @@ from idu_api.urban_api.dto import (
     SocValueDTO,
     UrbanFunctionDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityAlreadyExists, EntityNotFoundById
+from idu_api.urban_api.exceptions.logic.common import EntitiesNotFoundByIds, EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.service_types import (
     add_service_type_to_db,
     add_urban_function_to_db,

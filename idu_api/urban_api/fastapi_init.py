@@ -1,14 +1,19 @@
 """FastAPI application initialization is performed here."""
 
 import os
+from collections.abc import Callable
 from contextlib import asynccontextmanager
-from typing import Callable, NoReturn
+from pathlib import Path
+from typing import NoReturn
 
 import structlog
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.openapi.utils import get_openapi
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi_pagination import add_pagination
 from otteroad import KafkaProducerClient, KafkaProducerSettings
 
@@ -42,6 +47,9 @@ from .handlers import list_of_routers
 from .logic.impl.buffers import BufferServiceImpl
 from .version import LAST_UPDATE, VERSION
 
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+TEMPLATES_DIR = STATIC_DIR / "templates"
+
 
 def bind_routes(application: FastAPI, prefix: str, debug: bool) -> None:
     """Bind all routes to application."""
@@ -57,17 +65,61 @@ def bind_routes(application: FastAPI, prefix: str, debug: bool) -> None:
             application.include_router(router, prefix=(prefix if "/" not in {r.path for r in router.routes} else ""))
 
 
-def get_app(prefix: str = "/api") -> FastAPI:
-    """Create application and all dependable objects."""
-
+def load_config() -> UrbanAPIConfig:
+    """Loading config using CONFIG_PATH environment variable."""
     if "CONFIG_PATH" not in os.environ:
         raise ValueError("CONFIG_PATH environment variable is not set")
-    app_config: UrbanAPIConfig = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
 
-    description = "This is a Digital Territories Platform API to access and manipulate basic territories data."
+    return UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
+
+
+def setup_oauth(application: FastAPI, config: UrbanAPIConfig) -> None:
+    """Setup oauth 2.0 OpenAPI schema."""
+
+    def custom_openapi():
+        if application.openapi_schema:
+            return application.openapi_schema
+
+        openapi_schema = get_openapi(
+            title=application.title,
+            version=application.version,
+            description=application.description,
+            routes=application.routes,
+        )
+
+        auth = config.auth
+
+        openapi_schema.setdefault("components", {})
+        openapi_schema["components"]["securitySchemes"] = {
+            "OAuth2": {
+                "type": "oauth2",
+                "flows": {
+                    "authorizationCode": {
+                        "authorizationUrl": auth.authorization_url,
+                        "tokenUrl": auth.token_url,
+                        "scopes": {},
+                    }
+                },
+            }
+        }
+
+        openapi_schema["security"] = [{"OAuth2": []}]
+
+        application.openapi_schema = openapi_schema
+        return application.openapi_schema
+
+    application.openapi = custom_openapi
+
+
+def get_app(prefix: str = "/api", config: UrbanAPIConfig | None = None) -> FastAPI:
+    """Create application and all dependable objects."""
+    app_config: UrbanAPIConfig = config or load_config()
+
+    description_path = STATIC_DIR / "description.txt"
+    description = description_path.read_text(encoding="utf-8").strip()
 
     application = FastAPI(
-        title="Digital Territories Platform Data API",
+        title="Urban API",
         description=description,
         docs_url=None,
         openapi_url=f"{prefix}/openapi",
@@ -79,15 +131,39 @@ def get_app(prefix: str = "/api") -> FastAPI:
     )
     bind_routes(application, prefix, app_config.app.debug)
 
+    application.mount(
+        "/static",
+        StaticFiles(directory=str(STATIC_DIR)),
+        name="static",
+    )
+
+    setup_oauth(application, app_config)
+
     @application.get(f"{prefix}/docs", include_in_schema=False)
-    async def custom_swagger_ui_html():
-        return get_swagger_ui_html(
-            openapi_url=app.openapi_url,
-            title=app.title + " - Swagger UI",
-            oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
-            swagger_js_url="https://unpkg.com/swagger-ui-dist@5.11.7/swagger-ui-bundle.js",
-            swagger_css_url="https://unpkg.com/swagger-ui-dist@5.11.7/swagger-ui.css",
+    async def custom_docs(request: Request):
+        templates = Jinja2Templates(directory=TEMPLATES_DIR)
+        description_html = description.replace("\n\n", "</p><p>").replace("\n", "<br>")
+        description_html = f"<p>{description_html}</p>"
+        return templates.TemplateResponse(
+            "swagger_custom.html",
+            {
+                "request": request,
+                "API_TITLE": application.title,
+                "API_VERSION": application.version,
+                "PREFIX": prefix,
+                "TERMS_URL": application.terms_of_service,
+                "CONTACT_EMAIL": application.contact["email"],
+                "LICENSE_NAME": application.license_info.get("name", ""),
+                "LICENSE_URL": application.license_info.get("url", ""),
+                "OPENAPI_URL": application.openapi_url,
+                "API_DESCRIPTION_HTML": description_html,
+                "SWAGGER_CLIENT_ID": app_config.auth.client_id,
+            },
         )
+
+    @application.get("/api/oauth2-redirect.html", include_in_schema=False)
+    async def oauth2_redirect():
+        return FileResponse(STATIC_DIR / "oauth2-redirect.html")
 
     @application.exception_handler(404)
     async def handle_404(request: Request, exc: Exception) -> NoReturn:
@@ -127,12 +203,8 @@ def get_app(prefix: str = "/api") -> FastAPI:
     )
     urls_mapper = URLsMapper()
     urls_mapper.add_routes(application.routes)
-    auth_client = AuthenticationClient(
-        app_config.auth.cache_size,
-        app_config.auth.cache_ttl,
-        app_config.auth.validate,
-        app_config.auth.url,
-    )
+
+    auth_client = AuthenticationClient(config=app_config.auth)
 
     metrics_dep.init_dispencer(application, metrics)
     logger_dep.init_dispencer(application, logger)
@@ -195,6 +267,12 @@ async def lifespan(application: FastAPI):
         app_config.observability.prometheus,
         app_config.observability.jaeger,
     )
+
+    if not app_config.auth.verify:
+        await logger.awarning(
+            "JWT verification is DISABLED. Tokens are not validated and may be forged. "
+            "This mode must NOT be used in production."
+        )
 
     yield
 

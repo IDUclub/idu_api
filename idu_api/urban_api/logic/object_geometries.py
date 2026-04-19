@@ -4,7 +4,7 @@ import abc
 from typing import Protocol
 
 from idu_api.urban_api.dto import ObjectGeometryDTO, PhysicalObjectDTO, UrbanObjectDTO
-from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPost, ObjectGeometryPut
+from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPost
 
 
 class ObjectGeometriesService(Protocol):
@@ -13,12 +13,6 @@ class ObjectGeometriesService(Protocol):
     @abc.abstractmethod
     async def get_object_geometry_by_ids(self, object_geometry_ids: list[int]) -> list[ObjectGeometryDTO]:
         """Get list of object geometries by list of identifiers."""
-
-    @abc.abstractmethod
-    async def put_object_geometry(
-        self, object_geometry: ObjectGeometryPut, object_geometry_id: int
-    ) -> ObjectGeometryDTO:
-        """Put object geometry."""
 
     @abc.abstractmethod
     async def patch_object_geometry(

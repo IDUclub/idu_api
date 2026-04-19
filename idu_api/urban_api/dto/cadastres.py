@@ -9,6 +9,8 @@ from shapely.wkb import loads as wkb_loads
 
 @dataclass
 class ProjectCadastreDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing cadastral data for a project with geometry and attributes."""
+
     project_cadastre_id: int
     geometry: geom.Polygon | geom.MultiPolygon
     centre_point: geom.Point
@@ -30,6 +32,7 @@ class ProjectCadastreDTO:  # pylint: disable=too-many-instance-attributes
     similarity_score: float | None
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -38,4 +41,5 @@ class ProjectCadastreDTO:  # pylint: disable=too-many-instance-attributes
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self):
+        """Serialize DTO to a GeoJSON-like dictionary."""
         return asdict(self)

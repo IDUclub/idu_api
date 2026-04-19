@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ShortTerritoryIndicatorBindDTO:
+    """Compact DTO for indicator bounds within a territory."""
+
     indicator_id: int
     indicator_name: str
     measurement_unit_name: str | None
@@ -13,7 +15,9 @@ class ShortTerritoryIndicatorBindDTO:
 
 
 @dataclass(frozen=True)
-class TerritoryIndicatorBindDTO:  # pylint: disable=too-many-instance-attributes
+class TerritoryIndicatorBindDTO:
+    """Detailed DTO linking indicators to territories with hierarchy and bounds."""
+
     indicator_id: int
     indicator_name: str
     indicator_parent_id: int | None

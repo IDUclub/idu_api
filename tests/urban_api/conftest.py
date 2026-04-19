@@ -1,30 +1,45 @@
-"""All configurations and fixtures, including database and urban_api_host, are defined here."""
+"""All configurations and fixtures for Urban API integration tests.
+
+This setup provides:
+- PostgreSQL database with Alembic migrations
+- FastAPI application in ASGI test mode (no subprocess)
+- Async HTTP client for integration testing
+"""
 
 import os
-import socket
-import subprocess
-import tempfile
-import time
-from collections.abc import Iterator
 from pathlib import Path
 
-import httpx
-import psutil
+import pytest
+import pytest_asyncio
+import structlog
 from alembic import command
 from alembic.config import Config
+from asgi_lifespan import LifespanManager
 from dotenv import load_dotenv
+from httpx import ASGITransport, AsyncClient
 
 from idu_api.common.db.config import MultipleDBsConfig
 from idu_api.urban_api.config import UrbanAPIConfig
-from tests.urban_api.helpers import *
+from idu_api.urban_api.fastapi_init import get_app
+from tests.urban_api.helpers import *  # noqa: F401,F403
 
+logger = structlog.get_logger("test")
 load_dotenv(dotenv_path="urban_api/.env")
+
+
+# ---------------------------------------------------------------------------
+# Database setup
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(scope="session")
 def database() -> MultipleDBsConfig:
-    """Fixture to get database credentials from environment variables."""
+    """
+    Provide database configuration for integration tests.
 
+    Loads configuration from TEST_CONFIG_PATH and applies Alembic migrations
+    before any tests are executed.
+    """
     if "TEST_CONFIG_PATH" not in os.environ:
         pytest.skip("Database for integration tests is not configured")
 
@@ -34,84 +49,98 @@ def database() -> MultipleDBsConfig:
     return config.db
 
 
-@pytest.fixture(scope="session")
-def config(database) -> UrbanAPIConfig:
-    """Fixture to generate configuration from environment variables."""
+def run_migrations(database: MultipleDBsConfig) -> None:
+    """
+    Apply Alembic migrations to the test database.
 
-    s = socket.socket()
-    s.bind(("", 0))
-    port: int = s.getsockname()[1]
-    config = UrbanAPIConfig.load(os.environ["TEST_CONFIG_PATH"])
-    config.app.uvicorn.port = port
-    config.db = database
-    config.app.uvicorn.reload = False
-    return config
-
-
-@pytest.fixture(scope="session")
-def urban_api_host(config) -> Iterator[str]:  # pylint: disable=redefined-outer-name
-    """Fixture to start the urban_api HTTP server on random port with poetry command."""
-
-    host = f"http://localhost:{config.app.uvicorn.port}"
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_yaml_config_path = temp_file.name
-        config.dump(temp_yaml_config_path)
-    os.environ["CONFIG_PATH"] = temp_yaml_config_path
-    with subprocess.Popen(
-        [
-            # fmt: off
-            "poetry", "run", "launch_urban_api",
-            "--config_path", temp_yaml_config_path,
-            # fmt: on
-        ]
-    ) as process:
-        try:
-            attempts = 15
-            success = False
-            for _ in range(attempts):
-                attempt_started_at = time.monotonic()
-                try:
-                    with httpx.Client() as client:
-                        if client.get(f"{host}/health_check/ping", timeout=1).is_success:
-                            success = True
-                            break
-                except Exception:  # pylint: disable=broad-except
-                    pass
-                time.sleep(max(0, 1.0 - (time.monotonic() - attempt_started_at)))
-            if success:
-                yield host
-            else:
-                pytest.fail(f"Failed to start urban_api server in {attempts} attempts with a second interval")
-        finally:
-            try:
-                for child in psutil.Process(process.pid).children(recursive=True):
-                    child.terminate()
-            except psutil.NoSuchProcess:
-                pass
-            process.terminate()
-
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                for child in psutil.Process(process.pid).children(recursive=True):
-                    child.kill()
-                process.kill()
-            if os.path.exists(temp_yaml_config_path):
-                os.remove(temp_yaml_config_path)
-
-
-def run_migrations(database: MultipleDBsConfig):  # pylint: disable=redefined-outer-name
+    This ensures schema is up-to-date before running tests.
+    """
     dsn = (
-        f"postgresql+asyncpg://{database.master.user}:{database.master.password.get_secret_value()}"
-        f"@{database.master.host}:{database.master.port}/{database.master.database}"
+        f"postgresql+asyncpg://{database.master.user}:"
+        f"{database.master.password.get_secret_value()}"
+        f"@{database.master.host}:{database.master.port}/"
+        f"{database.master.database}"
     )
+
     alembic_dir = Path(__file__).resolve().parent.parent.parent / "idu_api" / "common" / "db"
 
     alembic_cfg = Config(str(alembic_dir / "alembic.ini"))
     alembic_cfg.set_main_option("script_location", str(alembic_dir / "migrator"))
+    alembic_cfg.set_main_option("sqlalchemy.url", dsn)
 
     try:
-        alembic_cfg.set_main_option("sqlalchemy.url", dsn)
         command.upgrade(alembic_cfg, "head")
-    except Exception as e:  # pylint: disable=broad-except
-        pytest.fail(f"Error on migration preparation: {str(e)}")
+    except Exception as e:
+        pytest.fail(f"Error during migration setup: {str(e)}")
+
+
+# ---------------------------------------------------------------------------
+# Application config
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="session")
+def config(database) -> UrbanAPIConfig:
+    """
+    Build application configuration for tests.
+
+    Reuses production config file but overrides database settings
+    with test database.
+    """
+    base = UrbanAPIConfig.load(os.environ["TEST_CONFIG_PATH"])
+    base.db = database
+    base.app.uvicorn.reload = False
+    return base
+
+
+# ---------------------------------------------------------------------------
+# FastAPI application (ASGI mode)
+# ---------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="function")
+def app(config):
+    """
+    Create FastAPI application instance for testing.
+
+    Application is run in ASGI mode without network or subprocess.
+    """
+    app = get_app(config=config)
+    return app
+
+
+# ---------------------------------------------------------------------------
+# Async HTTP client
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture(scope="function")
+async def client(app):
+    """
+    Async HTTP client bound to FastAPI ASGI application.
+
+    This replaces real HTTP server and allows fast in-memory requests.
+    """
+    async with LifespanManager(app):
+        async with AsyncClient(
+            transport=ASGITransport(app=app),
+            base_url="http://test",
+        ) as ac:
+            yield ac
+
+
+# ---------------------------------------------------------------------------
+# Smoke test fixture (prevents silent app misconfiguration)
+# ---------------------------------------------------------------------------
+
+
+@pytest_asyncio.fixture(scope="function")
+async def _smoke_test(client: AsyncClient):
+    """
+    Basic smoke test to ensure application starts correctly.
+
+    Fails fast if app routing or startup configuration is broken.
+    """
+    response = await client.get("/health_check/ping")
+
+    assert response.status_code == 200, "Application failed smoke test: /health_check/ping is not healthy"

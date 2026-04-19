@@ -1,6 +1,6 @@
 """Service types internal logic is defined here."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import delete, select, update
 from sqlalchemy.dialects.postgresql import insert

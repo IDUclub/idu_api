@@ -1,7 +1,6 @@
 """Object geometries projects-related endpoints are defined here."""
 
-from fastapi import Depends, HTTPException, Path, Query, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, HTTPException, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
@@ -273,7 +272,6 @@ territory in GeoJSON format.
     "/scenarios/{scenario_id}/geometries/{object_geometry_id}",
     response_model=ScenarioObjectGeometry,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def put_object_geometry(
     request: Request,
@@ -321,7 +319,6 @@ async def put_object_geometry(
     "/scenarios/{scenario_id}/geometries/{object_geometry_id}",
     response_model=ScenarioObjectGeometry,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_object_geometry(
     request: Request,
@@ -369,7 +366,6 @@ async def patch_object_geometry(
     "/scenarios/{scenario_id}/geometries/{object_geometry_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_object_geometry(
     request: Request,

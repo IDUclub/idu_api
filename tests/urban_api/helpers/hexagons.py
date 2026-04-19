@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import HexagonPost
 from idu_api.urban_api.schemas.geometries import Geometry
@@ -15,8 +15,8 @@ __all__ = ["hexagon", "hexagon_post_req"]
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def hexagon(urban_api_host, region) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def hexagon(client, region) -> dict[str, Any]:
     """Returns created hexagon."""
     hexagon_post_req = HexagonPost(
         geometry=Geometry(
@@ -26,8 +26,9 @@ def hexagon(urban_api_host, region) -> dict[str, Any]:
         properties={},
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(f"territory/{region['territory_id']}/hexagons", json=[hexagon_post_req.model_dump()])
+    response = await client.post(
+        f"/v1territory/{region['territory_id']}/hexagons", json=[hexagon_post_req.model_dump()]
+    )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()[0]

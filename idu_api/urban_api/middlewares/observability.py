@@ -92,6 +92,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
 
 def _try_get_parent_span_id(request: Request) -> None:
+    """Try to restore tracing context from incoming request headers."""
     trace_id_str = request.headers.get("X-Trace-Id")
     span_id_str = request.headers.get("X-Span-Id")
 

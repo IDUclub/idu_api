@@ -1,10 +1,5 @@
 """Projects indicators values internal logic is defined here."""
 
-import os
-from typing import Any
-
-import aiohttp
-import structlog
 from geoalchemy2.functions import ST_AsEWKB
 from otteroad import KafkaProducerClient
 from otteroad.models import ScenarioIndicatorsUpdated
@@ -20,7 +15,6 @@ from idu_api.common.db.entities import (
     scenarios_data,
     territories_data,
 )
-from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.dto import (
     HexagonWithIndicatorsDTO,
     ScenarioIndicatorValueDTO,
@@ -381,40 +375,3 @@ async def get_hexagons_with_indicators_by_scenario_id_from_db(
         )
 
     return [HexagonWithIndicatorsDTO(**result) for result in list(grouped_data.values())]
-
-
-# TODO: remove this function
-async def update_all_indicators_values_by_scenario_id_to_db(
-    conn: AsyncConnection, scenario_id: int, user: UserDTO, logger: structlog.stdlib.BoundLogger
-) -> dict[str, Any]:
-    """Update all indicators values for given scenario."""
-
-    scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
-
-    config = UrbanAPIConfig.from_file(os.getenv("CONFIG_PATH"))
-
-    async with aiohttp.ClientSession() as session:
-        params = {"scenario_id": scenario_id, "project_id": scenario.project_id, "background": "false"}
-        try:
-            response = await session.put(
-                f"{config.external.hextech_api}/hextech/indicators_saving/save_all",
-                params=params,
-            )
-            response.raise_for_status()
-        except aiohttp.ClientResponseError as exc:
-            await logger.aerror(
-                "failed to save indicators",
-                status=exc.status,
-                message=exc.message,
-                url=exc.request_info.url,
-                params=params,
-            )
-            raise
-        except aiohttp.ClientConnectorError as exc:
-            await logger.aerror("request failed", error=str(exc), params=params)
-            raise
-        except Exception:
-            await logger.aexception("unexpected error occurred")
-            raise
-
-    return {"status": "ok"}

@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import (
     Buffer,
@@ -52,20 +52,19 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def buffer_type(urban_api_host) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def buffer_type(client) -> dict[str, Any]:
     """Returns created buffer type."""
     buffer_type_post_req = BufferTypePost(name="Test buffer type name", description="Test buffer type description")
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/buffer_types", json=buffer_type_post_req.model_dump())
+    response = await client.post("/api/v1/buffer_types", json=buffer_type_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def default_buffer_value(urban_api_host, buffer_type, physical_object_type) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def default_buffer_value(client, buffer_type, physical_object_type) -> dict[str, Any]:
     """Returns created default buffer value."""
     default_buffer_value_post_req = DefaultBufferValuePost(
         buffer_type_id=buffer_type["buffer_type_id"],
@@ -74,15 +73,14 @@ def default_buffer_value(urban_api_host, buffer_type, physical_object_type) -> d
         buffer_value=100,
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/buffer_types/defaults", json=default_buffer_value_post_req.model_dump())
+    response = await client.post("/api/v1/buffer_types/defaults", json=default_buffer_value_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def buffer(urban_api_host, buffer_type, urban_object) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def buffer(client, buffer_type, urban_object) -> dict[str, Any]:
     """Returns created buffer."""
     buffer_post_req = BufferPut(
         buffer_type_id=buffer_type["buffer_type_id"],
@@ -93,15 +91,14 @@ def buffer(urban_api_host, buffer_type, urban_object) -> dict[str, Any]:
         ),
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.put("/buffers", json=buffer_post_req.model_dump())
+    response = await client.put("/api/v1/buffers", json=buffer_post_req.model_dump())
 
     assert response.status_code == 200, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def scenario_buffer(urban_api_host, buffer_type, scenario, scenario_urban_object, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def scenario_buffer(client, buffer_type, scenario, scenario_urban_object, superuser_token) -> dict[str, Any]:
     """Returns created scenario buffer."""
     scenario_buffer_post_req = ScenarioBufferPut(
         buffer_type_id=buffer_type["buffer_type_id"],
@@ -119,12 +116,11 @@ def scenario_buffer(urban_api_host, buffer_type, scenario, scenario_urban_object
     scenario_id = scenario["scenario_id"]
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.put(
-            f"/scenarios/{scenario_id}/buffers",
-            json=scenario_buffer_post_req.model_dump(),
-            headers=headers,
-        )
+    response = await client.put(
+        f"/scenarios/{scenario_id}/buffers",
+        json=scenario_buffer_post_req.model_dump(),
+        headers=headers,
+    )
 
     assert response.status_code == 200, f"Invalid status code was returned: {response.status_code}."
     return response.json()

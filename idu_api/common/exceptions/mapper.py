@@ -1,6 +1,6 @@
 """Mapper from exceptions to HTTP responses is defined here"""
 
-from typing import Callable, Type
+from collections.abc import Callable
 
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
@@ -10,10 +10,10 @@ class ExceptionMapper:
     """Maps exceptions to `JSONResponse` for FastAPI error handling."""
 
     def __init__(self, debug: bool = False):
-        self._known_exceptions: dict[Type, Callable[[Exception], JSONResponse]] = {}
+        self._known_exceptions: dict[type, Callable[[Exception], JSONResponse]] = {}
         self._debug = debug
 
-    def register_simple(self, exception_type: Type, status_code: int, detail: str) -> None:
+    def register_simple(self, exception_type: type, status_code: int, detail: str) -> None:
         """Register simple response handler with setting status_code and detail."""
         self._known_exceptions[exception_type] = lambda exc: JSONResponse(
             {
@@ -24,7 +24,7 @@ class ExceptionMapper:
             status_code=status_code,
         )
 
-    def register_func(self, exception_type: Type, func: Callable[[Exception], JSONResponse]) -> None:
+    def register_func(self, exception_type: type, func: Callable[[Exception], JSONResponse]) -> None:
         """Register complex response handler by passing function."""
         self._known_exceptions[exception_type] = func
 
@@ -71,11 +71,13 @@ class ExceptionMapper:
 
     @staticmethod
     def _get_real_exception(exc: Exception) -> Exception:
+        """Unwrap nested BaseExceptionGroup to get the original exception."""
         while isinstance(exc, BaseExceptionGroup):
             exc = exc.args[0]
         return exc
 
-    def _format_exception_type(self, exception_type: Type) -> str:
+    def _format_exception_type(self, exception_type: type) -> str:
+        """Return exception type name, optionally including module in debug mode."""
         if self._debug:
             return f"{exception_type.__module__}.{exception_type.__qualname__}"
         return exception_type.__qualname__

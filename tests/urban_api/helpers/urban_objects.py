@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import PhysicalObjectWithGeometryPost, ScenarioServicePost, ServicePost, UrbanObjectPatch
 from idu_api.urban_api.schemas.geometries import Geometry
@@ -20,8 +20,8 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def urban_object(urban_api_host, city, physical_object_type, service_type, territory_type) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def urban_object(client, city, physical_object_type, service_type, territory_type) -> dict[str, Any]:
     """Returns created urban object."""
     physical_object_with_geometry_post_req = PhysicalObjectWithGeometryPost(
         territory_id=city["territory_id"],
@@ -44,10 +44,9 @@ def urban_object(urban_api_host, city, physical_object_type, service_type, terri
         properties={"key": "value"},
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/physical_objects", json=physical_object_with_geometry_post_req.model_dump())
-        physical_object_with_geometry = response.json()
-        assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
+    response = await client.post("/api/v1/physical_objects", json=physical_object_with_geometry_post_req.model_dump())
+    physical_object_with_geometry = response.json()
+    assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
 
     service_post_req = ServicePost(
         physical_object_id=physical_object_with_geometry["physical_object"]["physical_object_id"],
@@ -59,18 +58,17 @@ def urban_object(urban_api_host, city, physical_object_type, service_type, terri
         is_capacity_real=True,
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/services", json=service_post_req.model_dump())
-        assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
-        response = client.get(f"/urban_objects/{physical_object_with_geometry['urban_object_id']}")
-        assert response.status_code == 200, f"Invalid status code was returned: {response.status_code}."
+    response = await client.post("/api/v1/services", json=service_post_req.model_dump())
+    assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
+    response = await client.get(f"/api/v1/urban_objects/{physical_object_with_geometry['urban_object_id']}")
+    assert response.status_code == 200, f"Invalid status code was returned: {response.status_code}."
 
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def scenario_urban_object(
-    urban_api_host,
+@pytest_asyncio.fixture(scope="function")
+async def scenario_urban_object(
+    client,
     scenario,
     city,
     physical_object_type,
@@ -103,14 +101,13 @@ def scenario_urban_object(
         properties={"key": "value"},
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(
-            f"/scenarios/{scenario_id}/physical_objects",
-            json=physical_object_with_geometry_post_req.model_dump(),
-            headers=headers,
-        )
-        physical_object_with_geometry = response.json()
-        assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
+    response = await client.post(
+        f"/scenarios/{scenario_id}/physical_objects",
+        json=physical_object_with_geometry_post_req.model_dump(),
+        headers=headers,
+    )
+    physical_object_with_geometry = response.json()
+    assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
 
     service_post_req = ScenarioServicePost(
         physical_object_id=physical_object_with_geometry["physical_object"]["physical_object_id"],
@@ -124,13 +121,12 @@ def scenario_urban_object(
         is_capacity_real=True,
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(
-            f"/scenarios/{scenario_id}/services",
-            json=service_post_req.model_dump(),
-            headers=headers,
-        )
-        assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
+    response = await client.post(
+        f"/scenarios/{scenario_id}/services",
+        json=service_post_req.model_dump(),
+        headers=headers,
+    )
+    assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
 
     return response.json()
 

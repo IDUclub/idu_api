@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import ProjectCadastrePut
 from idu_api.urban_api.schemas.geometries import Geometry
@@ -13,8 +13,8 @@ from idu_api.urban_api.schemas.geometries import Geometry
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def project_cadastre(urban_api_host, project, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def project_cadastre(client, project, superuser_token) -> dict[str, Any]:
     """Returns created project cadastre."""
     cadastre = ProjectCadastrePut(
         geometry=Geometry(
@@ -25,13 +25,12 @@ def project_cadastre(urban_api_host, project, superuser_token) -> dict[str, Any]
     project_id = project["project_id"]
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.put(
-            f"/projects/{project_id}/cadastres",
-            json=[cadastre.model_dump()],
-            headers=headers,
-        )
-        result = client.get(f"/projects/{project_id}/cadastres", headers=headers)
+    response = await client.put(
+        f"/projects/{project_id}/cadastres",
+        json=[cadastre.model_dump()],
+        headers=headers,
+    )
+    result = client.get(f"/api/v1/projects/{project_id}/cadastres", headers=headers)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     print(result.json())

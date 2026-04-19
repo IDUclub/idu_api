@@ -1,3 +1,5 @@
+"""Buffer-related tables are defined here."""
+
 from geoalchemy2 import Geometry
 from sqlalchemy.sql.expression import false
 from sqlalchemy.sql.schema import Column, ForeignKey, PrimaryKeyConstraint, Table

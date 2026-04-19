@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import Normative, NormativeDelete, NormativePost, OkResponse, TerritoryWithNormatives
@@ -28,7 +28,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "bad_request_1", "bad_request_2", "not_found"],
 )
 async def test_get_territory_normatives(
-    urban_api_host: str,
+    client: AsyncClient,
     normative: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -48,9 +48,8 @@ async def test_get_territory_normatives(
         params["year"] = normative["year"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/normatives", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/normatives", params=params)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -71,7 +70,7 @@ async def test_get_territory_normatives(
     ids=["success", "not_found", "conflict"],
 )
 async def test_post_territory_normatives(
-    urban_api_host: str,
+    client: AsyncClient,
     normative_post_req: NormativePost,
     normative: dict[str, Any],
     expected_status: int,
@@ -87,8 +86,7 @@ async def test_post_territory_normatives(
     new_normative["year"] = normative["year"] if expected_status == 400 else normative["year"] - 1
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/territory/{territory_id}/normatives", json=[new_normative])
+    response = await client.post(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
 
     # Assert
     if response.status_code == 201:
@@ -107,7 +105,7 @@ async def test_post_territory_normatives(
     ids=["success", "not_found"],
 )
 async def test_put_territory_normatives(
-    urban_api_host: str,
+    client: AsyncClient,
     normative_post_req: NormativePost,
     normative: dict[str, Any],
     expected_status: int,
@@ -123,8 +121,7 @@ async def test_put_territory_normatives(
     new_normative["year"] = normative["year"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/territory/{territory_id}/normatives", json=[new_normative])
+    response = await client.put(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
 
     # Assert
     if response.status_code == 200:
@@ -143,7 +140,7 @@ async def test_put_territory_normatives(
     ids=["success", "not_found"],
 )
 async def test_patch_territory_normatives(
-    urban_api_host: str,
+    client: AsyncClient,
     normative_post_req: NormativePost,
     normative: dict[str, Any],
     expected_status: int,
@@ -159,8 +156,7 @@ async def test_patch_territory_normatives(
     new_normative["year"] = normative["year"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/territory/{territory_id}/normatives", json=[new_normative])
+    response = await client.patch(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
 
     # Assert
     if response.status_code == 200:
@@ -179,7 +175,7 @@ async def test_patch_territory_normatives(
     ids=["success", "not_found"],
 )
 async def test_delete_territory_normatives(
-    urban_api_host: str,
+    client: AsyncClient,
     normative_delete_req: NormativeDelete,
     normative: dict[str, Any],
     expected_status: int,
@@ -195,8 +191,7 @@ async def test_delete_territory_normatives(
     new_normative["year"] = normative["year"] - 1
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.request("DELETE", f"/territory/{territory_id}/normatives", json=[new_normative])
+    response = await client.request("DELETE", f"/territory/{territory_id}/normatives", json=[new_normative])
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -213,7 +208,7 @@ async def test_delete_territory_normatives(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_normatives_values_by_parent_id(
-    urban_api_host: str,
+    client: AsyncClient,
     normative: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -229,9 +224,8 @@ async def test_get_normatives_values_by_parent_id(
         params["year"] = normative["year"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/territory/normatives_values", params=params)
-        result = response.json()
+    response = await client.get("/api/v1/territory/normatives_values", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)

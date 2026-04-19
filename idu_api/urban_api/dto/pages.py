@@ -9,6 +9,8 @@ T = TypeVar("T")
 
 @dataclass
 class PageDTO(Generic[T]):
+    """Generic DTO representing a paginated response with items and total count."""
+
     total: int
     items: Sequence[T]
     cursor_data: dict[str, Any] | None = None

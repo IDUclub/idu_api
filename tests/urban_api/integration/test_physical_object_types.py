@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 
 from idu_api.urban_api.schemas import (
     OkResponse,
@@ -25,7 +25,7 @@ from tests.urban_api.helpers.utils import assert_response
 
 @pytest.mark.asyncio
 async def test_get_physical_object_types(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_function: dict[str, Any],
     physical_object_type: dict[str, Any],
 ):
@@ -38,8 +38,7 @@ async def test_get_physical_object_types(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/physical_object_types", params=params)
+    response = await client.get("/api/v1/physical_object_types", params=params)
 
     # Assert
     assert_response(response, 200, PhysicalObjectType, result_type="list")
@@ -60,7 +59,7 @@ async def test_get_physical_object_types(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_physical_object_type(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_type_post_req: PhysicalObjectTypePost,
     physical_object_function: dict[str, Any],
     expected_status: int,
@@ -77,8 +76,7 @@ async def test_add_physical_object_type(
     )
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/physical_object_types", json=new_type)
+    response = await client.post("/api/v1/physical_object_types", json=new_type)
 
     # Assert
     assert_response(response, expected_status, PhysicalObjectType, error_message)
@@ -95,7 +93,7 @@ async def test_add_physical_object_type(
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_physical_object_type(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_type_patch_req: PhysicalObjectTypePatch,
     physical_object_type: dict[str, Any],
     expected_status: int,
@@ -112,8 +110,7 @@ async def test_patch_physical_object_type(
     physical_object_type_id = type_id_param or physical_object_type["physical_object_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/physical_object_types/{physical_object_type_id}", json=new_type)
+    response = await client.patch(f"/api/v1/physical_object_types/{physical_object_type_id}", json=new_type)
 
     # Assert
     assert_response(response, expected_status, PhysicalObjectType, error_message)
@@ -129,7 +126,7 @@ async def test_patch_physical_object_type(
     ids=["success", "not_found"],
 )
 async def test_delete_physical_object_type(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_type_post_req: PhysicalObjectTypePost,
     physical_object_function: dict[str, Any],
     expected_status: int,
@@ -144,13 +141,12 @@ async def test_delete_physical_object_type(
     new_type["physical_object_function_id"] = physical_object_function["physical_object_function_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if type_id_param is None:
-            response = await client.post("/physical_object_types", json=new_type)
-            physical_object_type_id = response.json()["physical_object_type_id"]
-            response = await client.delete(f"/physical_object_types/{physical_object_type_id}")
-        else:
-            response = await client.delete(f"/physical_object_types/{type_id_param}")
+    if type_id_param is None:
+        response = await client.post("/api/v1/physical_object_types", json=new_type)
+        physical_object_type_id = response.json()["physical_object_type_id"]
+        response = await client.delete(f"/api/v1/physical_object_types/{physical_object_type_id}")
+    else:
+        response = await client.delete(f"/api/v1/physical_object_types/{type_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -166,7 +162,7 @@ async def test_delete_physical_object_type(
     ids=["success", "not_found"],
 )
 async def test_get_physical_object_functions_by_parent_id(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_function: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -180,8 +176,7 @@ async def test_get_physical_object_functions_by_parent_id(
         params["parent_id"] = parent_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/physical_object_functions_by_parent", params=params)
+    response = await client.get("/api/v1/physical_object_functions_by_parent", params=params)
 
     # Assert
     if response.status_code == 200:
@@ -205,7 +200,7 @@ async def test_get_physical_object_functions_by_parent_id(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_physical_object_function(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_function_post_req: PhysicalObjectFunctionPost,
     expected_status: int,
     error_message: str | None,
@@ -219,8 +214,7 @@ async def test_add_physical_object_function(
     new_function["parent_id"] = parent_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/physical_object_functions", json=new_function)
+    response = await client.post("/api/v1/physical_object_functions", json=new_function)
 
     # Assert
     assert_response(response, expected_status, PhysicalObjectFunction, error_message)
@@ -236,7 +230,7 @@ async def test_add_physical_object_function(
     ids=["success", "not_found"],
 )
 async def test_put_physical_object_function(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_function_put_req: PhysicalObjectFunctionPut,
     expected_status: int,
     error_message: str | None,
@@ -250,8 +244,7 @@ async def test_put_physical_object_function(
     new_function["parent_id"] = parent_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/physical_object_functions", json=new_function)
+    response = await client.put("/api/v1/physical_object_functions", json=new_function)
 
     # Assert
     assert_response(response, expected_status, PhysicalObjectFunction, error_message)
@@ -268,7 +261,7 @@ async def test_put_physical_object_function(
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_physical_object_function(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_function_put_req: PhysicalObjectFunctionPut,
     physical_object_function: dict[str, Any],
     expected_status: int,
@@ -285,8 +278,7 @@ async def test_patch_physical_object_function(
     physical_object_function_id = function_id_param or physical_object_function["physical_object_function_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/physical_object_functions/{physical_object_function_id}", json=new_function)
+    response = await client.patch(f"/api/v1/physical_object_functions/{physical_object_function_id}", json=new_function)
 
     # Assert
     assert_response(response, expected_status, PhysicalObjectFunction, error_message)
@@ -302,7 +294,7 @@ async def test_patch_physical_object_function(
     ids=["success", "not_found"],
 )
 async def test_delete_physical_object_function(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_function_post_req: PhysicalObjectFunctionPost,
     expected_status: int,
     error_message: str | None,
@@ -316,13 +308,12 @@ async def test_delete_physical_object_function(
     new_function["parent_id"] = None
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if function_id_param is None:
-            response = await client.post("/physical_object_functions", json=new_function)
-            physical_object_function_id = response.json()["physical_object_function_id"]
-            response = await client.delete(f"/physical_object_functions/{physical_object_function_id}")
-        else:
-            response = await client.delete(f"/physical_object_functions/{function_id_param}")
+    if function_id_param is None:
+        response = await client.post("/api/v1/physical_object_functions", json=new_function)
+        physical_object_function_id = response.json()["physical_object_function_id"]
+        response = await client.delete(f"/api/v1/physical_object_functions/{physical_object_function_id}")
+    else:
+        response = await client.delete(f"/api/v1/physical_object_functions/{function_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -339,7 +330,7 @@ async def test_delete_physical_object_function(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_physical_object_types_hierarchy(
-    urban_api_host: str,
+    client: AsyncClient,
     expected_status: int,
     error_message: str | None,
     ids_param: str | None,
@@ -352,8 +343,7 @@ async def test_get_physical_object_types_hierarchy(
         params["physical_object_types_ids"] = ids_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/physical_object_types/hierarchy", params=params)
+    response = await client.get("/api/v1/physical_object_types/hierarchy", params=params)
 
     # Assert
     if expected_status == 200:
@@ -373,7 +363,7 @@ async def test_get_physical_object_types_hierarchy(
     ids=["success", "not_found"],
 )
 async def test_get_service_types(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -385,8 +375,7 @@ async def test_get_service_types(
     physical_object_type_id = type_id_param or physical_object_type["physical_object_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/physical_object_types/{physical_object_type_id}/service_types")
+    response = await client.get(f"/api/v1/physical_object_types/{physical_object_type_id}/service_types")
 
     # Assert
     if response.status_code == 200:

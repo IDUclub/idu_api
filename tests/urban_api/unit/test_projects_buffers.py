@@ -64,7 +64,7 @@ async def test_get_buffers_by_scenario_id_from_db(mock_conn: MockConnection):
     scenario_id = 1
     buffer_type_id = 1
     physical_object_type_id, service_type_id = 1, 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     project_geometry = (
         select(projects_territory_data.c.geometry).where(projects_territory_data.c.project_id == 1)
@@ -332,7 +332,7 @@ async def test_get_context_buffers_from_db(mock_conn: MockConnection):
     buffer_type_id = 1
     physical_object_type_id, service_type_id = 1, 1
     mock_geom = str(MagicMock(spec=ScalarSelect))
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     public_urban_object_ids = (
         select(projects_urban_objects_data.c.public_urban_object_id)
@@ -619,7 +619,7 @@ async def test_put_scenario_buffer_to_db(mock_conn: MockConnection, scenario_buf
         return True
 
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     check_urban_object = (
         select(projects_urban_objects_data.c.urban_object_id)
@@ -686,7 +686,7 @@ async def test_delete_buffer_from_db(mock_conn: MockConnection, scenario_buffer_
         return True
 
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     check_urban_object = (
         select(projects_urban_objects_data.c.urban_object_id)

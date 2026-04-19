@@ -6,7 +6,7 @@ Current list is:
 - indicators_dict
 """
 
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import TIMESTAMP, Column, ForeignKey, Integer, Sequence, String, Table, func
 

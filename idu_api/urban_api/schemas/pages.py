@@ -1,3 +1,5 @@
+"""Pagination models are defined here."""
+
 from collections.abc import Sequence
 from math import ceil
 from typing import Any, ClassVar, Generic, TypeVar
@@ -14,10 +16,13 @@ T = TypeVar("T", bound=BaseModel)
 
 
 class BaseParams(BaseModel, AbstractParams):
+    """Pagination parameters for page-based pagination."""
+
     page: int = Query(1, ge=1, alias="page")
     size: int = Query(10, ge=1, alias="page_size")
 
     def to_raw_params(self) -> RawParams:
+        """Convert pagination parameters to raw offset/limit format."""
         return RawParams(
             limit=self.size if self.size is not None else None,
             offset=self.size * (self.page - 1) if self.page is not None and self.size is not None else None,
@@ -25,6 +30,8 @@ class BaseParams(BaseModel, AbstractParams):
 
 
 class Page(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public-methods
+    """Standard page-based pagination response."""
+
     count: int
     prev: str | None = None
     next: str | None = None
@@ -41,6 +48,7 @@ class Page(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public-metho
         total: int | None = None,
         **kwargs: Any,
     ) -> "Page":
+        """Create a paginated response with navigation links."""
 
         assert isinstance(params, BaseParams)
         assert total is not None
@@ -63,12 +71,15 @@ class Page(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public-metho
 
 
 class CursorParams(BaseModel, AbstractParams):
+    """Cursor-based pagination parameters."""
+
     cursor: str | None = Query(None, description="Cursor for the next page")
     size: int = Query(10, ge=1, description="Page size", alias="page_size")
 
     str_cursor: ClassVar[bool] = True
 
     def to_raw_params(self) -> CursorRawParams:
+        """Convert cursor parameters into raw cursor-based pagination format."""
         return CursorRawParams(
             cursor=decode_cursor(self.cursor, to_str=self.str_cursor),
             size=self.size,
@@ -76,6 +87,8 @@ class CursorParams(BaseModel, AbstractParams):
 
 
 class CursorPage(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public-methods
+    """Cursor-based pagination response."""
+
     count: int
     prev: str | None = None
     next: str | None = None
@@ -94,6 +107,7 @@ class CursorPage(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public
         next_: Cursor | None = None,
         **kwargs: Any,
     ) -> "CursorPage":
+        """Create a cursor-based paginated response."""
 
         assert isinstance(params, CursorParams)
         assert total is not None

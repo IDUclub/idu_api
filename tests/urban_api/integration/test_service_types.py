@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 
 from idu_api.urban_api.schemas import (
     OkResponse,
@@ -26,7 +26,7 @@ from tests.urban_api.helpers.utils import assert_response
 
 
 @pytest.mark.asyncio
-async def test_get_service_types(urban_api_host: str, service_type: dict[str, Any], urban_function: dict[str, Any]):
+async def test_get_service_types(client: AsyncClient, service_type: dict[str, Any], urban_function: dict[str, Any]):
     """Test GET /service_types method."""
 
     # Arrange
@@ -36,8 +36,7 @@ async def test_get_service_types(urban_api_host: str, service_type: dict[str, An
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/service_types", params=params)
+    response = await client.get("/api/v1/service_types", params=params)
 
     # Assert
     assert_response(response, 200, ServiceType, result_type="list")
@@ -58,7 +57,7 @@ async def test_get_service_types(urban_api_host: str, service_type: dict[str, An
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_service_type(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type_post_req: ServiceTypePost,
     urban_function: dict[str, Any],
     expected_status: int,
@@ -73,8 +72,7 @@ async def test_add_service_type(
     new_type["urban_function_id"] = function_id_param or urban_function["urban_function_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/service_types", json=new_type)
+    response = await client.post("/api/v1/service_types", json=new_type)
 
     # Assert
     assert_response(response, expected_status, ServiceType, error_message)
@@ -90,7 +88,7 @@ async def test_add_service_type(
     ids=["success", "not_found"],
 )
 async def test_put_service_type(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type_put_req: ServiceTypePut,
     urban_function: dict[str, Any],
     expected_status: int,
@@ -105,8 +103,7 @@ async def test_put_service_type(
     new_type["urban_function_id"] = function_id_param or urban_function["urban_function_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/service_types", json=new_type)
+    response = await client.put("/api/v1/service_types", json=new_type)
 
     # Assert
     assert_response(response, expected_status, ServiceType, error_message)
@@ -123,7 +120,7 @@ async def test_put_service_type(
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_service_type(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type_put_req: ServiceTypePut,
     service_type: dict[str, Any],
     expected_status: int,
@@ -140,8 +137,7 @@ async def test_patch_service_type(
     service_type_id = type_id_param or service_type["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/service_types/{service_type_id}", json=new_type)
+    response = await client.patch(f"/api/v1/service_types/{service_type_id}", json=new_type)
 
     # Assert
     assert_response(response, expected_status, ServiceType, error_message)
@@ -157,7 +153,7 @@ async def test_patch_service_type(
     ids=["success", "not_found"],
 )
 async def test_delete_service_type(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type_post_req: ServiceTypePost,
     urban_function: dict[str, Any],
     expected_status: int,
@@ -172,13 +168,12 @@ async def test_delete_service_type(
     new_type["urban_function_id"] = urban_function["urban_function_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if type_id_param is None:
-            response = await client.post("/service_types", json=new_type)
-            service_type_id = response.json()["service_type_id"]
-            response = await client.delete(f"/service_types/{service_type_id}")
-        else:
-            response = await client.delete(f"/service_types/{type_id_param}")
+    if type_id_param is None:
+        response = await client.post("/api/v1/service_types", json=new_type)
+        service_type_id = response.json()["service_type_id"]
+        response = await client.delete(f"/api/v1/service_types/{service_type_id}")
+    else:
+        response = await client.delete(f"/api/v1/service_types/{type_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -194,7 +189,7 @@ async def test_delete_service_type(
     ids=["success", "not_found"],
 )
 async def test_get_urban_functions_by_parent_id(
-    urban_api_host: str,
+    client: AsyncClient,
     urban_function: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -208,8 +203,7 @@ async def test_get_urban_functions_by_parent_id(
         params["parent_id"] = parent_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/urban_functions_by_parent", params=params)
+    response = await client.get("/api/v1/urban_functions_by_parent", params=params)
 
     # Assert
     if response.status_code == 200:
@@ -233,7 +227,7 @@ async def test_get_urban_functions_by_parent_id(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_urban_function(
-    urban_api_host: str,
+    client: AsyncClient,
     urban_function_post_req: UrbanFunctionPost,
     expected_status: int,
     error_message: str | None,
@@ -247,8 +241,7 @@ async def test_add_urban_function(
     new_function["parent_id"] = parent_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/urban_functions", json=new_function)
+    response = await client.post("/api/v1/urban_functions", json=new_function)
 
     # Assert
     assert_response(response, expected_status, UrbanFunction, error_message)
@@ -264,7 +257,7 @@ async def test_add_urban_function(
     ids=["success", "not_found"],
 )
 async def test_put_urban_function(
-    urban_api_host: str,
+    client: AsyncClient,
     urban_function_put_req: UrbanFunctionPut,
     expected_status: int,
     error_message: str | None,
@@ -278,8 +271,7 @@ async def test_put_urban_function(
     new_function["parent_id"] = parent_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/urban_functions", json=new_function)
+    response = await client.put("/api/v1/urban_functions", json=new_function)
 
     # Assert
     assert_response(response, expected_status, UrbanFunction, error_message)
@@ -296,7 +288,7 @@ async def test_put_urban_function(
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_urban_function(
-    urban_api_host: str,
+    client: AsyncClient,
     urban_function_put_req: UrbanFunctionPut,
     urban_function: dict[str, Any],
     expected_status: int,
@@ -313,8 +305,7 @@ async def test_patch_urban_function(
     urban_function_id = function_id_param or urban_function["urban_function_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/urban_functions/{urban_function_id}", json=new_function)
+    response = await client.patch(f"/api/v1/urban_functions/{urban_function_id}", json=new_function)
 
     # Assert
     assert_response(response, expected_status, UrbanFunction, error_message)
@@ -330,7 +321,7 @@ async def test_patch_urban_function(
     ids=["success", "not_found"],
 )
 async def test_delete_urban_function(
-    urban_api_host: str,
+    client: AsyncClient,
     urban_function_post_req: UrbanFunctionPost,
     expected_status: int,
     error_message: str | None,
@@ -344,13 +335,12 @@ async def test_delete_urban_function(
     new_function["parent_id"] = None
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if function_id_param is None:
-            response = await client.post("/urban_functions", json=new_function)
-            urban_function_id = response.json()["urban_function_id"]
-            response = await client.delete(f"/urban_functions/{urban_function_id}")
-        else:
-            response = await client.delete(f"/urban_functions/{function_id_param}")
+    if function_id_param is None:
+        response = await client.post("/api/v1/urban_functions", json=new_function)
+        urban_function_id = response.json()["urban_function_id"]
+        response = await client.delete(f"/api/v1/urban_functions/{urban_function_id}")
+    else:
+        response = await client.delete(f"/api/v1/urban_functions/{function_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -367,7 +357,7 @@ async def test_delete_urban_function(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_service_types_hierarchy(
-    urban_api_host: str,
+    client: AsyncClient,
     expected_status: int,
     error_message: str | None,
     ids_param: str | None,
@@ -380,8 +370,7 @@ async def test_get_service_types_hierarchy(
         params["service_types_ids"] = ids_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/service_types/hierarchy", params=params)
+    response = await client.get("/api/v1/service_types/hierarchy", params=params)
 
     # Assert
     if expected_status == 200:
@@ -401,7 +390,7 @@ async def test_get_service_types_hierarchy(
     ids=["success", "not_found"],
 )
 async def test_get_physical_object_types(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -413,8 +402,7 @@ async def test_get_physical_object_types(
     service_type_id = type_id_param or service_type["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/service_types/{service_type_id}/physical_object_types")
+    response = await client.get(f"/api/v1/service_types/{service_type_id}/physical_object_types")
 
     # Assert
     if response.status_code == 200:
@@ -433,7 +421,7 @@ async def test_get_physical_object_types(
     ids=["success", "not_found"],
 )
 async def test_get_social_groups(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -445,8 +433,7 @@ async def test_get_social_groups(
     service_type_id = type_id_param or service_type["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/service_types/{service_type_id}/social_groups")
+    response = await client.get(f"/api/v1/service_types/{service_type_id}/social_groups")
 
     # Assert
     if response.status_code == 200:
@@ -465,7 +452,7 @@ async def test_get_social_groups(
     ids=["success", "not_found"],
 )
 async def test_get_social_values(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -477,8 +464,7 @@ async def test_get_social_values(
     service_type_id = type_id_param or service_type["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/service_types/{service_type_id}/social_values")
+    response = await client.get(f"/api/v1/service_types/{service_type_id}/social_values")
 
     # Assert
     if response.status_code == 200:

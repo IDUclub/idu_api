@@ -8,10 +8,9 @@ from idu_api.urban_api.logic.impl.helpers.services import (
     delete_service_from_db,
     get_service_by_id_from_db,
     patch_service_to_db,
-    put_service_to_db,
 )
 from idu_api.urban_api.logic.services import ServicesDataService
-from idu_api.urban_api.schemas import ServicePatch, ServicePost, ServicePut
+from idu_api.urban_api.schemas import ServicePatch, ServicePost
 
 
 class ServicesDataServiceImpl(ServicesDataService):
@@ -30,10 +29,6 @@ class ServicesDataServiceImpl(ServicesDataService):
     async def add_service(self, service: ServicePost) -> ServiceDTO:
         async with self._connection_manager.get_connection() as conn:
             return await add_service_to_db(conn, service)
-
-    async def put_service(self, service: ServicePut, service_id: int) -> ServiceDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await put_service_to_db(conn, service, service_id)
 
     async def patch_service(self, service: ServicePatch, service_id: int) -> ServiceDTO:
         async with self._connection_manager.get_connection() as conn:

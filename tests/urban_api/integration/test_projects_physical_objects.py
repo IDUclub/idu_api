@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
@@ -40,7 +40,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success_common", "success_context", "forbidden", "not_found"],
 )
 async def test_get_physical_object_types_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
     valid_token: str,
@@ -58,9 +58,10 @@ async def test_get_physical_object_types_by_scenario_id(
     params = {"for_context": for_context_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/physical_object_types", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(
+        f"/api/v1/scenarios/{scenario_id}/physical_object_types", headers=headers, params=params
+    )
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -86,7 +87,7 @@ async def test_get_physical_object_types_by_scenario_id(
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
 async def test_get_physical_objects_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
     valid_token: str,
@@ -106,9 +107,8 @@ async def test_get_physical_objects_by_scenario_id(
         params["physical_object_function_id"] = physical_object_function["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/physical_objects", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/physical_objects", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -133,7 +133,7 @@ async def test_get_physical_objects_by_scenario_id(
     ids=["success_common", "success_regional", "bad_request", "forbidden", "not_found"],
 )
 async def test_get_physical_objects_with_geometry_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
@@ -157,11 +157,10 @@ async def test_get_physical_objects_with_geometry_by_scenario_id(
         params["physical_object_function_id"] = physical_object_function["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(
-            f"/scenarios/{scenario_id}/physical_objects_with_geometry", headers=headers, params=params
-        )
-        result = response.json()
+    response = await client.get(
+        f"/scenarios/{scenario_id}/physical_objects_with_geometry", headers=headers, params=params
+    )
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -186,7 +185,7 @@ async def test_get_physical_objects_with_geometry_by_scenario_id(
     ids=["success", "bad_request", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_physical_objects(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     physical_object: dict[str, Any],
@@ -210,11 +209,8 @@ async def test_get_context_physical_objects(
         params["physical_object_function_id"] = physical_object_function["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(
-            f"/scenarios/{scenario_id}/context/physical_objects", headers=headers, params=params
-        )
-        result = response.json()
+    response = await client.get(f"/scenarios/{scenario_id}/context/physical_objects", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -239,7 +235,7 @@ async def test_get_context_physical_objects(
     ids=["success", "bad_request", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_physical_objects_with_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     physical_object: dict[str, Any],
@@ -263,11 +259,10 @@ async def test_get_context_physical_objects_with_geometry(
         params["physical_object_function_id"] = physical_object_function["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(
-            f"/scenarios/{scenario_id}/context/physical_objects_with_geometry", headers=headers, params=params
-        )
-        result = response.json()
+    response = await client.get(
+        f"/scenarios/{scenario_id}/context/physical_objects_with_geometry", headers=headers, params=params
+    )
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -290,7 +285,7 @@ async def test_get_context_physical_objects_with_geometry(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_add_physical_object_with_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
@@ -311,78 +306,14 @@ async def test_add_physical_object_with_geometry(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(
-            f"/scenarios/{scenario_id}/physical_objects",
-            json=new_object,
-            headers=headers,
-        )
+    response = await client.post(
+        f"/scenarios/{scenario_id}/physical_objects",
+        json=new_object,
+        headers=headers,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioUrbanObject, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, scenario_id_param",
-    [
-        (201, None, None),
-        (400, "вы можете загружать физические объекты только с заданной функцией физического объекта", None),
-        (403, "запрещён", None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "bad_request", "forbidden", "not_found"],
-)
-async def test_update_physical_objects_by_function_id(
-    urban_api_host: str,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
-    scenario_physical_object: dict[str, Any],
-    city: dict[str, Any],
-    valid_token: str,
-    superuser_token: str,
-    expected_status: int,
-    error_message: str | None,
-    scenario_id_param: int | None,
-):
-    """Test POST /scenarios/{scenario_id}/all_physical_objects method."""
-
-    # Arrange
-    if scenario_id_param is None:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
-    else:
-        scenario_id = scenario_id_param
-    new_object = physical_object_with_geometry_post_req.model_dump()
-    new_object["physical_object_type_id"] = scenario_physical_object["physical_object_type"]["physical_object_type_id"]
-    new_object["territory_id"] = city["territory_id"]
-    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
-    function_id = scenario_physical_object["physical_object_type"]["physical_object_function"]["id"]
-    params = {"physical_object_function_id": function_id if expected_status != 400 else 1e9}
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(
-            f"/scenarios/{scenario_id}/all_physical_objects",
-            json=[new_object],
-            headers=headers,
-            params=params,
-        )
-
-    # Assert
-    if expected_status == 201:
-        assert_response(response, expected_status, ScenarioUrbanObject, error_message, result_type="list")
-    else:
-        assert_response(response, expected_status, ScenarioUrbanObject, error_message)
 
 
 @pytest.mark.asyncio
@@ -398,7 +329,7 @@ async def test_update_physical_objects_by_function_id(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_put_scenario_physical_object(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_put_req: PhysicalObjectPut,
     project: dict[str, Any],
     scenario: dict[str, Any],
@@ -424,9 +355,8 @@ async def test_put_scenario_physical_object(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     physical_object_id = (
         scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     )
@@ -436,13 +366,12 @@ async def test_put_scenario_physical_object(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
-            json=new_object,
-            headers=headers,
-            params=params,
-        )
+    response = await client.put(
+        f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+        json=new_object,
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioPhysicalObject, error_message)
@@ -461,7 +390,7 @@ async def test_put_scenario_physical_object(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_patch_scenario_physical_object(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_put_req: PhysicalObjectPut,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
@@ -487,9 +416,8 @@ async def test_patch_scenario_physical_object(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     physical_object_id = (
         scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     )
@@ -499,13 +427,12 @@ async def test_patch_scenario_physical_object(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
-            json=new_object,
-            headers=headers,
-            params=params,
-        )
+    response = await client.patch(
+        f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+        json=new_object,
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioPhysicalObject, error_message)
@@ -523,7 +450,7 @@ async def test_patch_scenario_physical_object(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_delete_physical_object(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
@@ -550,9 +477,8 @@ async def test_delete_physical_object(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     new_object = physical_object_with_geometry_post_req.model_dump()
     new_object["physical_object_type_id"] = scenario_physical_object["physical_object_type"]["physical_object_type_id"]
     new_object["territory_id"] = scenario_geometry["territory"]["id"]
@@ -560,32 +486,31 @@ async def test_delete_physical_object(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if expected_status == 200 and is_scenario_param:
-            response = await client.post(
-                f"scenarios/{scenario_id}/physical_objects",
-                json=new_object,
-                headers=headers,
-            )
-            physical_object_id = response.json()["physical_object"]["physical_object_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
-                headers=headers,
-                params=params,
-            )
-        elif not is_scenario_param:
-            physical_object_id = physical_object["physical_object_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
-                headers=headers,
-                params=params,
-            )
-        else:
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/physical_objects/1",
-                headers=headers,
-                params=params,
-            )
+    if expected_status == 200 and is_scenario_param:
+        response = await client.post(
+            f"scenarios/{scenario_id}/physical_objects",
+            json=new_object,
+            headers=headers,
+        )
+        physical_object_id = response.json()["physical_object"]["physical_object_id"]
+        response = await client.delete(
+            f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+            headers=headers,
+            params=params,
+        )
+    elif not is_scenario_param:
+        physical_object_id = physical_object["physical_object_id"]
+        response = await client.delete(
+            f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+            headers=headers,
+            params=params,
+        )
+    else:
+        response = await client.delete(
+            f"/scenarios/{scenario_id}/physical_objects/1",
+            headers=headers,
+            params=params,
+        )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -604,7 +529,7 @@ async def test_delete_physical_object(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_add_scenario_building(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_building_post_req: ScenarioBuildingPost,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
@@ -627,17 +552,15 @@ async def test_add_scenario_building(
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
         new_object["territory_id"] = city["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post("/physical_objects", json=new_object)
-            physical_object_id = response.json()["physical_object"]["physical_object_id"]
+        response = await client.post("/api/v1/physical_objects", json=new_object)
+        physical_object_id = response.json()["physical_object"]["physical_object_id"]
     new_building = scenario_building_post_req.model_dump()
     new_building["physical_object_id"] = physical_object_id
     new_building["is_scenario_object"] = is_scenario_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/scenarios/{scenario_id}/buildings", json=new_building, headers=headers)
+    response = await client.post(f"/api/v1/scenarios/{scenario_id}/buildings", json=new_building, headers=headers)
 
     # Assert
     assert_response(response, expected_status, ScenarioPhysicalObject, error_message)
@@ -655,7 +578,7 @@ async def test_add_scenario_building(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_put_scenario_building(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_building_put_req: ScenarioBuildingPut,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
@@ -678,17 +601,15 @@ async def test_put_scenario_building(
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
         new_object["territory_id"] = city["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post("/physical_objects", json=new_object)
-            physical_object_id = response.json()["physical_object"]["physical_object_id"]
+        response = await client.post("/api/v1/physical_objects", json=new_object)
+        physical_object_id = response.json()["physical_object"]["physical_object_id"]
     new_building = scenario_building_put_req.model_dump()
     new_building["physical_object_id"] = physical_object_id
     new_building["is_scenario_object"] = is_scenario_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/scenarios/{scenario_id}/buildings", json=new_building, headers=headers)
+    response = await client.put(f"/api/v1/scenarios/{scenario_id}/buildings", json=new_building, headers=headers)
 
     # Assert
     assert_response(response, expected_status, ScenarioPhysicalObject, error_message)
@@ -706,7 +627,7 @@ async def test_put_scenario_building(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_patch_scenario_building(
-    urban_api_host: str,
+    client: AsyncClient,
     building_post_req: BuildingPost,
     scenario_building_put_req: ScenarioBuildingPut,
     scenario_building_patch_req: ScenarioBuildingPatch,
@@ -730,35 +651,32 @@ async def test_patch_scenario_building(
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
         new_object["territory_id"] = city["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post("/physical_objects", json=new_object)
-            physical_object_id = response.json()["physical_object"]["physical_object_id"]
-            new_building = building_post_req.model_dump()
-            new_building["physical_object_id"] = physical_object_id
-            response = await client.post("/buildings", json=new_building)
-            building_id = response.json()["building"]["id"]
+        response = await client.post("/api/v1/physical_objects", json=new_object)
+        physical_object_id = response.json()["physical_object"]["physical_object_id"]
+        new_building = building_post_req.model_dump()
+        new_building["physical_object_id"] = physical_object_id
+        response = await client.post("/api/v1/buildings", json=new_building)
+        building_id = response.json()["building"]["id"]
     else:
         new_building = scenario_building_put_req.model_dump()
         new_building["physical_object_id"] = scenario_physical_object["physical_object_id"]
         new_building["is_scenario_object"] = is_scenario_param
         headers = {"Authorization": f"Bearer {superuser_token}"}
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.put(
-                f"/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
-            )
-            building_id = response.json()["building"]["id"]
+        response = await client.put(
+            f"/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
+        )
+        building_id = response.json()["building"]["id"]
     new_building = scenario_building_patch_req.model_dump()
     params = {"is_scenario_object": is_scenario_param}
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/scenarios/{scenario_id}/buildings/{building_id}",
-            json=new_building,
-            params=params,
-            headers=headers,
-        )
+    response = await client.patch(
+        f"/scenarios/{scenario_id}/buildings/{building_id}",
+        json=new_building,
+        params=params,
+        headers=headers,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioPhysicalObject, error_message)
@@ -776,7 +694,7 @@ async def test_patch_scenario_building(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_delete_scenario_building(
-    urban_api_host: str,
+    client: AsyncClient,
     building_post_req: BuildingPost,
     scenario_building_put_req: ScenarioBuildingPut,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
@@ -799,33 +717,30 @@ async def test_delete_scenario_building(
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
         new_object["territory_id"] = city["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post("/physical_objects", json=new_object)
-            physical_object_id = response.json()["physical_object"]["physical_object_id"]
-            new_building = building_post_req.model_dump()
-            new_building["physical_object_id"] = physical_object_id
-            response = await client.post("/buildings", json=new_building)
-            building_id = response.json()["building"]["id"]
+        response = await client.post("/api/v1/physical_objects", json=new_object)
+        physical_object_id = response.json()["physical_object"]["physical_object_id"]
+        new_building = building_post_req.model_dump()
+        new_building["physical_object_id"] = physical_object_id
+        response = await client.post("/api/v1/buildings", json=new_building)
+        building_id = response.json()["building"]["id"]
     else:
         new_building = scenario_building_put_req.model_dump()
         new_building["physical_object_id"] = scenario_physical_object["physical_object_id"]
         new_building["is_scenario_object"] = is_scenario_param
         headers = {"Authorization": f"Bearer {superuser_token}"}
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.put(
-                f"/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
-            )
-            building_id = response.json()["building"]["id"]
+        response = await client.put(
+            f"/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
+        )
+        building_id = response.json()["building"]["id"]
     params = {"is_scenario_object": is_scenario_param}
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/buildings/{building_id}",
-            params=params,
-            headers=headers,
-        )
+    response = await client.delete(
+        f"/scenarios/{scenario_id}/buildings/{building_id}",
+        params=params,
+        headers=headers,
+    )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

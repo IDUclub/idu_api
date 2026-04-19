@@ -82,6 +82,7 @@ class AsyncMinioClient:
         logger: structlog.stdlib.BoundLogger,
         prefix: str = "",
     ) -> list[str]:
+        """List objects in bucket by prefix."""
         try:
             response = await session.list_objects_v2(Bucket=self._bucket_name, Prefix=prefix)
             existing_objects = {obj["Key"] for obj in response.get("Contents", [])}
@@ -122,6 +123,7 @@ class AsyncMinioClient:
         logger: structlog.stdlib.BoundLogger,
         expires_in: int = 3600,
     ) -> list[str]:
+        """Generate presigned URLs for objects."""
         try:
             tasks = [
                 session.generate_presigned_url(
@@ -144,6 +146,7 @@ class AsyncMinioClient:
         new_key: str,
         logger: structlog.stdlib.BoundLogger,
     ):
+        """Copy object inside the same bucket."""
         try:
             copy_source = {"Bucket": self._bucket_name, "Key": old_key}
             await session.copy_object(Bucket=self._bucket_name, CopySource=copy_source, Key=new_key)
@@ -172,6 +175,7 @@ class AsyncMinioClient:
 
 
 def get_minio_client_from_config(app_config: UrbanAPIConfig) -> AsyncMinioClient:
+    """Create MinIO client from application configuration."""
     minio_client = AsyncMinioClient(
         url=app_config.fileserver.url,
         access_key=app_config.fileserver.access_key,
@@ -185,4 +189,5 @@ def get_minio_client_from_config(app_config: UrbanAPIConfig) -> AsyncMinioClient
 
 
 def get_minio_client() -> AsyncMinioClient:
+    """Create MinIO client from environment configuration file."""
     return get_minio_client_from_config(UrbanAPIConfig.from_file(os.environ["CONFIG_PATH"]))

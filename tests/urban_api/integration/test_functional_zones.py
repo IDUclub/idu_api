@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 
 from idu_api.urban_api.schemas import (
     FunctionalZone,
@@ -25,12 +25,11 @@ from tests.urban_api.helpers.utils import assert_response
 
 
 @pytest.mark.asyncio
-async def test_get_functional_zone_types(urban_api_host: str, functional_zone_type: dict[str, Any]):
+async def test_get_functional_zone_types(client: AsyncClient, functional_zone_type: dict[str, Any]):
     """Test GET /functional_zones_types method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/functional_zones_types")
+    response = await client.get("/api/v1/functional_zones_types")
 
     # Assert
     assert_response(response, 200, FunctionalZoneType, result_type="list")
@@ -50,7 +49,7 @@ async def test_get_functional_zone_types(urban_api_host: str, functional_zone_ty
     ids=["success", "conflict"],
 )
 async def test_add_functional_zone_type(
-    urban_api_host: str,
+    client: AsyncClient,
     functional_zone_type_post_req: FunctionalZoneTypePost,
     expected_status: int,
     error_message: str | None,
@@ -62,8 +61,7 @@ async def test_add_functional_zone_type(
     new_zone_type["name"] = "new name"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/functional_zones_types", json=new_zone_type)
+    response = await client.post("/api/v1/functional_zones_types", json=new_zone_type)
 
     # Assert
     assert_response(response, expected_status, FunctionalZoneType, error_message)
@@ -80,7 +78,7 @@ async def test_add_functional_zone_type(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_profiles_reclamation_data_matrix(
-    urban_api_host: str,
+    client: AsyncClient,
     profiles_reclamation_data: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -97,8 +95,7 @@ async def test_get_profiles_reclamation_data_matrix(
         params["territory_id"] = territory_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/profiles_reclamation/matrix", params=params)
+    response = await client.get("/api/v1/profiles_reclamation/matrix", params=params)
 
     # Assert
     assert_response(response, expected_status, ProfilesReclamationDataMatrix, error_message)
@@ -119,7 +116,7 @@ async def test_get_profiles_reclamation_data_matrix(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_profiles_reclamation_data(
-    urban_api_host,
+    client,
     profiles_reclamation_post_req: ProfilesReclamationDataPost,
     functional_zone_type: dict[str, Any],
     region: dict[str, Any],
@@ -137,8 +134,7 @@ async def test_add_profiles_reclamation_data(
     new_profiles_reclamation["territory_id"] = territory_id_param or region["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/profiles_reclamation", json=new_profiles_reclamation)
+    response = await client.post("/api/v1/profiles_reclamation", json=new_profiles_reclamation)
 
     # Assert
     assert_response(response, expected_status, ProfilesReclamationData, error_message)
@@ -154,7 +150,7 @@ async def test_add_profiles_reclamation_data(
     ids=["success", "not_found"],
 )
 async def test_put_profiles_reclamation_data(
-    urban_api_host,
+    client,
     profiles_reclamation_put_req: ProfilesReclamationDataPut,
     functional_zone_type: dict[str, Any],
     region: dict[str, Any],
@@ -172,8 +168,7 @@ async def test_put_profiles_reclamation_data(
     new_profiles_reclamation["territory_id"] = territory_id_param or region["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/profiles_reclamation", json=new_profiles_reclamation)
+    response = await client.put("/api/v1/profiles_reclamation", json=new_profiles_reclamation)
 
     # Assert
     assert_response(response, expected_status, ProfilesReclamationData, error_message)
@@ -189,7 +184,7 @@ async def test_put_profiles_reclamation_data(
     ids=["success", "not_found"],
 )
 async def test_delete_profiles_reclamation_data(
-    urban_api_host,
+    client,
     functional_zone_type: dict[str, Any],
     region: dict[str, Any],
     expected_status: int,
@@ -207,8 +202,7 @@ async def test_delete_profiles_reclamation_data(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.request("DELETE", "/profiles_reclamation", json=json_data)
+    response = await client.request("DELETE", "/profiles_reclamation", json=json_data)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -224,7 +218,7 @@ async def test_delete_profiles_reclamation_data(
     ids=["success", "not_found"],
 )
 async def test_add_functional_zone(
-    urban_api_host,
+    client,
     functional_zone_post_req: FunctionalZonePost,
     functional_zone_type: dict[str, Any],
     city: dict[str, Any],
@@ -241,40 +235,7 @@ async def test_add_functional_zone(
     new_functional_zone["territory_id"] = territory_id_param or city["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/functional_zones", json=new_functional_zone)
-
-    # Assert
-    assert_response(response, expected_status, FunctionalZone, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, functional_zone_id_param",
-    [
-        (200, None, None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "not_found"],
-)
-async def test_put_functional_zone(
-    urban_api_host,
-    functional_zone: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    functional_zone_id_param: int | None,
-):
-    """Test PUT /functional_zones method."""
-
-    # Arrange
-    new_functional_zone = {k: v for k, v in functional_zone.items() if k not in ("territory", "functional_zone_type")}
-    new_functional_zone["functional_zone_type_id"] = functional_zone["functional_zone_type"]["id"]
-    new_functional_zone["territory_id"] = functional_zone["territory"]["id"]
-    functional_zone_id = functional_zone_id_param or new_functional_zone.pop("functional_zone_id")
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/functional_zones/{functional_zone_id}", json=new_functional_zone)
+    response = await client.post("/api/v1/functional_zones", json=new_functional_zone)
 
     # Assert
     assert_response(response, expected_status, FunctionalZone, error_message)
@@ -290,7 +251,7 @@ async def test_put_functional_zone(
     ids=["success", "not_found"],
 )
 async def test_patch_functional_zone(
-    urban_api_host,
+    client,
     functional_zone: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -305,8 +266,7 @@ async def test_patch_functional_zone(
     functional_zone_id = functional_zone_id_param or new_functional_zone.pop("functional_zone_id")
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/functional_zones/{functional_zone_id}", json=new_functional_zone)
+    response = await client.patch(f"/api/v1/functional_zones/{functional_zone_id}", json=new_functional_zone)
 
     # Assert
     assert_response(response, expected_status, FunctionalZone, error_message)
@@ -322,7 +282,7 @@ async def test_patch_functional_zone(
     ids=["success", "not_found"],
 )
 async def test_delete_functional_zone(
-    urban_api_host: str,
+    client: AsyncClient,
     functional_zone_post_req: FunctionalZonePost,
     functional_zone_type: dict[str, Any],
     city: dict[str, Any],
@@ -338,12 +298,11 @@ async def test_delete_functional_zone(
     new_functional_zone["territory_id"] = city["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if functional_zone_id_param is None:
-            response = await client.post("/functional_zones", json=new_functional_zone)
-            response = await client.delete(f"/functional_zones/{response.json()['functional_zone_id']}")
-        else:
-            response = await client.delete(f"/functional_zones/{functional_zone_id_param}")
+    if functional_zone_id_param is None:
+        response = await client.post("/api/v1/functional_zones", json=new_functional_zone)
+        response = await client.delete(f"/api/v1/functional_zones/{response.json()['functional_zone_id']}")
+    else:
+        response = await client.delete(f"/api/v1/functional_zones/{functional_zone_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -359,7 +318,7 @@ async def test_delete_functional_zone(
     ids=["success", "bad_request"],
 )
 async def test_get_functional_zones_intersects_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     functional_zone: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -372,8 +331,7 @@ async def test_get_functional_zones_intersects_geometry(
     params = {"year": functional_zone["year"], "source": functional_zone["source"]}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/functional_zones/around", params=params, json=geometry_param.model_dump())
+    response = await client.post("/api/v1/functional_zones/around", params=params, json=geometry_param.model_dump())
 
     # Assert
     if response.status_code == 200:

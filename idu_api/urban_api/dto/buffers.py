@@ -9,6 +9,8 @@ from shapely.wkb import loads as wkb_loads
 
 @dataclass(frozen=True)
 class BufferTypeDTO:
+    """DTO describing a buffer type."""
+
     buffer_type_id: int
     name: str
     description: str | None
@@ -16,6 +18,8 @@ class BufferTypeDTO:
 
 @dataclass(frozen=True)
 class DefaultBufferValueDTO:
+    """DTO for default buffer values by object and service types."""
+
     buffer_type_id: int
     buffer_type_name: str
     buffer_type_description: str | None
@@ -28,6 +32,8 @@ class DefaultBufferValueDTO:
 
 @dataclass
 class BufferDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a spatial buffer with related urban object data."""
+
     buffer_type_id: int
     buffer_type_name: str
     buffer_type_description: str | None
@@ -47,10 +53,12 @@ class BufferDTO:  # pylint: disable=too-many-instance-attributes
     is_custom: bool
 
     def __post_init__(self) -> None:
+        """Convert geometry from WKB bytes to shapely object if needed."""
         if isinstance(self.geometry, bytes):
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         buffer = asdict(self)
 
         buffer["buffer_type"] = {
@@ -91,5 +99,7 @@ class BufferDTO:  # pylint: disable=too-many-instance-attributes
 
 @dataclass
 class ScenarioBufferDTO(BufferDTO):
+    """Extended buffer DTO with scenario-specific attributes."""
+
     is_scenario_object: bool
     is_locked: bool

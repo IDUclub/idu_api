@@ -50,7 +50,7 @@ from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPut
 from idu_api.urban_api.utils.query_filters import EqFilter, RecursiveFilter, apply_filters
 
 
-async def get_geometries_by_scenario_id_from_db(
+async def get_geometries_by_scenario_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -263,7 +263,7 @@ async def get_geometries_by_scenario_id_from_db(
     return [ScenarioGeometryDTO(**row) for row in list(grouped_objects.values())]
 
 
-async def get_geometries_with_all_objects_by_scenario_id_from_db(
+async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -784,7 +784,7 @@ async def get_context_geometries_from_db(
     return [ScenarioGeometryDTO(**row) for row in result]
 
 
-async def get_context_geometries_with_all_objects_from_db(
+async def get_context_geometries_with_all_objects_from_db(  # pylint: disable=too-many-locals,too-many-arguments
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,

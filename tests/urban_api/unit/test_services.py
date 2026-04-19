@@ -23,9 +23,8 @@ from idu_api.urban_api.logic.impl.helpers.services import (
     delete_service_from_db,
     get_service_by_id_from_db,
     patch_service_to_db,
-    put_service_to_db,
 )
-from idu_api.urban_api.schemas import Service, ServicePatch, ServicePost, ServicePut, UrbanObject
+from idu_api.urban_api.schemas import Service, ServicePatch, ServicePost, UrbanObject
 from tests.urban_api.helpers.connection import MockConnection
 
 ####################################################################################
@@ -113,39 +112,6 @@ async def test_add_service_to_db(mock_conn: MockConnection, service_post_req: Se
     mock_conn.execute_mock.assert_any_call(str(urban_objects_statement))
     mock_conn.execute_mock.assert_any_call(str(insert_service_statement))
     mock_conn.execute_mock.assert_any_call(str(insert_urban_object_statement))
-    mock_conn.commit_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_put_service_to_db(mock_conn: MockConnection, service_put_req: ServicePut):
-    """Test the put_service_to_db function."""
-
-    # Arrange
-    async def check_service(conn, table, conditions, not_conditions=None):
-        if table == services_data:
-            return False
-        return True
-
-    service_id = 1
-    update_service_statement = (
-        update(services_data)
-        .where(services_data.c.service_id == service_id)
-        .values(**service_put_req.model_dump(), updated_at=datetime.now(timezone.utc))
-    )
-
-    # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.services.check_existence",
-        new=AsyncMock(side_effect=check_service),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_service_to_db(mock_conn, service_put_req, service_id)
-    result = await put_service_to_db(mock_conn, service_put_req, service_id)
-
-    # Assert
-    assert isinstance(result, ServiceDTO), "Result should be a ServiceDTO."
-    assert isinstance(Service.from_dto(result), Service), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(update_service_statement))
     mock_conn.commit_mock.assert_called_once()
 
 

@@ -43,6 +43,7 @@ async def health_check():
 
 @system_router.post("/debug/raise_error")
 async def raise_error(idu_api_error: bool = True):
+    """Return error response."""
     if idu_api_error:
         raise IduApiError()
     raise RuntimeError("Something really unexpected occured")

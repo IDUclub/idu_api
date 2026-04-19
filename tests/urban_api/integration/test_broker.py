@@ -2,8 +2,8 @@
 
 import asyncio
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from otteroad import KafkaConsumerService
 from otteroad.models import (
     FunctionalZonesUpdated,
@@ -21,30 +21,41 @@ from tests.urban_api.helpers.utils import assert_response
 
 
 @pytest.mark.asyncio
-async def test_urban_objects_update(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_urban_objects_update(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/urban_objects_updated method."""
 
     # Arrange
     new_handler = mock_handler(UrbanObjectsUpdated)
     kafka_consumer.register_handler(new_handler)
-    event = UrbanObjectsUpdated(territory_id=1, service_types=[1], physical_object_types=[1])
+
+    event = UrbanObjectsUpdated(
+        territory_id=1,
+        service_types=[1],
+        physical_object_types=[1],
+    )
 
     # Act
     await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/urban_events/urban_objects_updated", json=event.model_dump())
-    await asyncio.sleep(15)
+    response = await client.post(
+        "/api/broker/urban_events/urban_objects_updated",
+        json=event.model_dump(),
+    )
+    await asyncio.sleep(5)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
-    assert len(new_handler.received_events) == 1, "No one event was received"
+
+    assert len(new_handler.received_events) == 1, "No event was received"
+
     received = new_handler.received_events[0]
+
     assert isinstance(received, UrbanObjectsUpdated), "Received event is not UrbanObjectsUpdated"
+
     assert received == event, "Event data does not match"
 
 
 @pytest.mark.asyncio
-async def test_functional_zones_update(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_functional_zones_update(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/zones_updated method."""
 
     # Arrange
@@ -53,10 +64,9 @@ async def test_functional_zones_update(urban_api_host: str, kafka_consumer: Kafk
     event = FunctionalZonesUpdated(territory_id=1)
 
     # Act
-    await asyncio.sleep(10)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/urban_events/zones_updated", json=event.model_dump())
-    await asyncio.sleep(10)
+    await asyncio.sleep(5)
+    response = await client.post("/api/broker/urban_events/zones_updated", json=event.model_dump())
+    await asyncio.sleep(5)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -67,7 +77,7 @@ async def test_functional_zones_update(urban_api_host: str, kafka_consumer: Kafk
 
 
 @pytest.mark.asyncio
-async def test_territories_update(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_territories_update(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/territories_updated method."""
 
     # Arrange
@@ -77,8 +87,7 @@ async def test_territories_update(urban_api_host: str, kafka_consumer: KafkaCons
 
     # Act
     await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/urban_events/territories_updated", json=event.model_dump())
+    response = await client.post("/api/broker/urban_events/territories_updated", json=event.model_dump())
     await asyncio.sleep(5)
 
     # Assert
@@ -90,7 +99,7 @@ async def test_territories_update(urban_api_host: str, kafka_consumer: KafkaCons
 
 
 @pytest.mark.asyncio
-async def test_territories_delete(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_territories_delete(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/territories_deleted method."""
 
     # Arrange
@@ -100,8 +109,7 @@ async def test_territories_delete(urban_api_host: str, kafka_consumer: KafkaCons
 
     # Act
     await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/urban_events/territories_deleted", json=event.model_dump())
+    response = await client.post("/api/broker/urban_events/territories_deleted", json=event.model_dump())
     await asyncio.sleep(5)
 
     # Assert
@@ -113,7 +121,7 @@ async def test_territories_delete(urban_api_host: str, kafka_consumer: KafkaCons
 
 
 @pytest.mark.asyncio
-async def test_regional_scenario_create(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_regional_scenario_create(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/regional_scenario_created method."""
 
     # Arrange
@@ -123,8 +131,7 @@ async def test_regional_scenario_create(urban_api_host: str, kafka_consumer: Kaf
 
     # Act
     await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/scenario_events/regional_scenario_created", json=event.model_dump())
+    response = await client.post("/api/broker/scenario_events/regional_scenario_created", json=event.model_dump())
     await asyncio.sleep(5)
 
     # Assert
@@ -136,7 +143,7 @@ async def test_regional_scenario_create(urban_api_host: str, kafka_consumer: Kaf
 
 
 @pytest.mark.asyncio
-async def test_scenario_objects_update(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_scenario_objects_update(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/scenario_objects_updated method."""
 
     # Arrange
@@ -146,8 +153,7 @@ async def test_scenario_objects_update(urban_api_host: str, kafka_consumer: Kafk
 
     # Act
     await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/scenario_events/scenario_objects_updated", json=event.model_dump())
+    response = await client.post("/api/broker/scenario_events/scenario_objects_updated", json=event.model_dump())
     await asyncio.sleep(5)
 
     # Assert
@@ -159,7 +165,7 @@ async def test_scenario_objects_update(urban_api_host: str, kafka_consumer: Kafk
 
 
 @pytest.mark.asyncio
-async def test_scenario_zones_update(urban_api_host: str, kafka_consumer: KafkaConsumerService):
+async def test_scenario_zones_update(client: AsyncClient, kafka_consumer: KafkaConsumerService):
     """Test POST /broker/urban_events/scenario_zones_updated method."""
 
     # Arrange
@@ -169,8 +175,7 @@ async def test_scenario_zones_update(urban_api_host: str, kafka_consumer: KafkaC
 
     # Act
     await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api") as client:
-        response = await client.post("/broker/scenario_events/scenario_zones_updated", json=event.model_dump())
+    response = await client.post("/api/broker/scenario_events/scenario_zones_updated", json=event.model_dump())
     await asyncio.sleep(5)
 
     # Assert

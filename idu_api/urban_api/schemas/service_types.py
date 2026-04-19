@@ -10,6 +10,8 @@ from idu_api.urban_api.schemas.short_models import UrbanFunctionBasic
 
 
 class ServiceType(BaseModel):
+    """Service type with all its attributes."""
+
     service_type_id: int = Field(..., examples=[1])
     urban_function: UrbanFunctionBasic
     name: str = Field(..., description="service type unit name", examples=["Школа"])
@@ -27,15 +29,14 @@ class ServiceType(BaseModel):
     @field_validator("infrastructure_type", mode="before")
     @staticmethod
     def infrastructure_type_to_string(infrastructure_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(infrastructure_type, Enum):
             return infrastructure_type.value
         return infrastructure_type
 
     @classmethod
     def from_dto(cls, dto: ServiceTypeDTO) -> "ServiceType":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             service_type_id=dto.service_type_id,
             name=dto.name,
@@ -51,6 +52,8 @@ class ServiceType(BaseModel):
 
 
 class ServiceTypePost(BaseModel):
+    """Schema of service type for POST request."""
+
     urban_function_id: int = Field(..., description="urban function id, if set", examples=[1])
     name: str = Field(..., description="service type unit name", examples=["Школа"])
     capacity_modeled: int | None = Field(None, description="default capacity", examples=[1])
@@ -66,6 +69,8 @@ class ServiceTypePost(BaseModel):
 
 
 class ServiceTypePut(BaseModel):
+    """Schema of service type for PUT request."""
+
     urban_function_id: int = Field(..., description="urban function id, if set", examples=[1])
     name: str = Field(..., description="service type unit name", examples=["Школа"])
     capacity_modeled: int | None = Field(..., description="default capacity", examples=[1])
@@ -81,6 +86,8 @@ class ServiceTypePut(BaseModel):
 
 
 class ServiceTypePatch(BaseModel):
+    """Schema of service type for PATCH request."""
+
     urban_function_id: int | None = Field(None, description="urban function id, if set", examples=[1])
     name: str | None = Field(None, description="service type unit name", examples=["Школа"])
     capacity_modeled: int | None = Field(None, description="default capacity", examples=[1])
@@ -98,13 +105,14 @@ class ServiceTypePatch(BaseModel):
     @classmethod
     def check_empty_request(cls, values):
         """Ensure the request body is not empty."""
-
         if not values:
             raise ValueError("request body cannot be empty")
         return values
 
 
 class UrbanFunction(BaseModel):
+    """Urban function with all its attributes."""
+
     urban_function_id: int = Field(..., examples=[1])
     parent_urban_function: UrbanFunctionBasic | None
     name: str = Field(..., description="urban function unit name", examples=["Образование"])
@@ -114,9 +122,7 @@ class UrbanFunction(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: UrbanFunctionDTO) -> "UrbanFunction":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             urban_function_id=dto.urban_function_id,
             parent_urban_function=(
@@ -135,18 +141,24 @@ class UrbanFunction(BaseModel):
 
 
 class UrbanFunctionPost(BaseModel):
+    """Schema of urban function for POST request."""
+
     name: str = Field(..., description="urban function unit name", examples=["Образование"])
     parent_id: int | None = Field(None, description="Urban function parent id, if set", examples=[1])
     code: str = Field(..., description="urban function code", examples=["1"])
 
 
 class UrbanFunctionPut(BaseModel):
+    """Schema of urban function for PUT request."""
+
     name: str = Field(..., description="urban function unit name", examples=["Образование"])
     parent_id: int | None = Field(..., description="Urban function parent id, if set", examples=[1])
     code: str = Field(..., description="urban function code", examples=["1"])
 
 
 class UrbanFunctionPatch(BaseModel):
+    """Schema of urban function for PATCH request."""
+
     name: str | None = Field(None, description="urban function unit name", examples=["Образование"])
     parent_id: int | None = Field(None, description="Urban function parent id, if set", examples=[1])
     code: str | None = Field(None, description="urban function code", examples=["1"])
@@ -155,13 +167,14 @@ class UrbanFunctionPatch(BaseModel):
     @model_validator(mode="before")
     def check_empty_request(cls, values):
         """Ensure the request body is not empty."""
-
         if not values:
             raise ValueError("request body cannot be empty")
         return values
 
 
 class ServiceTypesHierarchy(BaseModel):
+    """Hierarchical service types model including list of children."""
+
     urban_function_id: int = Field(..., examples=[1])
     parent_id: int | None = Field(
         ..., description="parent urban function identifier (null if it is top-level urban function)", examples=[1]
@@ -174,9 +187,7 @@ class ServiceTypesHierarchy(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ServiceTypesHierarchyDTO) -> "ServiceTypesHierarchy":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             urban_function_id=dto.urban_function_id,
             parent_id=dto.parent_id,

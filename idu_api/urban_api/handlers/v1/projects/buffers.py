@@ -1,7 +1,6 @@
 """Buffers projects-related endpoints are defined here."""
 
-from fastapi import Depends, HTTPException, Path, Query, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, HTTPException, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
@@ -127,7 +126,6 @@ async def get_context_buffers(
     "/scenarios/{scenario_id}/buffers",
     response_model=ScenarioBuffer,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def put_buffer(
     request: Request,
@@ -169,7 +167,6 @@ async def put_buffer(
     "/scenarios/{scenario_id}/buffers",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_buffer(
     request: Request,

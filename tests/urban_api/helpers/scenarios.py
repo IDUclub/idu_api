@@ -3,7 +3,6 @@
 from datetime import datetime, timezone
 from typing import Any
 
-import httpx
 import pytest
 import pytest_asyncio
 import structlog
@@ -11,7 +10,7 @@ from sqlalchemy import insert
 
 from idu_api.common.db.connection import PostgresConnectionManager
 from idu_api.common.db.entities import scenarios_data
-from idu_api.urban_api.schemas import PhysicalObjectWithGeometryPost, Scenario, ScenarioPatch, ScenarioPost, ScenarioPut
+from idu_api.urban_api.schemas import PhysicalObjectWithGeometryPost, Scenario, ScenarioPatch, ScenarioPost
 from idu_api.urban_api.schemas.geometries import Geometry
 from idu_api.urban_api.schemas.short_models import FunctionalZoneTypeBasic, ShortProject, ShortScenario, ShortTerritory
 
@@ -22,7 +21,6 @@ __all__ = [
     "scenario_req",
     "scenario_patch_req",
     "scenario_post_req",
-    "scenario_put_req",
 ]
 
 ####################################################################################
@@ -30,8 +28,8 @@ __all__ = [
 ####################################################################################
 
 
-@pytest_asyncio.fixture(scope="session")
-async def base_regional_scenario(database, regional_project, urban_api_host, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def base_regional_scenario(database, regional_project, client, superuser_token) -> dict[str, Any]:
     """Returns created base regional scenario."""
     logger = structlog.getLogger("test")
     connection_manager: PostgresConnectionManager = PostgresConnectionManager(
@@ -57,15 +55,14 @@ async def base_regional_scenario(database, regional_project, urban_api_host, sup
         await conn.commit()
 
     headers = {"Authorization": f"Bearer {superuser_token}"}
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.get(f"/scenarios/{scenario_id}", headers=headers)
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}", headers=headers)
 
     assert response.status_code == 200, f"Invalid status code was returned: {response.status_code}.\n{response.json()}"
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def regional_scenario(urban_api_host, regional_project, base_regional_scenario, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def regional_scenario(client, regional_project, base_regional_scenario, superuser_token) -> dict[str, Any]:
     """Returns created regional scenario."""
     scenario_post_req = ScenarioPost(
         project_id=regional_project["project_id"],
@@ -94,25 +91,24 @@ def regional_scenario(urban_api_host, regional_project, base_regional_scenario, 
     )
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(
-            f"/scenarios/{base_regional_scenario['scenario_id']}",
-            json=scenario_post_req.model_dump(),
-            headers=headers,
-        )
-        scenario_id = response.json()["scenario_id"]
-        client.post(
-            f"/scenarios/{scenario_id}/physical_objects",
-            json=physical_object_post_req.model_dump(),
-            headers=headers,
-        )
+    response = await client.post(
+        f"/scenarios/{base_regional_scenario['scenario_id']}",
+        json=scenario_post_req.model_dump(),
+        headers=headers,
+    )
+    scenario_id = response.json()["scenario_id"]
+    client.post(
+        f"/scenarios/{scenario_id}/physical_objects",
+        json=physical_object_post_req.model_dump(),
+        headers=headers,
+    )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}.\n{response.json()}"
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def scenario(urban_api_host, project, functional_zone_type, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def scenario(client, project, functional_zone_type, superuser_token) -> dict[str, Any]:
     """Returns created scenario."""
     scenario_post_req = ScenarioPost(
         project_id=project["project_id"],
@@ -121,12 +117,11 @@ def scenario(urban_api_host, project, functional_zone_type, superuser_token) -> 
     )
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(
-            f"/scenarios/{project['base_scenario']['id']}",
-            json=scenario_post_req.model_dump(),
-            headers=headers,
-        )
+    response = await client.post(
+        f"/scenarios/{project['base_scenario']['id']}",
+        json=scenario_post_req.model_dump(),
+        headers=headers,
+    )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}.\n{response.json()}"
     return response.json()
@@ -174,18 +169,6 @@ def scenario_post_req() -> ScenarioPost:
         project_id=1,
         name="Test Scenario Name",
         functional_zone_type_id=1,
-        properties={},
-    )
-
-
-@pytest.fixture
-def scenario_put_req() -> ScenarioPut:
-    """POST request template for user scenarios data."""
-
-    return ScenarioPut(
-        name="Updated Test Scenario Name",
-        functional_zone_type_id=1,
-        is_based=True,
         properties={},
     )
 

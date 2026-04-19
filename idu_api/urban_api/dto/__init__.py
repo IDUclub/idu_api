@@ -2,7 +2,6 @@
 
 from .binds import ShortTerritoryIndicatorBindDTO, TerritoryIndicatorBindDTO
 from .buffers import BufferDTO, BufferTypeDTO, DefaultBufferValueDTO, ScenarioBufferDTO
-from .buildings import BuildingDTO, BuildingWithGeometryDTO
 from .cadastres import ProjectCadastreDTO
 from .functional_zones import (
     FunctionalZoneDTO,
@@ -92,8 +91,6 @@ __all__ = [
     "PhysicalObjectTypeDTO",
     "PhysicalObjectTypesHierarchyDTO",
     "PhysicalObjectWithGeometryDTO",
-    "BuildingDTO",
-    "BuildingWithGeometryDTO",
     "FunctionalZoneDTO",
     "FunctionalZoneTypeDTO",
     "TerritoryWithIndicatorsDTO",
@@ -139,4 +136,5 @@ __all__ = [
     "BinnedIndicatorValueDTO",
     "TerritoryWithBinnedIndicatorsDTO",
     "ProjectCadastreDTO",
+    "TerritoryTreeWithoutGeometryDTO",
 ]

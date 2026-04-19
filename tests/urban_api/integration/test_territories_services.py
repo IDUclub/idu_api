@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import Page, Service, ServiceType, ServiceWithGeometry
@@ -26,7 +26,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_service_types_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     urban_object: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -42,8 +42,7 @@ async def test_get_service_types_by_territory_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/service_types", params=params)
+    response = await client.get(f"/api/v1/territory/{territory_id}/service_types", params=params)
 
     # Assert
     if response.status_code == 200:
@@ -65,7 +64,7 @@ async def test_get_service_types_by_territory_id(
     ids=["success_v1", "success_v2", "bad_request_1", "bad_request_2", "not_found"],
 )
 async def test_get_services_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     object_geometry: dict[str, Any],
     service: dict[str, Any],
     expected_status: int,
@@ -88,9 +87,8 @@ async def test_get_services_by_territory_id(
         params["urban_function_id"] = service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/{version}") as client:
-        response = await client.get(f"/territory/{territory_id}/services", params=params)
-        result = response.json()
+    response = await client.get(f"/api/{version}/territory/{territory_id}/services", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, Page, error_message)
@@ -118,7 +116,7 @@ async def test_get_services_by_territory_id(
     ids=["success_v1", "success_v2", "bad_request_1", "bad_request_2", "not_found"],
 )
 async def test_get_services_with_geometry_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     object_geometry: dict[str, Any],
     service: dict[str, Any],
     expected_status: int,
@@ -141,9 +139,8 @@ async def test_get_services_with_geometry_by_territory_id(
         params["urban_function_id"] = service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/{version}") as client:
-        response = await client.get(f"/territory/{territory_id}/services_with_geometry", params=params)
-        result = response.json()
+    response = await client.get(f"/api/{version}/territory/{territory_id}/services_with_geometry", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, Page, error_message)
@@ -170,7 +167,7 @@ async def test_get_services_with_geometry_by_territory_id(
     ids=["success", "bad_request_1", "bad_request_2", "not_found"],
 )
 async def test_get_services_geojson_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     object_geometry: dict[str, Any],
     service: dict[str, Any],
     expected_status: int,
@@ -192,9 +189,8 @@ async def test_get_services_geojson_by_territory_id(
         params["urban_function_id"] = service["service_type"]["urban_function"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/services_geojson", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/services_geojson", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)

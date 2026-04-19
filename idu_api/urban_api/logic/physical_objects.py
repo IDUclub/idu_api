@@ -6,7 +6,6 @@ from typing import Protocol
 from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 from idu_api.urban_api.dto import (
-    BuildingDTO,
     ObjectGeometryDTO,
     PhysicalObjectDTO,
     PhysicalObjectWithGeometryDTO,
@@ -20,7 +19,6 @@ from idu_api.urban_api.schemas import (
     BuildingPut,
     PhysicalObjectPatch,
     PhysicalObjectPost,
-    PhysicalObjectPut,
     PhysicalObjectWithGeometryPost,
 )
 
@@ -51,12 +49,6 @@ class PhysicalObjectsService(Protocol):
         """Create physical object with geometry."""
 
     @abc.abstractmethod
-    async def put_physical_object(
-        self, physical_object: PhysicalObjectPut, physical_object_id: int
-    ) -> PhysicalObjectDTO:
-        """Put physical object."""
-
-    @abc.abstractmethod
     async def patch_physical_object(
         self, physical_object: PhysicalObjectPatch, physical_object_id: int
     ) -> PhysicalObjectDTO:
@@ -81,10 +73,6 @@ class PhysicalObjectsService(Protocol):
     @abc.abstractmethod
     async def delete_building(self, building_id: int) -> dict:
         """Delete living building object."""
-
-    @abc.abstractmethod
-    async def get_buildings_by_physical_object_id(self, physical_object_id: int) -> list[BuildingDTO]:
-        """Get living building or list of living buildings by physical object id."""
 
     @abc.abstractmethod
     async def get_services_by_physical_object_id(

@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 @dataclass
 class ProfilesReclamationDataDTO:
+    """DTO representing reclamation data between two profiles with cost and time metrics."""
+
     profile_reclamation_id: int
     source_profile_id: int
     target_profile_id: int
@@ -18,6 +20,8 @@ class ProfilesReclamationDataDTO:
 
 @dataclass
 class ProfilesReclamationDataMatrixDTO:
+    """DTO representing a matrix of reclamation metrics between multiple profiles."""
+
     labels: list[int]
     technical_price: list[list[float]]
     technical_time: list[list[float]]

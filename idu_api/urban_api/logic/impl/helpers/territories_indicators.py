@@ -1,8 +1,8 @@
 """Territories indicators internal logic is defined here."""
 
 from collections import defaultdict
+from collections.abc import Callable
 from datetime import date
-from typing import Callable
 
 from geoalchemy2.functions import ST_AsEWKB
 from sqlalchemy import func, select
@@ -196,7 +196,7 @@ async def get_indicator_values_by_territory_id_from_db(  # pylint: disable=too-m
     return [BinnedIndicatorValueDTO(**indicator_value) for indicator_value in result]
 
 
-async def get_indicator_values_by_parent_id_from_db(  # pylint: disable=too-many-arguments
+async def get_indicator_values_by_parent_id_from_db(  # pylint: disable=too-many-arguments,too-many-locals
     conn: AsyncConnection,
     parent_id: int | None,
     indicator_ids: set[int] | None,

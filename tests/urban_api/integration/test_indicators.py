@@ -3,8 +3,8 @@
 import asyncio
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from otteroad import KafkaConsumerService
 from otteroad.models import IndicatorValuesUpdated
 
@@ -29,12 +29,11 @@ from tests.urban_api.helpers.utils import assert_response
 
 
 @pytest.mark.asyncio
-async def test_get_measurement_units(urban_api_host: str, measurement_unit: dict[str, Any]):
+async def test_get_measurement_units(client: AsyncClient, measurement_unit: dict[str, Any]):
     """Test GET /measurement_units method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/measurement_units")
+    response = await client.get("/api/v1/measurement_units")
 
     # Assert
     assert_response(response, 200, MeasurementUnit, result_type="list")
@@ -54,7 +53,7 @@ async def test_get_measurement_units(urban_api_host: str, measurement_unit: dict
     ids=["success", "conflict"],
 )
 async def test_add_measurement_units(
-    urban_api_host: str,
+    client: AsyncClient,
     measurement_unit_post_req: MeasurementUnitPost,
     expected_status: int,
     error_message: str | None,
@@ -66,20 +65,18 @@ async def test_add_measurement_units(
     new_unit["name"] = "new_name"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/measurement_units", json=new_unit)
+    response = await client.post("/api/v1/measurement_units", json=new_unit)
 
     # Assert
     assert_response(response, expected_status, MeasurementUnit, error_message)
 
 
 @pytest.mark.asyncio
-async def test_get_indicators_groups(urban_api_host: str, indicators_group: dict[str, Any]):
+async def test_get_indicators_groups(client: AsyncClient, indicators_group: dict[str, Any]):
     """Test GET /indicators_groups method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/indicators_groups")
+    response = await client.get("/api/v1/indicators_groups")
 
     # Assert
     assert_response(response, 200, IndicatorsGroup, result_type="list")
@@ -100,7 +97,7 @@ async def test_get_indicators_groups(urban_api_host: str, indicators_group: dict
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_indicators_groups(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator: dict[str, any],
     expected_status: int,
     error_message: str | None,
@@ -115,8 +112,7 @@ async def test_add_indicators_groups(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/indicators_groups", json=new_group)
+    response = await client.post("/api/v1/indicators_groups", json=new_group)
 
     # Assert
     assert_response(response, expected_status, IndicatorsGroup, error_message)
@@ -132,7 +128,7 @@ async def test_add_indicators_groups(
     ids=["success", "not_found"],
 )
 async def test_update_indicators_group(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator: dict[str, any],
     expected_status: int,
     error_message: str | None,
@@ -147,8 +143,7 @@ async def test_update_indicators_group(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/indicators_groups", json=new_group)
+    response = await client.put("/api/v1/indicators_groups", json=new_group)
 
     # Assert
     assert_response(response, expected_status, IndicatorsGroup, error_message)
@@ -164,7 +159,7 @@ async def test_update_indicators_group(
     ids=["success", "not_found"],
 )
 async def test_get_indicators_by_group_id(
-    urban_api_host,
+    client,
     indicators_group,
     indicator: dict[str, any],
     expected_status: int,
@@ -177,8 +172,7 @@ async def test_get_indicators_by_group_id(
     indicators_group_id = group_id if group_id is not None else indicators_group["indicators_group_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/indicators_groups/{indicators_group_id}")
+    response = await client.get(f"/api/v1/indicators_groups/{indicators_group_id}")
 
     # Assert
     if response.status_code == 200:
@@ -202,7 +196,7 @@ async def test_get_indicators_by_group_id(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_indicators_by_parent(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator: dict[str, Any],
     region: dict[str, Any],
     expected_status: int,
@@ -228,8 +222,7 @@ async def test_get_indicators_by_parent(
         params["service_type_id"] = type_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/indicators_by_parent", params=params)
+    response = await client.get("/api/v1/indicators_by_parent", params=params)
 
     # Assert
     if response.status_code == 200:
@@ -252,7 +245,7 @@ async def test_get_indicators_by_parent(
     ids=["success", "not_found"],
 )
 async def test_get_indicator_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -264,8 +257,7 @@ async def test_get_indicator_by_id(
     indicator_id = indicator["indicator_id"] if indicator_id_param is None else indicator_id_param
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/indicators/{indicator_id}")
+    response = await client.get(f"/api/v1/indicators/{indicator_id}")
 
     # Assert
     assert_response(response, expected_status, Indicator, error_message)
@@ -282,7 +274,7 @@ async def test_get_indicator_by_id(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_indicator(
-    urban_api_host: str,
+    client: AsyncClient,
     indicators_post_req: IndicatorPost,
     measurement_unit: dict[str, Any],
     service_type: dict[str, Any],
@@ -303,8 +295,7 @@ async def test_add_indicator(
     new_indicator["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/indicators", json=new_indicator)
+    response = await client.post("/api/v1/indicators", json=new_indicator)
 
     # Assert
     assert_response(response, expected_status, Indicator, error_message)
@@ -320,7 +311,7 @@ async def test_add_indicator(
     ids=["success", "not_found"],
 )
 async def test_put_indicator(
-    urban_api_host: str,
+    client: AsyncClient,
     indicators_put_req: IndicatorPut,
     measurement_unit: dict[str, Any],
     expected_status: int,
@@ -339,8 +330,7 @@ async def test_put_indicator(
     new_indicator["physical_object_type_id"] = None
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/indicators", json=new_indicator)
+    response = await client.put("/api/v1/indicators", json=new_indicator)
 
     # Assert
     assert_response(response, expected_status, Indicator, error_message)
@@ -357,7 +347,7 @@ async def test_put_indicator(
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_indicator(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -372,8 +362,7 @@ async def test_patch_indicator(
     indicator_id = indicator_id_param or indicator["indicator_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/indicators/{indicator_id}", json=new_indicator)
+    response = await client.patch(f"/api/v1/indicators/{indicator_id}", json=new_indicator)
 
     # Assert
     assert_response(response, expected_status, Indicator, error_message)
@@ -389,7 +378,7 @@ async def test_patch_indicator(
     ids=["success", "not_found"],
 )
 async def test_delete_indicator(
-    urban_api_host: str,
+    client: AsyncClient,
     indicators_post_req: IndicatorPost,
     expected_status: int,
     error_message: str | None,
@@ -406,12 +395,11 @@ async def test_delete_indicator(
     new_indicator["physical_object_type_id"] = None
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if indicator_id_param is None:
-            response = await client.post("/indicators", json=new_indicator)
-            response = await client.delete(f"/indicators/{response.json()['indicator_id']}")
-        else:
-            response = await client.delete(f"/indicators/{indicator_id_param}")
+    if indicator_id_param is None:
+        response = await client.post("/api/v1/indicators", json=new_indicator)
+        response = await client.delete(f"/api/v1/indicators/{response.json()['indicator_id']}")
+    else:
+        response = await client.delete(f"/api/v1/indicators/{indicator_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -427,7 +415,7 @@ async def test_delete_indicator(
     ids=["success", "not_found"],
 )
 async def test_get_indicator_value_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator_value: dict[str, any],
     expected_status: int,
     error_message: str | None,
@@ -439,9 +427,8 @@ async def test_get_indicator_value_by_id(
     indicator_value_id = indicator_value_id_param or indicator_value["indicator_value_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/indicator_value/{indicator_value_id}")
-        result = response.json()
+    response = await client.get(f"/api/v1/indicator_value/{indicator_value_id}")
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, IndicatorValue, error_message)
@@ -461,7 +448,7 @@ async def test_get_indicator_value_by_id(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator_value_post_req: IndicatorValuePost,
     indicator: dict[str, Any],
     country: dict[str, Any],
@@ -484,8 +471,7 @@ async def test_add_indicator_value(
     # Act
     if expected_status == 201:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/indicator_value", json=new_indicator_value)
+    response = await client.post("/api/v1/indicator_value", json=new_indicator_value)
     if expected_status == 201:
         await asyncio.sleep(5)
 
@@ -508,7 +494,7 @@ async def test_add_indicator_value(
     ids=["success", "not_found"],
 )
 async def test_put_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator_value_put_req: IndicatorValuePut,
     indicator: dict[str, Any],
     country: dict[str, Any],
@@ -531,8 +517,7 @@ async def test_put_indicator_value(
     # Act
     if expected_status == 201:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/indicator_value", json=new_indicator_value)
+    response = await client.put("/api/v1/indicator_value", json=new_indicator_value)
     if expected_status == 201:
         await asyncio.sleep(5)
 
@@ -555,7 +540,7 @@ async def test_put_indicator_value(
     ids=["success", "not_found"],
 )
 async def test_delete_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator_value_post_req: IndicatorValuePost,
     indicator: dict[str, Any],
     district: dict[str, Any],
@@ -572,13 +557,12 @@ async def test_delete_indicator_value(
     new_indicator_value["date_value"] = str(new_indicator_value["date_value"])
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if indicator_value_id_param is None:
-            response = await client.post("/indicator_value", json=new_indicator_value)
-            indicator_value_id = response.json()["indicator_value_id"]
-            response = await client.delete(f"/indicator_value/{indicator_value_id}")
-        else:
-            response = await client.delete(f"/indicator_value/{indicator_value_id_param}")
+    if indicator_value_id_param is None:
+        response = await client.post("/api/v1/indicator_value", json=new_indicator_value)
+        indicator_value_id = response.json()["indicator_value_id"]
+        response = await client.delete(f"/api/v1/indicator_value/{indicator_value_id}")
+    else:
+        response = await client.delete(f"/api/v1/indicator_value/{indicator_value_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -594,7 +578,7 @@ async def test_delete_indicator_value(
     ids=["success", "not_found"],
 )
 async def test_get_indicator_values_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -606,8 +590,7 @@ async def test_get_indicator_values_by_id(
     indicator_id = indicator_id_param or indicator["indicator_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/indicator/{indicator_id}/values")
+    response = await client.get(f"/api/v1/indicator/{indicator_id}/values")
 
     # Assert
     if response.status_code == 200:

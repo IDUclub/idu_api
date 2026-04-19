@@ -1,77 +1,103 @@
 """All fixtures for authentication tests are defined here."""
 
 import base64
-import hashlib
-import hmac
 import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
+from cryptography.hazmat.primitives import serialization
+from jose import jwt
 
 __all__ = ["expired_token", "superuser_token", "valid_token"]
 
-SECRET_KEY = "test_secret_key"
+
+# ------------------------
+# TEST KEY (RSA, как в Keycloak)
+# ------------------------
+
+PRIVATE_KEY = """
+-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAxG0v7cZp1v2mQ0g6m6gqQ6m6m6m6m6m6m6m6m6m6m6m6m6
+6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m
+-----END RSA PRIVATE KEY-----
+"""
+
+ISSUER = "https://keycloak.test/realms/TEST"
+AUDIENCE = "urban-api"
 
 
-####################################################################################
-#                                 Models                                           #
-####################################################################################
+# ------------------------
+# FIXTURES
+# ------------------------
 
 
 @pytest.fixture(scope="session")
 def superuser_token() -> str:
-    """Valid authentication access JWT token."""
-    expiration_time = datetime.now(timezone.utc) + timedelta(hours=1)
-    payload = {"sub": "admin", "is_superuser": True, "exp": int(expiration_time.timestamp())}
-
-    token = create_jwt(payload, SECRET_KEY)
-    return token
+    """Valid superuser JWT token."""
+    return create_token(
+        sub="admin",
+        roles=["ADMIN", "USER"],
+        is_superuser=True,
+        expired=False,
+    )
 
 
 @pytest.fixture(scope="session")
 def valid_token() -> str:
-    """Valid authentication access JWT token."""
-    expiration_time = datetime.now(timezone.utc) + timedelta(hours=1)
-    payload = {"sub": "user1", "is_superuser": False, "exp": int(expiration_time.timestamp())}
-
-    token = create_jwt(payload, SECRET_KEY)
-    return token
+    """Valid user JWT token."""
+    return create_token(
+        sub="user1",
+        roles=["USER"],
+        is_superuser=False,
+        expired=False,
+    )
 
 
 @pytest.fixture(scope="session")
 def expired_token() -> str:
-    """Expired authentication access JWT token."""
-    expiration_time = datetime.now(timezone.utc) - timedelta(hours=1)
-    payload = {"sub": "user1", "is_superuser": False, "exp": int(expiration_time.timestamp())}
+    """Expired JWT token."""
+    return create_token(
+        sub="user1",
+        roles=["USER"],
+        is_superuser=False,
+        expired=True,
+    )
 
-    token = create_jwt(payload, SECRET_KEY)
+
+# ------------------------
+# TOKEN CREATION
+# ------------------------
+
+
+def create_token(
+    sub: str,
+    roles: list[str],
+    is_superuser: bool,
+    expired: bool,
+) -> str:
+    """Create RS256 JWT compatible with Keycloak-like structure."""
+
+    now = datetime.now(timezone.utc)
+
+    payload = {
+        "sub": sub,
+        "preferred_username": sub,
+        "email": f"{sub}@test.local",
+        "exp": int((now - timedelta(hours=1)).timestamp()) if expired else int((now + timedelta(hours=1)).timestamp()),
+        "iat": int(now.timestamp()),
+        "iss": ISSUER,
+        "aud": [AUDIENCE],
+        "azp": "test-client",
+        "realm_access": {"roles": roles},
+        "resource_access": {"urban-api": {"roles": roles}},
+        "is_superuser": is_superuser,
+    }
+
+    token = jwt.encode(
+        payload,
+        PRIVATE_KEY,
+        algorithm="RS256",
+        headers={"kid": "test-key-1"},
+    )
+
     return token
-
-
-####################################################################################
-#                                 Helpers                                          #
-####################################################################################
-
-
-def base64url_encode(data: bytes) -> str:
-    """Encodes data in the Base64 URL format."""
-    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
-
-
-def create_jwt(payload: dict, secret_key: str) -> str:
-    """Creates a JWT token."""
-    # JWT header
-    header = {"alg": "HS256", "typ": "JWT"}
-
-    # Encoding the header and payload in Base64URL
-    header_encoded = base64url_encode(json.dumps(header).encode("utf-8"))
-    payload_encoded = base64url_encode(json.dumps(payload).encode("utf-8"))
-
-    # Creating a signature
-    message = (header_encoded + "." + payload_encoded).encode("utf-8")
-    signature = hmac.new(secret_key.encode("utf-8"), message, hashlib.sha256).digest()
-    signature_encoded = base64url_encode(signature)
-
-    # Collecting a JWT token
-    jwt_token = header_encoded + "." + payload_encoded + "." + signature_encoded
-    return jwt_token

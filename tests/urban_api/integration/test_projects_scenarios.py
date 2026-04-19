@@ -2,14 +2,14 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 
 from idu_api.urban_api.schemas import (
     OkResponse,
     Scenario,
+    ScenarioPatch,
     ScenarioPost,
-    ScenarioPut,
 )
 from tests.urban_api.helpers.utils import assert_response
 
@@ -30,7 +30,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_get_scenario_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     valid_token: str,
@@ -49,8 +49,7 @@ async def test_get_scenario_by_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}", headers=headers)
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, Scenario, error_message)
@@ -68,7 +67,7 @@ async def test_get_scenario_by_id(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_add_scenario(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_post_req: ScenarioPost,
     project: dict[str, Any],
     regional_project: dict[str, Any],
@@ -91,8 +90,7 @@ async def test_add_scenario(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/scenarios", json=new_scenario, headers=headers)
+    response = await client.post("/api/v1/scenarios", json=new_scenario, headers=headers)
 
     # Assert
     assert_response(response, expected_status, Scenario, error_message)
@@ -110,7 +108,7 @@ async def test_add_scenario(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_copy_scenario(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_post_req: ScenarioPost,
     project: dict[str, Any],
     regional_scenario: dict[str, Any],
@@ -135,8 +133,7 @@ async def test_copy_scenario(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/scenarios/{scenario_id}", json=new_scenario, headers=headers)
+    response = await client.post(f"/api/v1/scenarios/{scenario_id}", json=new_scenario, headers=headers)
 
     # Assert
     assert_response(response, expected_status, Scenario, error_message)
@@ -147,54 +144,14 @@ async def test_copy_scenario(
     "expected_status, error_message, scenario_id_param",
     [
         (200, None, None),
-        (400, "измените тот, который должен стать базовым, а не текущий", None),
         (403, "запрещён", None),
         (404, "не найден", 1e9),
     ],
-    ids=["success", "bad_request", "forbidden", "not_found"],
-)
-async def test_put_scenario(
-    urban_api_host: str,
-    scenario_put_req: ScenarioPut,
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    valid_token: str,
-    superuser_token: str,
-    scenario_id_param: int | None,
-):
-    """Test PUT /scenarios/{scenario_id} method."""
-
-    # Arrange
-    scenario_id = scenario_id_param or project["base_scenario"]["id"]
-    new_scenario = scenario_put_req.model_dump()
-    new_scenario["is_based"] = expected_status != 400
-    new_scenario["functional_zone_type_id"] = functional_zone_type["functional_zone_type_id"]
-    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/scenarios/{scenario_id}", json=new_scenario, headers=headers)
-
-    # Assert
-    assert_response(response, expected_status, Scenario, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, scenario_id_param",
-    [
-        (200, None, None),
-        (400, "измените тот, который должен стать базовым, а не текущий", None),
-        (403, "запрещён", None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "bad_request", "forbidden", "not_found"],
+    ids=["success", "forbidden", "not_found"],
 )
 async def test_patch_scenario(
-    urban_api_host: str,
-    scenario_put_req: ScenarioPut,
+    client: AsyncClient,
+    scenario_patch_req: ScenarioPatch,
     project: dict[str, Any],
     functional_zone_type: dict[str, Any],
     expected_status: int,
@@ -207,14 +164,12 @@ async def test_patch_scenario(
 
     # Arrange
     scenario_id = scenario_id_param or project["base_scenario"]["id"]
-    new_scenario = scenario_put_req.model_dump()
-    new_scenario["is_based"] = expected_status != 400
+    new_scenario = scenario_patch_req.model_dump()
     new_scenario["functional_zone_type_id"] = functional_zone_type["functional_zone_type_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/scenarios/{scenario_id}", json=new_scenario, headers=headers)
+    response = await client.patch(f"/api/v1/scenarios/{scenario_id}", json=new_scenario, headers=headers)
 
     # Assert
     assert_response(response, expected_status, Scenario, error_message)
@@ -231,7 +186,7 @@ async def test_patch_scenario(
     ids=["success", "not_authenticated", "not_found"],
 )
 async def test_delete_scenario(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_post_req: ScenarioPost,
     project: dict[str, Any],
     functional_zone_type: dict[str, Any],
@@ -250,15 +205,14 @@ async def test_delete_scenario(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if scenario_id_param is None:
-            response = await client.post(
-                "/scenarios", json=new_scenario, headers={"Authorization": f"Bearer {superuser_token}"}
-            )
-            scenario_id = response.json()["scenario_id"]
-            response = await client.delete(f"/scenarios/{scenario_id}", headers=headers)
-        else:
-            response = await client.delete(f"/scenarios/{scenario_id_param}", headers=headers)
+    if scenario_id_param is None:
+        response = await client.post(
+            "/scenarios", json=new_scenario, headers={"Authorization": f"Bearer {superuser_token}"}
+        )
+        scenario_id = response.json()["scenario_id"]
+        response = await client.delete(f"/api/v1/scenarios/{scenario_id}", headers=headers)
+    else:
+        response = await client.delete(f"/api/v1/scenarios/{scenario_id_param}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

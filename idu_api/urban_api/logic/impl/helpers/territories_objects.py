@@ -1,7 +1,8 @@
 """Territories objects internal logic is defined here."""
 
+from collections.abc import Callable
 from datetime import date
-from typing import Callable, Literal
+from typing import Literal
 
 import shapely.geometry as geom
 from geoalchemy2.functions import ST_AsEWKB, ST_GeomFromWKB
@@ -18,7 +19,7 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
     extract_values_from_model,
 )
-from idu_api.urban_api.schemas import TerritoryPatch, TerritoryPost, TerritoryPut
+from idu_api.urban_api.schemas import TerritoryPatch, TerritoryPost
 from idu_api.urban_api.utils.pagination import paginate_dto
 from idu_api.urban_api.utils.query_filters import CustomFilter, EqFilter, ILikeFilter, apply_filters
 
@@ -97,24 +98,6 @@ async def add_territory_to_db(conn: AsyncConnection, territory: TerritoryPost) -
     values = extract_values_from_model(territory)
     statement = insert(territories_data).values(**values).returning(territories_data.c.territory_id)
     territory_id = (await conn.execute(statement)).scalar_one()
-    await conn.commit()
-
-    return await get_territory_by_id(conn, territory_id)
-
-
-async def put_territory_to_db(
-    conn: AsyncConnection,
-    territory_id: int,
-    territory: TerritoryPut,
-) -> TerritoryDTO:
-    """Update territory object (put, update all the fields)."""
-
-    if not await check_existence(conn, territories_data, conditions={"territory_id": territory_id}):
-        raise EntityNotFoundById(territory_id, "territory")
-
-    values = extract_values_from_model(territory, to_update=True)
-    statement = update(territories_data).where(territories_data.c.territory_id == territory_id).values(**values)
-    await conn.execute(statement)
     await conn.commit()
 
     return await get_territory_by_id(conn, territory_id)

@@ -3,8 +3,8 @@
 from datetime import date
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import (
     IndicatorPost,
@@ -44,20 +44,19 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def measurement_unit(urban_api_host) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def measurement_unit(client) -> dict[str, Any]:
     """Returns created measurement unit."""
     measurement_unit_post_req = MeasurementUnitPost(name="Test Measurement Unit")
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/measurement_units", json=measurement_unit_post_req.model_dump())
+    response = await client.post("/api/v1/measurement_units", json=measurement_unit_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def indicator(urban_api_host, measurement_unit) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def indicator(client, measurement_unit) -> dict[str, Any]:
     """Returns created indicator."""
     indicators_post_req = IndicatorPost(
         name_full="Test Indicator Full Name",
@@ -68,29 +67,27 @@ def indicator(urban_api_host, measurement_unit) -> dict[str, Any]:
         physical_object_type_id=None,
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/indicators", json=indicators_post_req.model_dump())
+    response = await client.post("/api/v1/indicators", json=indicators_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def indicators_group(urban_api_host, indicator) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def indicators_group(client, indicator) -> dict[str, Any]:
     """Returns created indicators group."""
     indicators_group_post_req = IndicatorsGroupPost(
         name="Test Indicators Group", indicators_ids=[indicator["indicator_id"]]
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/indicators_groups", json=indicators_group_post_req.model_dump())
+    response = await client.post("/api/v1/indicators_groups", json=indicators_group_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def indicator_value(urban_api_host, indicator, region) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def indicator_value(client, indicator, region) -> dict[str, Any]:
     """Returns created indicator value."""
     indicator_value_post_req = {
         "indicator_id": indicator["indicator_id"],
@@ -102,15 +99,14 @@ def indicator_value(urban_api_host, indicator, region) -> dict[str, Any]:
         "information_source": "Test Source",
     }
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/indicator_value", json=indicator_value_post_req)
+    response = await client.post("/api/v1/indicator_value", json=indicator_value_post_req)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def scenario_indicator_value(urban_api_host, scenario, indicator, city, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def scenario_indicator_value(client, scenario, indicator, city, superuser_token) -> dict[str, Any]:
     """Returns created indicator value."""
     scenario_id = scenario["scenario_id"]
     scenario_indicator_value_post_req = {
@@ -124,20 +120,19 @@ def scenario_indicator_value(urban_api_host, scenario, indicator, city, superuse
     }
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(
-            f"scenarios/{scenario_id}/indicators_values",
-            json=scenario_indicator_value_post_req,
-            headers=headers,
-        )
+    response = await client.post(
+        f"scenarios/{scenario_id}/indicators_values",
+        json=scenario_indicator_value_post_req,
+        headers=headers,
+    )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def scenario_hexagon_indicator_value(
-    urban_api_host, regional_scenario, indicator, hexagon, superuser_token
+@pytest_asyncio.fixture(scope="function")
+async def scenario_hexagon_indicator_value(
+    client, regional_scenario, indicator, hexagon, superuser_token
 ) -> dict[str, Any]:
     """Returns created indicator value."""
     scenario_id = regional_scenario["scenario_id"]
@@ -152,12 +147,11 @@ def scenario_hexagon_indicator_value(
     }
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post(
-            f"scenarios/{scenario_id}/indicators_values",
-            json=scenario_indicator_value_post_req,
-            headers=headers,
-        )
+    response = await client.post(
+        f"scenarios/{scenario_id}/indicators_values",
+        json=scenario_indicator_value_post_req,
+        headers=headers,
+    )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()

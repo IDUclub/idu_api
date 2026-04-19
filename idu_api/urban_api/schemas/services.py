@@ -40,9 +40,7 @@ class Service(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ServiceDTO) -> "Service":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             service_id=dto.service_id,
             service_type=ServiceType(
@@ -74,6 +72,8 @@ class Service(BaseModel):
 
 
 class ServicePost(BaseModel):
+    """Service schema for POST request."""
+
     physical_object_id: int = Field(..., examples=[1])
     object_geometry_id: int = Field(..., examples=[1])
     service_type_id: int = Field(..., examples=[1])
@@ -89,6 +89,8 @@ class ServicePost(BaseModel):
 
 
 class ScenarioServicePost(BaseModel):
+    """Scenario service schema for POST request."""
+
     physical_object_id: int = Field(..., examples=[1])
     is_scenario_physical_object: bool = Field(..., description="to determine scenario object")
     object_geometry_id: int = Field(..., examples=[1])
@@ -106,6 +108,8 @@ class ScenarioServicePost(BaseModel):
 
 
 class ServicePut(BaseModel):
+    """Service schema for PUT request."""
+
     service_type_id: int = Field(..., examples=[1])
     territory_type_id: int | None = Field(..., examples=[1])
     name: str | None = Field(..., description="service name", examples=["--"])
@@ -119,6 +123,8 @@ class ServicePut(BaseModel):
 
 
 class ServicePatch(BaseModel):
+    """Service schema for PATCH request."""
+
     service_type_id: int | None = Field(None, examples=[1])
     territory_type_id: int | None = Field(None, examples=[1])
     name: str | None = Field(None, description="service name", examples=["--"])
@@ -133,15 +139,15 @@ class ServicePatch(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_empty_request(cls, values):
-        """
-        Ensure the request body is not empty.
-        """
+        """Ensure the request body is not empty."""
         if not values:
             raise ValueError("request body cannot be empty")
         return values
 
 
 class ServiceWithGeometry(BaseModel):
+    """Service with all its attributes and geometry."""
+
     service_id: int = Field(..., examples=[1])
     service_type: ServiceType
     territory_type: TerritoryType | None = None
@@ -168,10 +174,8 @@ class ServiceWithGeometry(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ServiceWithGeometryDTO) -> "ServiceWithGeometry":
-        """
-        Construct from DTO.
-        """
-        service = cls(
+        """Construct from DTO."""
+        return cls(
             service_id=dto.service_id,
             service_type=ServiceType(
                 service_type_id=dto.service_type_id,
@@ -200,30 +204,30 @@ class ServiceWithGeometry(BaseModel):
             created_at=dto.created_at,
             updated_at=dto.updated_at,
         )
-        return service
 
 
 class ServicesCountCapacity(BaseModel):
+    """Aggregated service count and capacity per territory model."""
+
     territory_id: int = Field(..., description="territory identifier", examples=[1])
     count: int = Field(..., description="total count of services that are located in the territory")
     capacity: int = Field(..., description="summary capacity of services that are located in the territory")
 
     @classmethod
     def from_dto(cls, dto: ServicesCountCapacityDTO) -> "ServicesCountCapacity":
+        """Construct from DTO."""
         return cls(territory_id=dto.territory_id, count=dto.count, capacity=dto.capacity)
 
 
 class ScenarioService(Service):
-    """Service with all its attributes."""
+    """Scenario service with all its attributes."""
 
     is_scenario_object: bool = Field(..., description="boolean parameter to determine scenario object")
     is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")
 
     @classmethod
     def from_dto(cls, dto: ScenarioServiceDTO) -> "ScenarioService":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             service_id=dto.service_id,
             service_type=ServiceType(

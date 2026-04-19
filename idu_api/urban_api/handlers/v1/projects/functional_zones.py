@@ -1,7 +1,6 @@
 """Functional zones projects-related endpoints are defined here."""
 
-from fastapi import Depends, Path, Query, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from pydantic import conlist
@@ -18,7 +17,6 @@ from idu_api.urban_api.schemas import (
     ScenarioFunctionalZone,
     ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePost,
-    ScenarioFunctionalZonePut,
     ScenarioFunctionalZoneWithoutGeometry,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
@@ -176,7 +174,6 @@ async def get_context_functional_zones(
     "/scenarios/{scenario_id}/functional_zones",
     response_model=list[ScenarioFunctionalZone],
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def add_scenario_functional_zones(
     request: Request,
@@ -211,51 +208,10 @@ async def add_scenario_functional_zones(
     return [ScenarioFunctionalZone.from_dto(zone) for zone in functional_zones]
 
 
-@projects_router.put(
-    "/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
-    response_model=ScenarioFunctionalZone,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-)
-async def put_scenario_functional_zone(
-    request: Request,
-    functional_zone: ScenarioFunctionalZonePut,
-    scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    functional_zone_id: int = Path(..., description="functional zone identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
-) -> ScenarioFunctionalZone:
-    """
-    ## Update a functional zone by replacing all its attributes.
-
-    ### Parameters:
-    - **scenario_id** (int, Path): Unique identifier of the scenario.
-    - **functional_zone_id** (int, Path): Unique identifier of the functional zone.
-    - **functional_zone** (ScenarioFunctionalZonePut, Body): New attributes for the functional zone.
-
-    ### Returns:
-    - **ScenarioFunctionalZone**: The updated functional zone.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario or functional zone (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the relevant project owner.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    functional_zone = await user_project_service.put_scenario_functional_zone(
-        functional_zone, scenario_id, functional_zone_id, user
-    )
-
-    return ScenarioFunctionalZone.from_dto(functional_zone)
-
-
 @projects_router.patch(
     "/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
     response_model=ScenarioFunctionalZone,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_scenario_functional_zone(
     request: Request,
@@ -295,7 +251,6 @@ async def patch_scenario_functional_zone(
     "/scenarios/{scenario_id}/functional_zones",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_functional_zones_by_scenario_id(
     request: Request,

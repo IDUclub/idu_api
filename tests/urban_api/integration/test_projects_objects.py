@@ -5,8 +5,8 @@ from datetime import date
 from io import BytesIO
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from otteroad import KafkaConsumerService
 from otteroad.models import BaseScenarioCreated, ProjectCreated
 from pydantic import ValidationError
@@ -14,15 +14,13 @@ from pydantic import ValidationError
 from idu_api.urban_api.config import UrbanAPIConfig
 from idu_api.urban_api.schemas import (
     MinioFile,
-    MinioImagesURL,
     MinioImageURL,
     OkResponse,
     Page,
     Project,
+    ProjectPatch,
     ProjectPhases,
-    ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ProjectTerritory,
     Scenario,
 )
@@ -48,7 +46,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_get_project_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     regional_project: dict[str, Any],
     valid_token: str,
@@ -65,8 +63,7 @@ async def test_get_project_by_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, Project, error_message)
@@ -84,7 +81,7 @@ async def test_get_project_by_id(
     ids=["success", "regional_project", "forbidden", "not_found"],
 )
 async def test_get_project_territory_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     regional_project: dict[str, Any],
     valid_token: str,
@@ -103,9 +100,8 @@ async def test_get_project_territory_by_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/territory", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/projects/{project_id}/territory", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, ProjectTerritory, error_message)
@@ -125,7 +121,7 @@ async def test_get_project_territory_by_id(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_get_scenarios_by_project_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     regional_project: dict[str, Any],
     valid_token: str,
@@ -142,9 +138,8 @@ async def test_get_scenarios_by_project_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/scenarios", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/projects/{project_id}/scenarios", headers=headers)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -168,7 +163,7 @@ async def test_get_scenarios_by_project_id(
     ids=["success_common", "success_regional", "bad_request", "unauthorized"],
 )
 async def test_get_projects(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     superuser_token: str,
     expected_status: int,
@@ -195,9 +190,8 @@ async def test_get_projects(
         )
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/projects", headers=headers, params=params)
-        result = response.json()
+    response = await client.get("/api/v1/projects", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, Page, error_message)
@@ -222,7 +216,7 @@ async def test_get_projects(
     ids=["success", "unauthorized"],
 )
 async def test_get_projects_territories(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     superuser_token: str,
     expected_status: int,
@@ -240,9 +234,8 @@ async def test_get_projects_territories(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/projects_territories", headers=headers, params=params)
-        result = response.json()
+    response = await client.get("/api/v1/projects_territories", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -266,7 +259,7 @@ async def test_get_projects_territories(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_add_project(
-    urban_api_host: str,
+    client: AsyncClient,
     project_post_req: ProjectPost,
     region: dict[str, Any],
     kafka_consumer: KafkaConsumerService,
@@ -290,8 +283,7 @@ async def test_add_project(
     # Act
     if expected_status == 201:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/projects", json=new_project, headers=headers)
+    response = await client.post("/api/v1/projects", json=new_project, headers=headers)
     if expected_status == 201:
         await asyncio.sleep(5)
 
@@ -316,7 +308,7 @@ async def test_add_project(
     ids=["success", "regional_project", "regional_scenario", "forbidden", "not_found", "conflict"],
 )
 async def test_create_base_scenario(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     regional_project: dict[str, Any],
     scenario: dict[str, Any],
@@ -345,8 +337,7 @@ async def test_create_base_scenario(
     # Act
     if expected_status == 201:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/projects/{project_id}/base_scenario/{scenario_id}", headers=headers)
+    response = await client.post(f"/api/v1/projects/{project_id}/base_scenario/{scenario_id}", headers=headers)
     if expected_status == 201:
         await asyncio.sleep(5)
 
@@ -369,54 +360,10 @@ async def test_create_base_scenario(
     ],
     ids=["success", "forbidden", "not_found"],
 )
-async def test_put_project(
-    urban_api_host: str,
-    project_post_req: ProjectPost,
-    project_put_req: ProjectPut,
-    region: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    valid_token: str,
-    superuser_token: str,
-    project_id_param: int | None,
-):
-    """Test PUT /projects/{project_id} method."""
-
-    # Arrange
-    project_id = project_id_param
-    if project_id_param is None:
-        new_project = project_post_req.model_dump()
-        new_project["territory_id"] = region["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(
-                "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
-            )
-            project_id = response.json()["project_id"]
-    new_project = project_put_req.model_dump()
-    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/projects/{project_id}", json=new_project, headers=headers)
-
-    # Assert
-    assert_response(response, expected_status, Project, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, project_id_param",
-    [
-        (200, None, None),
-        (403, "запрещён", None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "forbidden", "not_found"],
-)
 async def test_patch_project(
-    urban_api_host: str,
+    client: AsyncClient,
     project_post_req: ProjectPost,
-    project_put_req: ProjectPut,
+    project_patch_req: ProjectPatch,
     region: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -431,17 +378,15 @@ async def test_patch_project(
     if project_id_param is None:
         new_project = project_post_req.model_dump()
         new_project["territory_id"] = region["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(
-                "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
-            )
-            project_id = response.json()["project_id"]
-    new_project = project_put_req.model_dump()
+        response = await client.post(
+            "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
+        )
+        project_id = response.json()["project_id"]
+    new_project = project_patch_req.model_dump()
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/projects/{project_id}", json=new_project, headers=headers)
+    response = await client.patch(f"/api/v1/projects/{project_id}", json=new_project, headers=headers)
 
     # Assert
     assert_response(response, expected_status, Project, error_message)
@@ -458,7 +403,7 @@ async def test_patch_project(
     ids=["success", "not_authenticated", "not_found"],
 )
 async def test_delete_project(
-    urban_api_host: str,
+    client: AsyncClient,
     project_post_req: ProjectPost,
     region: dict[str, Any],
     expected_status: int,
@@ -475,15 +420,14 @@ async def test_delete_project(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if project_id_param is None:
-            response = await client.post(
-                "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
-            )
-            project_id = response.json()["project_id"]
-            response = await client.delete(f"/projects/{project_id}", headers=headers)
-        else:
-            response = await client.delete(f"/projects/{project_id_param}", headers=headers)
+    if project_id_param is None:
+        response = await client.post(
+            "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
+        )
+        project_id = response.json()["project_id"]
+        response = await client.delete(f"/api/v1/projects/{project_id}", headers=headers)
+    else:
+        response = await client.delete(f"/api/v1/projects/{project_id_param}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -500,7 +444,7 @@ async def test_delete_project(
     ids=["success", "bad_request", "unauthorized"],
 )
 async def test_get_projects_main_image_url(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     superuser_token: str,
     expected_status: int,
@@ -522,9 +466,8 @@ async def test_get_projects_main_image_url(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/projects_preview_url", headers=headers, params=params)
-        result = response.json()
+    response = await client.get("/api/v1/projects_preview_url", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -553,7 +496,7 @@ async def test_get_projects_main_image_url(
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
 async def test_upload_project_main_image(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     project_image: bytes,
     valid_token: str,
@@ -571,12 +514,11 @@ async def test_upload_project_main_image(
     files = {"file": ("image.jpg", BytesIO(project_image), file_type)}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/projects/{project_id}/image",
-            headers=headers,
-            files=files,
-        )
+    response = await client.put(
+        f"/projects/{project_id}/image",
+        headers=headers,
+        files=files,
+    )
 
     # Assert
     if expected_status == 200:
@@ -597,7 +539,7 @@ async def test_upload_project_main_image(
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
 async def test_upload_gallery_image(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     project_image: bytes,
     valid_token: str,
@@ -615,12 +557,11 @@ async def test_upload_gallery_image(
     files = {"file": ("image.jpg", BytesIO(project_image), file_type)}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(
-            f"/projects/{project_id}/gallery",
-            headers=headers,
-            files=files,
-        )
+    response = await client.post(
+        f"/projects/{project_id}/gallery",
+        headers=headers,
+        files=files,
+    )
 
     # Assert
     if expected_status == 201:
@@ -641,7 +582,7 @@ async def test_upload_gallery_image(
     ids=["success", "forbidden", "not_found_project", "not_found_image"],
 )
 async def test_set_project_main_image(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     project_image: bytes,
     valid_token: str,
@@ -658,18 +599,17 @@ async def test_set_project_main_image(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if expected_status == 200:
-            files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
-            response = await client.post(
-                f"/projects/{project_id}/gallery",
-                headers=headers,
-                files=files,
-            )
-            image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
-        else:
-            image_id = "fake_id"
-        response = await client.put(f"/projects/{project_id}/gallery/{image_id}", headers=headers)
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        response = await client.post(
+            f"/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
+    else:
+        image_id = "fake_id"
+    response = await client.put(f"/api/v1/projects/{project_id}/gallery/{image_id}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -686,7 +626,7 @@ async def test_set_project_main_image(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_project_gallery_images_urls(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -702,8 +642,7 @@ async def test_get_project_gallery_images_urls(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/gallery", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/gallery", headers=headers)
 
     # Assert
     if expected_status == 200:
@@ -725,7 +664,7 @@ async def test_get_project_gallery_images_urls(
     ids=["success", "forbidden", "not_found_project", "not_found_image"],
 )
 async def test_delete_project_gallery_image(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     project_image: bytes,
     valid_token: str,
@@ -742,18 +681,17 @@ async def test_delete_project_gallery_image(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if expected_status == 200:
-            files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
-            response = await client.post(
-                f"/projects/{project_id}/gallery",
-                headers=headers,
-                files=files,
-            )
-            image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
-        else:
-            image_id = "fake_id"
-        response = await client.delete(f"/projects/{project_id}/gallery/{image_id}", headers=headers)
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        response = await client.post(
+            f"/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
+    else:
+        image_id = "fake_id"
+    response = await client.delete(f"/api/v1/projects/{project_id}/gallery/{image_id}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -770,7 +708,7 @@ async def test_delete_project_gallery_image(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_full_project_image(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -785,8 +723,7 @@ async def test_get_full_project_image(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/image", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/image", headers=headers)
 
     # Assert
     assert response.status_code == expected_status, f"Invalid status code: {response.status_code}."
@@ -810,7 +747,7 @@ async def test_get_full_project_image(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_preview_project_image(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -825,8 +762,7 @@ async def test_get_preview_project_image(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/preview", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/preview", headers=headers)
 
     # Assert
     assert response.status_code == expected_status, f"Invalid status code: {response.status_code}."
@@ -850,7 +786,7 @@ async def test_get_preview_project_image(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_full_project_image_url(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -865,8 +801,7 @@ async def test_get_full_project_image_url(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/image_url", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/image_url", headers=headers)
 
     # Assert
     assert response.status_code == expected_status, f"Invalid status code: {response.status_code}."
@@ -890,7 +825,7 @@ async def test_get_full_project_image_url(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_preview_project_image_url(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -905,8 +840,7 @@ async def test_get_preview_project_image_url(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/preview_url", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/preview_url", headers=headers)
 
     # Assert
     assert response.status_code == expected_status, f"Invalid status code: {response.status_code}."
@@ -931,7 +865,7 @@ async def test_get_preview_project_image_url(
     ids=["success", "bad_request", "forbidden", "not_found"],
 )
 async def test_upload_project_logo(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     project_image: bytes,
     valid_token: str,
@@ -949,12 +883,11 @@ async def test_upload_project_logo(
     files = {"file": ("image.jpg", BytesIO(project_image), file_type)}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/projects/{project_id}/logo",
-            headers=headers,
-            files=files,
-        )
+    response = await client.put(
+        f"/projects/{project_id}/logo",
+        headers=headers,
+        files=files,
+    )
 
     # Assert
     if expected_status == 200:
@@ -974,7 +907,7 @@ async def test_upload_project_logo(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_project_logo_url(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -989,8 +922,7 @@ async def test_get_project_logo_url(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/logo", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/logo", headers=headers)
 
     # Assert
     if expected_status == 200:
@@ -1010,7 +942,7 @@ async def test_get_project_logo_url(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_delete_project_logo(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -1025,8 +957,7 @@ async def test_delete_project_logo(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/projects/{project_id}/logo", headers=headers)
+    response = await client.delete(f"/api/v1/projects/{project_id}/logo", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -1043,7 +974,7 @@ async def test_delete_project_logo(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_project_phase_documents_urls(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -1059,8 +990,7 @@ async def test_get_project_phase_documents_urls(
     params = {"phase": "construction"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/phases/documents", headers=headers, params=params)
+    response = await client.get(f"/api/v1/projects/{project_id}/phases/documents", headers=headers, params=params)
 
     # Assert
     if expected_status == 200:
@@ -1080,7 +1010,7 @@ async def test_get_project_phase_documents_urls(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_upload_phase_document(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     project_image: bytes,
     valid_token: str,
@@ -1098,13 +1028,12 @@ async def test_upload_phase_document(
     params = {"phase": "construction"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(
-            f"/projects/{project_id}/phases/documents",
-            headers=headers,
-            files=files,
-            params=params,
-        )
+    response = await client.post(
+        f"/projects/{project_id}/phases/documents",
+        headers=headers,
+        files=files,
+        params=params,
+    )
 
     # Assert
     if expected_status == 201:
@@ -1125,7 +1054,7 @@ async def test_upload_phase_document(
     ids=["success", "forbidden", "not_found_project", "not_found_file"],
 )
 async def test_rename_phase_document(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -1141,12 +1070,11 @@ async def test_rename_phase_document(
     params = {"phase": "construction", "old_key": "image.jpg", "new_key": "renamed_image.jpg"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/projects/{project_id}/phases/documents",
-            headers=headers,
-            params=params,
-        )
+    response = await client.patch(
+        f"/projects/{project_id}/phases/documents",
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     if expected_status == 200:
@@ -1167,7 +1095,7 @@ async def test_rename_phase_document(
     ids=["success", "forbidden", "not_found_project"],
 )
 async def test_delete_project_phase_document(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -1187,8 +1115,7 @@ async def test_delete_project_phase_document(
     params = {"phase": "construction", "filename": filename}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/projects/{project_id}/phases/documents", headers=headers, params=params)
+    response = await client.delete(f"/api/v1/projects/{project_id}/phases/documents", headers=headers, params=params)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -1205,7 +1132,7 @@ async def test_delete_project_phase_document(
     ids=["success", "not_authenticated", "not_found"],
 )
 async def test_get_project_phases(
-    urban_api_host: str,
+    client: AsyncClient,
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -1220,8 +1147,7 @@ async def test_get_project_phases(
     project_id = project_id_param or project["project_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/phases", headers=headers)
+    response = await client.get(f"/api/v1/projects/{project_id}/phases", headers=headers)
 
     # Assert
     assert_response(response, expected_status, ProjectPhases, error_message)
@@ -1238,7 +1164,7 @@ async def test_get_project_phases(
     ids=["success", "not_authenticated", "not_found"],
 )
 async def test_put_project_phases(
-    urban_api_host: str,
+    client: AsyncClient,
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -1266,8 +1192,7 @@ async def test_put_project_phases(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/projects/{project_id}/phases", headers=headers, json=phases)
+    response = await client.put(f"/api/v1/projects/{project_id}/phases", headers=headers, json=phases)
 
     # Assert
     assert_response(response, expected_status, ProjectPhases, error_message)

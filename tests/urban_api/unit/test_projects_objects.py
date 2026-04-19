@@ -7,8 +7,6 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 import structlog
-from aioresponses import aioresponses
-from aioresponses.core import merge_params, normalize_url
 from fastapi_pagination.bases import RawParams
 from geoalchemy2.functions import ST_AsEWKB
 from otteroad import KafkaProducerClient
@@ -46,7 +44,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_objects import (
     get_projects_territories_from_db,
     patch_project_to_db,
     put_project_phases_to_db,
-    put_project_to_db,
 )
 from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
@@ -55,7 +52,6 @@ from idu_api.urban_api.schemas import (
     ProjectPhases,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ProjectTerritory,
     Scenario,
 )
@@ -76,7 +72,7 @@ async def test_get_project_by_id_from_db(mock_conn: MockConnection):
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     regional_scenarios = scenarios_data.alias("regional_scenarios")
     statement = (
         select(
@@ -128,7 +124,7 @@ async def test_get_project_territory_by_id_from_db(mock_check: AsyncMock, mock_c
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     regional_scenarios = scenarios_data.alias("regional_scenarios")
     statement = (
         select(
@@ -181,7 +177,7 @@ async def test_get_projects_from_db(mock_verify_params, mock_conn: MockConnectio
     """Test the get_projects_from_db function."""
 
     # Arrange
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     filters = {
         "only_own": False,
         "is_regional": False,
@@ -263,7 +259,7 @@ async def test_get_projects_territories_from_db(mock_conn: MockConnection):
     """Test the get_projects_territories_from_db function."""
 
     # Arrange
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     regional_scenarios = scenarios_data.alias("regional_scenarios")
     statement = (
         select(
@@ -311,11 +307,11 @@ async def test_get_projects_territories_from_db(mock_conn: MockConnection):
 
 
 @pytest.mark.asyncio
-async def test_add_project_to_db(config: UrbanAPIConfig, mock_conn: MockConnection, project_post_req: ProjectPost):
+async def test_add_project_to_db(mock_conn: MockConnection, project_post_req: ProjectPost):
     """Test the add_project_to_db function."""
 
     # Arrange
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement_for_project = (
         insert(projects_data)
         .values(
@@ -341,26 +337,13 @@ async def test_add_project_to_db(config: UrbanAPIConfig, mock_conn: MockConnecti
         )
         .returning(scenarios_data.c.scenario_id)
     )
-    scenario_id = 1
-    project_id = 1
     logger: structlog.stdlib.BoundLogger = structlog.get_logger()
-    api_url = f"{config.external.hextech_api}/hextech/indicators_saving/save_all"
-    params = {
-        "scenario_id": scenario_id,
-        "project_id": project_id,
-        "background": "true",
-    }
-    normal_api_url = normalize_url(merge_params(api_url, params))
     kafka_producer = AsyncMock(spec=KafkaProducerClient)
     event = ProjectCreated(project_id=1, base_scenario_id=1, territory_id=1)
     project_storage_manager = AsyncMock(spec=ProjectStorageManager)
 
     # Act
-    with aioresponses() as mocked:
-        mocked.put(normal_api_url, status=200)
-        result = await add_project_to_db(
-            mock_conn, project_post_req, user, kafka_producer, project_storage_manager, logger
-        )
+    result = await add_project_to_db(mock_conn, project_post_req, user, kafka_producer, project_storage_manager, logger)
 
     # Assert
     assert isinstance(result, ProjectDTO), "Result should be a ProjectDTO."
@@ -382,19 +365,12 @@ async def test_add_project_to_db(config: UrbanAPIConfig, mock_conn: MockConnecti
         "INSERT INTO user_projects.urban_objects_data" in str(args[0]) for args in mock_conn.execute_mock.call_args_list
     ), "Expected insertion into user_projects.urban_objects_data table not found."
     mock_conn.commit_mock.assert_called_once()
-    mocked.assert_called_once_with(
-        url=api_url,
-        method="PUT",
-        data=None,
-        params=params,
-    )
-    assert mocked.requests[("PUT", normal_api_url)][0].kwargs["params"] == params, "Request params do not match."
     kafka_producer.send.assert_any_call(event)
     project_storage_manager.init_project.assert_called_once()
 
 
 @pytest.mark.asyncio
-async def test_create_base_scenario_to_db(config: UrbanAPIConfig, project_post_req: ProjectPost):
+async def test_create_base_scenario_to_db():
     """Test the create_base_scenario_to_db function."""
 
     # Arrange
@@ -415,14 +391,6 @@ async def test_create_base_scenario_to_db(config: UrbanAPIConfig, project_post_r
         .select_from(scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id))
         .where(scenarios_data.c.scenario_id == scenario_id)
     )
-    logger: structlog.stdlib.BoundLogger = structlog.get_logger("test")
-    api_url = f"{config.external.hextech_api}/hextech/indicators_saving/save_all"
-    params = {
-        "scenario_id": scenario_id,
-        "project_id": project_id,
-        "background": "true",
-    }
-    normal_api_url = normalize_url(merge_params(api_url, params))
     kafka_producer = AsyncMock(spec=KafkaProducerClient)
     event = BaseScenarioCreated(
         project_id=project_id,
@@ -436,9 +404,7 @@ async def test_create_base_scenario_to_db(config: UrbanAPIConfig, project_post_r
     # Act
     with patch("idu_api.urban_api.logic.impl.helpers.projects_objects.check_existence") as mock_check:
         mock_check.return_value = False
-        with aioresponses() as mocked:
-            mocked.put(normal_api_url, status=200)
-            result = await create_base_scenario_to_db(mock_conn, project_id, scenario_id, kafka_producer, logger)
+        result = await create_base_scenario_to_db(mock_conn, project_id, scenario_id, kafka_producer)
 
     # Assert
     assert isinstance(result, ScenarioDTO), "Result should be a ScenarioDTO."
@@ -460,38 +426,7 @@ async def test_create_base_scenario_to_db(config: UrbanAPIConfig, project_post_r
         "SELECT regional_urban_objects" in str(args[0]) for args in mock_conn.execute_mock.call_args_list
     ), "Expected selection urban objects from regional scenario not found."
     mock_conn.commit_mock.assert_called_once()
-    mocked.assert_called_once_with(
-        url=api_url,
-        method="PUT",
-        data=None,
-        params=params,
-    )
-    assert mocked.requests[("PUT", normal_api_url)][0].kwargs["params"] == params, "Request params do not match."
     kafka_producer.send.assert_any_call(event)
-
-
-@pytest.mark.asyncio
-@patch("idu_api.urban_api.logic.impl.helpers.projects_objects.check_project")
-async def test_put_project_to_db(mock_check: AsyncMock, mock_conn: MockConnection, project_put_req: ProjectPut):
-    """Test the put_project_to_db function."""
-
-    # Arrange
-    project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
-    update_statement = (
-        update(projects_data)
-        .where(projects_data.c.project_id == project_id)
-        .values(**project_put_req.model_dump(), updated_at=datetime.now(timezone.utc))
-    )
-
-    # Act
-    result = await put_project_to_db(mock_conn, project_put_req, project_id, user)
-
-    # Assert
-    assert isinstance(result, ProjectDTO), "Result should be a ProjectDTO"
-    mock_conn.execute_mock.assert_any_call(str(update_statement))
-    mock_conn.commit_mock.assert_called_once()
-    mock_check.assert_called_once_with(mock_conn, project_id, user, to_edit=True)
 
 
 @pytest.mark.asyncio
@@ -501,7 +436,7 @@ async def test_patch_project_to_db(mock_check: AsyncMock, mock_conn: MockConnect
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_data)
         .where(projects_data.c.project_id == project_id)
@@ -528,7 +463,7 @@ async def test_delete_project_from_db(
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     logger: structlog.stdlib.BoundLogger = structlog.get_logger()
     delete_geometry_statement = delete(projects_object_geometries_data).where(
         projects_object_geometries_data.c.object_geometry_id.in_([1])
@@ -562,7 +497,7 @@ async def test_get_project_phases_by_id_from_db(mock_check: AsyncMock, mock_conn
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(
             projects_phases_data.c.actual_start_date,
@@ -601,7 +536,7 @@ async def test_put_project_phases_to_db(
     # Arrange
 
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     update_statement = (
         update(projects_phases_data)

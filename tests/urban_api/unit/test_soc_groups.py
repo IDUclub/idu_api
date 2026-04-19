@@ -26,7 +26,7 @@ from idu_api.urban_api.dto import (
     SocValueIndicatorValueDTO,
     SocValueWithServiceTypesDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.logic.impl.helpers.soc_groups import (
     add_service_type_to_social_group_to_db,
     add_service_type_to_social_value_to_db,

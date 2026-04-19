@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from geoalchemy2.functions import ST_AsEWKB, ST_GeomFromWKB, ST_Intersection, ST_Intersects, ST_Within
-from sqlalchemy import ScalarSelect, case, delete, insert, select, text, update
+from geoalchemy2.functions import ST_AsEWKB, ST_Intersection, ST_Intersects, ST_Within
+from sqlalchemy import ScalarSelect, case, delete, insert, select, update
 
 from idu_api.common.db.entities import (
     functional_zone_types_dict,
@@ -31,11 +31,9 @@ from idu_api.urban_api.logic.impl.helpers.projects_functional_zones import (
     get_functional_zones_by_scenario_id_from_db,
     get_functional_zones_sources_by_scenario_id_from_db,
     patch_scenario_functional_zone_to_db,
-    put_scenario_functional_zone_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import (
     OBJECTS_NUMBER_LIMIT,
-    SRID,
     extract_values_from_model,
 )
 from idu_api.urban_api.schemas import (
@@ -43,7 +41,6 @@ from idu_api.urban_api.schemas import (
     FunctionalZoneSource,
     ScenarioFunctionalZone,
     ScenarioFunctionalZonePatch,
-    ScenarioFunctionalZonePut,
 )
 from tests.urban_api.helpers.connection import MockConnection
 
@@ -58,7 +55,7 @@ async def test_get_functional_zones_sources_by_scenario_id_from_db(mock_conn: Mo
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(projects_functional_zones.c.year, projects_functional_zones.c.source)
         .where(projects_functional_zones.c.scenario_id == scenario_id)
@@ -92,7 +89,7 @@ async def test_get_functional_zones_by_scenario_id_from_db(mock_conn: MockConnec
     year = datetime.today().year
     source = "mock_sting"
     functional_zone_type_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(
             projects_functional_zones.c.functional_zone_id,
@@ -157,7 +154,7 @@ async def test_get_context_functional_zones_sources_from_db(mock_conn: MockConne
     # Arrange
     project_id = 1
     mock_geom = str(MagicMock(spec=ScalarSelect))
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(functional_zones_data.c.year, functional_zones_data.c.source)
         .where(
@@ -198,7 +195,7 @@ async def test_get_context_functional_zones_from_db(mock_conn: MockConnection):
     source = "mock_string"
     functional_zone_type_id = 1
     mock_geom = str(MagicMock(spec=ScalarSelect))
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     statement = (
         select(
             functional_zones_data.c.functional_zone_id,
@@ -328,7 +325,7 @@ async def test_add_scenario_functional_zones_to_db(
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_functional_zones).where(
         projects_functional_zones.c.scenario_id == scenario_id,
         projects_functional_zones.c.source == "User",
@@ -356,61 +353,6 @@ async def test_add_scenario_functional_zones_to_db(
     mock_conn.execute_mock.assert_any_call(str(insert_statement))
     mock_conn.commit_mock.assert_called_once()
     mock_check.assert_called_once_with(mock_conn, scenario_id, user, to_edit=True, allow_regional=False)
-
-
-@pytest.mark.asyncio
-@patch("idu_api.urban_api.logic.impl.helpers.projects_functional_zones.check_scenario")
-async def test_put_scenario_functional_zone_to_db(
-    mock_check: AsyncMock, mock_conn: MockConnection, scenario_functional_zone_put_req: ScenarioFunctionalZonePut
-):
-    """Test the put_scenario_functional_zone_to_db function."""
-
-    # Arrange
-    async def check_functional_zone(conn, table, conditions):
-        if table == projects_functional_zones:
-            return False
-        return True
-
-    scenario_id = 1
-    functional_zone_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
-    update_statement = (
-        update(projects_functional_zones)
-        .where(projects_functional_zones.c.functional_zone_id == functional_zone_id)
-        .values(
-            name=scenario_functional_zone_put_req.name,
-            functional_zone_type_id=scenario_functional_zone_put_req.functional_zone_type_id,
-            year=scenario_functional_zone_put_req.year,
-            source=scenario_functional_zone_put_req.source,
-            geometry=ST_GeomFromWKB(
-                scenario_functional_zone_put_req.geometry.as_shapely_geometry().wkb, text(str(SRID))
-            ),
-            properties=scenario_functional_zone_put_req.properties,
-            updated_at=datetime.now(timezone.utc),
-        )
-    )
-
-    # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.projects_functional_zones.check_existence",
-        new=AsyncMock(side_effect=check_functional_zone),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_scenario_functional_zone_to_db(
-                mock_conn, scenario_functional_zone_put_req, scenario_id, functional_zone_id, user
-            )
-    result = await put_scenario_functional_zone_to_db(
-        mock_conn, scenario_functional_zone_put_req, scenario_id, functional_zone_id, user
-    )
-
-    # Assert
-    assert isinstance(result, ScenarioFunctionalZoneDTO), "Result should be a ScenarioFunctionalZoneDTO."
-    assert isinstance(
-        ScenarioFunctionalZone.from_dto(result), ScenarioFunctionalZone
-    ), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(update_statement))
-    mock_conn.commit_mock.assert_called_once()
-    mock_check.assert_any_call(mock_conn, scenario_id, user, to_edit=True, allow_regional=False)
 
 
 @pytest.mark.asyncio

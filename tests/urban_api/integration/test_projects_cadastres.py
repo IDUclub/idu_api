@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import OkResponse, ProjectCadastreAttributes, ProjectCadastrePut
@@ -27,7 +27,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "regional_project", "forbidden", "not_found"],
 )
 async def test_get_cadastres_by_project_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     regional_project: dict[str, Any],
     project_cadastre: dict[str, Any],
@@ -45,9 +45,8 @@ async def test_get_cadastres_by_project_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/projects/{project_id}/cadastres", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/projects/{project_id}/cadastres", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -75,7 +74,7 @@ async def test_get_cadastres_by_project_id(
     ids=["success", "regional_project", "forbidden", "not_found"],
 )
 async def test_put_project_cadastres(
-    urban_api_host: str,
+    client: AsyncClient,
     project_cadastre_put_req: ProjectCadastrePut,
     project: dict[str, Any],
     regional_project: dict[str, Any],
@@ -94,8 +93,7 @@ async def test_put_project_cadastres(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/projects/{project_id}/cadastres", json=[new_cadastre], headers=headers)
+    response = await client.put(f"/api/v1/projects/{project_id}/cadastres", json=[new_cadastre], headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -113,7 +111,7 @@ async def test_put_project_cadastres(
     ids=["success", "regional_project", "forbidden", "not_found"],
 )
 async def test_delete_cadastres_by_project_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     regional_project: dict[str, Any],
     valid_token: str,
@@ -130,8 +128,7 @@ async def test_delete_cadastres_by_project_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/projects/{project_id}/cadastres", headers=headers)
+    response = await client.delete(f"/api/v1/projects/{project_id}/cadastres", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

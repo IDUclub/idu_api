@@ -2,9 +2,8 @@
 
 from datetime import date
 
-from fastapi import Depends, File, HTTPException, Path, Query, Request, Security, UploadFile
+from fastapi import Depends, File, HTTPException, Path, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPBearer
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from otteroad import KafkaProducerClient
@@ -26,7 +25,6 @@ from idu_api.urban_api.schemas import (
     ProjectPhases,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ProjectTerritory,
     Scenario,
 )
@@ -349,7 +347,6 @@ async def get_projects_territories(
     "/projects",
     response_model=Project,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def add_project(
     request: Request,
@@ -387,7 +384,6 @@ async def add_project(
     "/projects/{project_id}/base_scenario/{scenario_id}",
     response_model=Scenario,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def create_base_scenario(
     request: Request,
@@ -434,51 +430,10 @@ async def create_base_scenario(
     return Scenario.from_dto(scenario)
 
 
-@projects_router.put(
-    "/projects/{project_id}",
-    response_model=Project,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def put_project(
-    request: Request,
-    project: ProjectPut,
-    project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
-) -> Project:
-    """
-    ## Update all attributes of the given project.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **project_id** (int, Path): Unique identifier of the project.
-    - **project** (ProjectPut, Body): The updated project data.
-
-    ### Returns:
-    - **Project**: The updated project with related base scenario and region short information.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the project (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    project_dto = await user_project_service.put_project(project, project_id, user)
-
-    return Project.from_dto(project_dto)
-
-
 @projects_router.patch(
     "/projects/{project_id}",
     response_model=Project,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_project(
     request: Request,
@@ -513,7 +468,6 @@ async def patch_project(
 @projects_router.delete(
     "/projects/{project_id}",
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project(
     request: Request,
@@ -644,7 +598,6 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     "/projects/{project_id}/image",
     response_model=str,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_project_main_image(
     request: Request,
@@ -699,7 +652,6 @@ async def upload_project_main_image(
     "/projects/{project_id}/gallery",
     response_model=str,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_project_gallery_image(
     request: Request,
@@ -749,7 +701,6 @@ async def upload_project_gallery_image(
     "/projects/{project_id}/gallery/{image_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def set_project_main_image(
     request: Request,
@@ -828,7 +779,6 @@ async def get_project_gallery_images_urls(
     "/projects/{project_id}/gallery/{image_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project_gallery_image(
     request: Request,
@@ -1072,7 +1022,6 @@ async def get_project_logo_url(
     "/projects/{project_id}/logo",
     response_model=str,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_project_logo(
     request: Request,
@@ -1120,7 +1069,6 @@ async def upload_project_logo(
     "/projects/{project_id}/logo",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project_logo(
     request: Request,
@@ -1199,7 +1147,6 @@ async def get_project_phase_documents_urls(
     "/projects/{project_id}/phases/documents",
     response_model=MinioFile,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_phase_document(
     request: Request,
@@ -1245,7 +1192,6 @@ async def upload_phase_document(
     "/projects/{project_id}/phases/documents",
     response_model=MinioFile,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def rename_phase_document(
     request: Request,
@@ -1289,7 +1235,6 @@ async def rename_phase_document(
     "/projects/{project_id}/phases/documents",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project_phase_document(
     request: Request,

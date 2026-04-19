@@ -1,6 +1,4 @@
-"""
-TokensTuple DTO is defined here.
-"""
+"""TokensTuple DTO is defined here."""
 
 from dataclasses import dataclass
 
