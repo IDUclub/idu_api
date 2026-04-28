@@ -26,14 +26,13 @@ async def project_cadastre(client, project, superuser_token) -> dict[str, Any]:
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
     response = await client.put(
-        f"/projects/{project_id}/cadastres",
+        f"/api/v1/projects/{project_id}/cadastres",
         json=[cadastre.model_dump()],
         headers=headers,
     )
-    result = client.get(f"/api/v1/projects/{project_id}/cadastres", headers=headers)
+    result = await client.get(f"/api/v1/projects/{project_id}/cadastres", headers=headers)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
-    print(result.json())
     return result.json()["features"][0]["properties"]
 
 

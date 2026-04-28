@@ -129,7 +129,6 @@ class AuthenticationClient:
                 raise AuthTokenExpiredError() from exc
             raise InvalidTokenSignature() from exc
         except Exception as exc:
-            print(exc)
             raise JWTDecodeError() from exc
 
     async def process_token(self, token: str) -> dict[str, Any]:

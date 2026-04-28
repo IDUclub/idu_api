@@ -57,11 +57,13 @@ async def test_add_buffer_type(
     """Test POST /buffer_types method."""
 
     # Arrange
-    new_zone_type = buffer_type_post_req.model_dump()
-    new_zone_type["name"] = "new name"
+    new_buffer_type = buffer_type_post_req.model_dump()
+    new_buffer_type["name"] = "new name"
 
     # Act
-    response = await client.post("/api/v1/buffer_types", json=new_zone_type)
+    if expected_status == 409:
+        await client.post("/api/v1/buffer_types", json=new_buffer_type)
+    response = await client.post("/api/v1/buffer_types", json=new_buffer_type)
 
     # Assert
     assert_response(response, expected_status, BufferType, error_message)
@@ -110,6 +112,8 @@ async def test_add_default_buffer_values(
     new_default_value["service_type_id"] = type_id_param or service_type["service_type_id"]
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/buffer_types/defaults", json=new_default_value)
     response = await client.post("/api/v1/buffer_types/defaults", json=new_default_value)
 
     # Assert
@@ -162,7 +166,9 @@ async def test_put_default_buffer_values(
 async def test_put_buffer(
     client,
     buffer_put_req: BufferPut,
+    default_buffer_value_put_req: DefaultBufferValuePut,
     buffer_type: dict[str, Any],
+    service_type: dict[str, Any],
     urban_object: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -172,12 +178,17 @@ async def test_put_buffer(
     """Test PUT /buffers method."""
 
     # Arrange
+    new_default_value = default_buffer_value_put_req.model_dump()
+    new_default_value["buffer_type_id"] = buffer_type["buffer_type_id"]
+    new_default_value["physical_object_type_id"] = None
+    new_default_value["service_type_id"] = service_type["service_type_id"]
     new_buffer = buffer_put_req.model_dump()
     new_buffer["buffer_type_id"] = type_id_param or buffer_type["buffer_type_id"]
     new_buffer["urban_object_id"] = urban_object["urban_object_id"]
     new_buffer["geometry"] = geom_param.model_dump() if geom_param else None
 
     # Act
+    await client.put("/api/v1/buffer_types/defaults", json=new_default_value)
     response = await client.put("/api/v1/buffers", json=new_buffer)
 
     # Assert

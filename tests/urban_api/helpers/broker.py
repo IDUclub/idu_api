@@ -1,5 +1,6 @@
 """All fixtures for broker integration tests are defined here."""
 
+import asyncio
 import uuid
 from typing import Any, AsyncGenerator
 
@@ -31,7 +32,7 @@ def mock_handler(event_type: type[BaseModel]):
     return MessageHandler()
 
 
-@pytest_asyncio.fixture
+@pytest_asyncio.fixture(scope="function")
 async def kafka_consumer(config: UrbanAPIConfig) -> AsyncGenerator[KafkaConsumerService, Any]:
     """Fixture for Kafka consumer service."""
     settings = KafkaConsumerSettings(
@@ -46,5 +47,7 @@ async def kafka_consumer(config: UrbanAPIConfig) -> AsyncGenerator[KafkaConsumer
     service = KafkaConsumerService(settings, logger=structlog.getLogger("test-consumer"))
     service.add_worker(["urban.events", "scenario.events", "indicator.events"])
     await service.start()
+    while not service._workers[0]._consumer.assignment():
+        await asyncio.sleep(0.1)
     yield service
     await service.stop()

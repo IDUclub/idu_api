@@ -20,8 +20,9 @@ from otteroad import KafkaProducerClient, KafkaProducerSettings
 from idu_api.common.db.connection.manager import PostgresConnectionManager
 from idu_api.common.exceptions.mapper import ExceptionMapper
 from idu_api.urban_api.config import UrbanAPIConfig
-from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep, metrics_dep
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep, metrics_dep, project_storage_dep
 from idu_api.urban_api.exceptions.mapper import register_exceptions
+from idu_api.urban_api.logic.impl.buffers import BufferServiceImpl
 from idu_api.urban_api.logic.impl.functional_zones import FunctionalZonesServiceImpl
 from idu_api.urban_api.logic.impl.indicators import IndicatorsServiceImpl
 from idu_api.urban_api.logic.impl.object_geometries import ObjectGeometriesServiceImpl
@@ -37,6 +38,7 @@ from idu_api.urban_api.logic.impl.urban_objects import UrbanObjectsServiceImpl
 from idu_api.urban_api.middlewares.dependency_injection import PassServicesDependenciesMiddleware
 from idu_api.urban_api.middlewares.exception_handler import ExceptionHandlerMiddleware, HandlerNotFoundError
 from idu_api.urban_api.middlewares.observability import ObservabilityMiddleware
+from idu_api.urban_api.minio.services.projects_storage import get_project_storage_manager_from_config
 from idu_api.urban_api.observability.logging import configure_logging
 from idu_api.urban_api.observability.metrics import setup_metrics
 from idu_api.urban_api.observability.otel_agent import OpenTelemetryAgent
@@ -44,7 +46,6 @@ from idu_api.urban_api.observability.utils import URLsMapper
 from idu_api.urban_api.utils.auth_client import AuthenticationClient
 
 from .handlers import list_of_routers
-from .logic.impl.buffers import BufferServiceImpl
 from .version import LAST_UPDATE, VERSION
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
@@ -205,10 +206,15 @@ def get_app(prefix: str = "/api", config: UrbanAPIConfig | None = None) -> FastA
     urls_mapper.add_routes(application.routes)
 
     auth_client = AuthenticationClient(config=app_config.auth)
+    project_storage_manager = get_project_storage_manager_from_config(app_config)
+    kafka_producer_settings = KafkaProducerSettings.from_custom_config(app_config.broker)
+    kafka_producer = KafkaProducerClient(kafka_producer_settings, logger=structlog.getLogger("broker"), init_loop=False)
 
     metrics_dep.init_dispencer(application, metrics)
     logger_dep.init_dispencer(application, logger)
     auth_dep.init_dispencer(application, auth_client)
+    project_storage_dep.init_dispencer(application, project_storage_manager)
+    kafka_producer_dep.init_dispencer(application, kafka_producer)
 
     application.add_middleware(
         PassServicesDependenciesMiddleware,
@@ -255,12 +261,8 @@ async def lifespan(application: FastAPI):
     config_to_log = app_config.to_order_dict()
     await logger.ainfo("application is starting", config=config_to_log)
 
-    kafka_producer_settings = KafkaProducerSettings.from_custom_config(app_config.broker)
-    kafka_producer = KafkaProducerClient(
-        kafka_producer_settings, logger=structlog.getLogger("broker")
-    )  # requires event_loop
-    kafka_producer_dep.init_dispencer(application, kafka_producer)
-
+    kafka_producer = application.state.kafka_producer_dep
+    kafka_producer.init_loop()
     await kafka_producer.start()
 
     otel_agent = OpenTelemetryAgent(

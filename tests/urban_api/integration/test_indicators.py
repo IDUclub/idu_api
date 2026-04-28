@@ -65,6 +65,8 @@ async def test_add_measurement_units(
     new_unit["name"] = "new_name"
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/measurement_units", json=new_unit)
     response = await client.post("/api/v1/measurement_units", json=new_unit)
 
     # Assert
@@ -98,7 +100,7 @@ async def test_get_indicators_groups(client: AsyncClient, indicators_group: dict
 )
 async def test_add_indicators_groups(
     client: AsyncClient,
-    indicator: dict[str, any],
+    indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     indicators_ids_param: list[int] | None,
@@ -112,6 +114,8 @@ async def test_add_indicators_groups(
     }
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/indicators_groups", json=new_group)
     response = await client.post("/api/v1/indicators_groups", json=new_group)
 
     # Assert
@@ -129,7 +133,7 @@ async def test_add_indicators_groups(
 )
 async def test_update_indicators_group(
     client: AsyncClient,
-    indicator: dict[str, any],
+    indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     indicators_ids: list[int],
@@ -161,7 +165,7 @@ async def test_update_indicators_group(
 async def test_get_indicators_by_group_id(
     client,
     indicators_group,
-    indicator: dict[str, any],
+    indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     group_id: int | None,
@@ -295,6 +299,8 @@ async def test_add_indicator(
     new_indicator["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/indicators", json=new_indicator)
     response = await client.post("/api/v1/indicators", json=new_indicator)
 
     # Assert
@@ -338,30 +344,38 @@ async def test_put_indicator(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "expected_status, error_message, name_full_param, indicator_id_param",
+    "expected_status, error_message, indicator_id_param",
     [
-        (200, None, "updated indicator", None),
-        (404, "не найден", "updated indicator", 1e9),
-        (409, "уже существует", "new name", None),
+        (200, None, None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_indicator(
     client: AsyncClient,
-    indicator: dict[str, Any],
+    indicators_post_req: IndicatorPost,
+    measurement_unit: dict[str, Any],
     expected_status: int,
     error_message: str | None,
-    name_full_param: str,
     indicator_id_param: int | None,
 ):
     """Test PATCH /indicators method."""
 
     # Arrange
-    new_indicator = {k: v for k, v in indicator.items() if k != "indicator_id"}
-    new_indicator["name_full"] = name_full_param
-    indicator_id = indicator_id_param or indicator["indicator_id"]
+    new_indicator = indicators_post_req.model_dump()
+    new_indicator["name_full"] = "new name"
+    new_indicator["measurement_unit_id"] = measurement_unit["measurement_unit_id"]
+    new_indicator["parent_id"] = None
+    new_indicator["service_type_id"] = None
+    new_indicator["physical_object_type_id"] = None
+    response = await client.post("/api/v1/indicators", json=new_indicator)
+    indicator_id = indicator_id_param or response.json().get("indicator_id")
 
     # Act
+    if expected_status == 409:
+        new_indicator["name_full"] = "conflict indicator"
+        await client.post("/api/v1/indicators", json=new_indicator)
     response = await client.patch(f"/api/v1/indicators/{indicator_id}", json=new_indicator)
 
     # Assert
@@ -416,7 +430,7 @@ async def test_delete_indicator(
 )
 async def test_get_indicator_value_by_id(
     client: AsyncClient,
-    indicator_value: dict[str, any],
+    indicator_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     indicator_value_id_param: int | None,
@@ -471,6 +485,8 @@ async def test_add_indicator_value(
     # Act
     if expected_status == 201:
         await asyncio.sleep(5)
+    if expected_status == 409:
+        await client.post("/api/v1/indicator_value", json=new_indicator_value)
     response = await client.post("/api/v1/indicator_value", json=new_indicator_value)
     if expected_status == 201:
         await asyncio.sleep(5)
@@ -579,7 +595,7 @@ async def test_delete_indicator_value(
 )
 async def test_get_indicator_values_by_id(
     client: AsyncClient,
-    indicator: dict[str, Any],
+    indicator_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     indicator_id_param: int | None,
@@ -587,7 +603,7 @@ async def test_get_indicator_values_by_id(
     """Test GET /indicator/{indicator_id}/values method."""
 
     # Arrange
-    indicator_id = indicator_id_param or indicator["indicator_id"]
+    indicator_id = indicator_id_param or indicator_value["indicator"]["indicator_id"]
 
     # Act
     response = await client.get(f"/api/v1/indicator/{indicator_id}/values")

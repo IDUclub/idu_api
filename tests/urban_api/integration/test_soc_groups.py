@@ -93,6 +93,8 @@ async def test_add_social_group(
     new_group["name"] = "new_name"
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/social_groups", json=new_group)
     response = await client.post("/api/v1/social_groups", json=new_group)
 
     # Assert
@@ -234,6 +236,8 @@ async def test_add_social_value(
     new_value["name"] = "new_name"
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/social_values", json=new_value)
     response = await client.post("/api/v1/social_values", json=new_value)
 
     # Assert
@@ -266,6 +270,8 @@ async def test_add_value_to_social_group(
     params = {"service_type_id": service_type["service_type_id"], "soc_value_id": social_value["soc_value_id"]}
 
     # Act
+    if expected_status == 409:
+        await client.post(f"/api/v1/social_groups/{soc_group_id}/values", params=params)
     response = await client.post(f"/api/v1/social_groups/{soc_group_id}/values", params=params)
 
     # Assert
@@ -379,7 +385,7 @@ async def test_delete_social_value(
 @pytest.mark.parametrize(
     "expected_status, error_message, soc_value_id_param",
     [
-        (200, None, 1),
+        (200, None, None),
         (404, "не найден", 1e9),
         (422, "пожалуйста, выберите либо конкретный год, либо last_only", 1e9),
     ],
@@ -395,7 +401,7 @@ async def test_get_social_value_indicator_values(
     """Test GET /social_values/{soc_group_id}/indicators method."""
 
     # Arrange
-    soc_value_id = soc_value_id_param
+    soc_value_id = soc_value_id_param or social_value_indicator["soc_value"]["id"]
     params = {
         "territory_id": social_value_indicator["territory"]["id"],
         "year": social_value_indicator["year"],
@@ -444,6 +450,8 @@ async def test_add_social_value_indicator_value(
     json_data["value"] = social_value_indicator["value"]
 
     # Act
+    if expected_status == 409:
+        await client.post(f"/api/v1/social_values/indicators", json=json_data)
     response = await client.post(f"/api/v1/social_values/indicators", json=json_data)
 
     # Assert
@@ -487,7 +495,7 @@ async def test_put_social_value_indicator_value(
 @pytest.mark.parametrize(
     "expected_status, error_message, soc_value_id_param",
     [
-        (200, None, 1),
+        (200, None, None),
         (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
@@ -502,7 +510,7 @@ async def test_delete_social_value_indicator_values(
     """Test DELETE /social_values/{soc_value_id}/indicators method."""
 
     # Arrange
-    soc_value_id = soc_value_id_param
+    soc_value_id = soc_value_id_param or social_value_indicator["soc_value"]["id"]
     params = {
         "territory_id": social_value_indicator["territory"]["id"],
         "year": social_value_indicator["year"],

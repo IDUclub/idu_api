@@ -77,7 +77,7 @@ async def social_value_indicator(client, social_value, region) -> dict[str, Any]
     )
 
     response = await client.post(
-        f"/social_values/indicators",
+        f"/api/v1/social_values/indicators",
         json=soc_value_indicator_post_req.model_dump(),
     )
 

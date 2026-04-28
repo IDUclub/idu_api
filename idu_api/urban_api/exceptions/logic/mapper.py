@@ -29,7 +29,7 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         common.EntityNotFoundById,
         lambda exc: _get_response(
             status.HTTP_404_NOT_FOUND,
-            "Entitiy not found by IDs",
+            "Entity not found by ID",
             f"Сущность '{exc.entity}' с (id={exc.requested_id}) не найдена.",
         ),
     )
@@ -45,23 +45,23 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         common.EntityNotFoundByParams,
         lambda exc: _get_response(
             status.HTTP_404_NOT_FOUND,
-            "Entitiy not found by parameters",
-            f"Сущность '{exc.entity}' с такими параметрами ({exc.params}) не найдена.",
+            "Entity not found by parameters",
+            f"Сущность '{exc.entity}' с такими параметрами {exc.params} не найдена.",
         ),
     )
     mapper.register_func(
         common.EntityAlreadyExists,
         lambda exc: _get_response(
             status.HTTP_409_CONFLICT,
-            "Entitiy already exists",
-            f"Сущность '{exc.entity}' с такими параметрами ({exc.params}) уже существует.",
+            "Entity already exists",
+            f"Сущность '{exc.entity}' с такими параметрами {exc.params} уже существует.",
         ),
     )
     mapper.register_func(
         common.EntityAlreadyEdited,
         lambda exc: _get_response(
             status.HTTP_409_CONFLICT,
-            "Entitiy already edited",
+            "Entity already edited",
             f"Сущность '{exc.entity}' уже изменена или удалена для этого сценария (id={exc.scenario_id}).",
         ),
     )

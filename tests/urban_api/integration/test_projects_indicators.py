@@ -222,7 +222,7 @@ async def test_patch_scenario_indicator_value(
     if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
     response = await client.patch(
-        f"/scenarios/{scenario_id}/indicators_values/{indicator_value_id}",
+        f"/api/v1/scenarios/{scenario_id}/indicators_values/{indicator_value_id}",
         headers=headers,
         json=new_value,
     )
@@ -303,26 +303,14 @@ async def test_delete_scenario_indicator_value_by_id(
     """Test DELETE /scenarios/{scenario_id}/indicators_values/{indicator_value_id} method."""
 
     # Arrange
-    scenario_id = scenario_indicator_value["scenario"]["id"]
-    new_value = scenario_indicator_value_post_req.model_dump()
-    new_value["indicator_id"] = scenario_indicator_value["indicator"]["indicator_id"]
-    new_value["territory_id"] = None
-    new_value["hexagon_id"] = None
+    scenario_id = scenario_id_param or scenario_indicator_value["scenario"]["id"]
+    indicator_value_id = scenario_indicator_value["indicator_value_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    if scenario_id_param is None:
-        response = await client.post(
-            f"/scenarios/{scenario_id}/indicators_values",
-            headers={"Authorization": f"Bearer {superuser_token}"},
-            json=new_value,
-        )
-        indicator_value_id = response.json()["indicator_value_id"]
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/indicators_values/{indicator_value_id}", headers=headers
-        )
-    else:
-        response = await client.delete(f"/api/v1/scenarios/{scenario_id_param}/indicators_values/1", headers=headers)
+    response = await client.delete(
+        f"/api/v1/scenarios/{scenario_id}/indicators_values/{indicator_value_id}", headers=headers
+    )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -356,7 +344,7 @@ async def test_get_hexagons_with_indicators_values_by_scenario_id(
 
     # Act
     response = await client.get(
-        f"/scenarios/{scenario_id}/indicators_values/hexagons",
+        f"/api/v1/scenarios/{scenario_id}/indicators_values/hexagons",
         headers=headers,
         params=params,
     )

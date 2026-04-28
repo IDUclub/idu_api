@@ -6,22 +6,27 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import rsa
 from jose import jwt
 
 __all__ = ["expired_token", "superuser_token", "valid_token"]
 
 
 # ------------------------
-# TEST KEY (RSA, как в Keycloak)
+# TEST KEY
 # ------------------------
 
-PRIVATE_KEY = """
------BEGIN RSA PRIVATE KEY-----
-MIIEpAIBAAKCAQEAxG0v7cZp1v2mQ0g6m6gqQ6m6m6m6m6m6m6m6m6m6m6m6m6
-6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m6m
------END RSA PRIVATE KEY-----
-"""
 
+def generate_private_key():
+    key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+    return key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    ).decode()
+
+
+PRIVATE_KEY = generate_private_key()
 ISSUER = "https://keycloak.test/realms/TEST"
 AUDIENCE = "urban-api"
 

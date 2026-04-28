@@ -248,7 +248,7 @@ async def test_get_context_services_with_geometry(
 
     # Act
     response = await client.get(
-        f"/scenarios/{scenario_id}/context/services_with_geometry", headers=headers, params=params
+        f"/api/v1/scenarios/{scenario_id}/context/services_with_geometry", headers=headers, params=params
     )
     result = response.json()
 
@@ -282,8 +282,6 @@ async def test_add_service(
     scenario_physical_object: dict[str, Any],
     object_geometry: dict[str, Any],
     physical_object: dict[str, Any],
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -295,16 +293,6 @@ async def test_add_service(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     new_service = scenario_service_post_req.model_dump()
     new_service["object_geometry_id"] = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
@@ -320,7 +308,7 @@ async def test_add_service(
 
     # Act
     response = await client.post(
-        f"/scenarios/{scenario_id}/services",
+        f"/api/v1/scenarios/{scenario_id}/services",
         json=new_service,
         headers=headers,
     )
@@ -360,16 +348,6 @@ async def test_put_scenario_service(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     service_id = scenario_service["service_id"] if is_scenario_param else service["service_id"]
     new_service = service_put_req.model_dump()
     new_service["service_type_id"] = scenario_service["service_type"]["service_type_id"]
@@ -378,8 +356,15 @@ async def test_put_scenario_service(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
+    if expected_status == 409:
+        await client.put(
+            f"/api/v1/scenarios/{scenario_id}/services/{service_id}",
+            json=new_service,
+            headers=headers,
+            params=params,
+        )
     response = await client.put(
-        f"/scenarios/{scenario_id}/services/{service_id}",
+        f"/api/v1/scenarios/{scenario_id}/services/{service_id}",
         json=new_service,
         headers=headers,
         params=params,
@@ -420,16 +405,6 @@ async def test_patch_scenario_service(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     service_id = scenario_service["service_id"] if is_scenario_param else service["service_id"]
     new_service = service_put_req.model_dump()
     new_service["service_type_id"] = scenario_service["service_type"]["service_type_id"]
@@ -438,8 +413,15 @@ async def test_patch_scenario_service(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
+    if expected_status == 409:
+        await client.patch(
+            f"/api/v1/scenarios/{scenario_id}/services/{service_id}",
+            json=new_service,
+            headers=headers,
+            params=params,
+        )
     response = await client.patch(
-        f"/scenarios/{scenario_id}/services/{service_id}",
+        f"/api/v1/scenarios/{scenario_id}/services/{service_id}",
         json=new_service,
         headers=headers,
         params=params,
@@ -462,14 +444,9 @@ async def test_patch_scenario_service(
 )
 async def test_delete_service(
     client: AsyncClient,
-    scenario_service_post_req: ScenarioServicePost,
     scenario: dict[str, Any],
     scenario_service: dict[str, Any],
-    scenario_physical_object: dict[str, Any],
-    scenario_geometry: dict[str, Any],
     service: dict[str, Any],
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -481,52 +458,16 @@ async def test_delete_service(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
-    new_service = scenario_service_post_req.model_dump()
-    new_service["object_geometry_id"] = scenario_geometry["object_geometry_id"]
-    new_service["is_scenario_geometry"] = True
-    new_service["physical_object_id"] = scenario_physical_object["physical_object_id"]
-    new_service["is_scenario_physical_object"] = True
-    new_service["service_type_id"] = scenario_service["service_type"]["service_type_id"]
-    new_service["territory_type_id"] = scenario_service["territory_type"]["territory_type_id"]
+    service_id = scenario_service["service_id"] if is_scenario_param else service["service_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    if expected_status == 200 and is_scenario_param:
-        response = await client.post(
-            f"scenarios/{scenario_id}/services",
-            json=new_service,
-            headers=headers,
-        )
-        service_id = response.json()["service"]["service_id"]
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/services/{service_id}",
-            headers=headers,
-            params=params,
-        )
-    elif not is_scenario_param:
-        service_id = service["service_id"]
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/services/{service_id}",
-            headers=headers,
-            params=params,
-        )
-    else:
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/services/1",
-            headers=headers,
-            params=params,
-        )
+    response = await client.delete(
+        f"/api/v1/scenarios/{scenario_id}/services/{service_id}",
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

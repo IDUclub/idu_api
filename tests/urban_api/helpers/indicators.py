@@ -1,5 +1,5 @@
 """All fixtures for functional zones tests are defined here."""
-
+import asyncio
 from datetime import date
 from typing import Any
 
@@ -99,6 +99,7 @@ async def indicator_value(client, indicator, region) -> dict[str, Any]:
         "information_source": "Test Source",
     }
 
+    await asyncio.sleep(5)
     response = await client.post("/api/v1/indicator_value", json=indicator_value_post_req)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
@@ -120,8 +121,9 @@ async def scenario_indicator_value(client, scenario, indicator, city, superuser_
     }
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
+    await asyncio.sleep(5)
     response = await client.post(
-        f"scenarios/{scenario_id}/indicators_values",
+        f"/api/v1/scenarios/{scenario_id}/indicators_values",
         json=scenario_indicator_value_post_req,
         headers=headers,
     )
@@ -148,7 +150,7 @@ async def scenario_hexagon_indicator_value(
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
     response = await client.post(
-        f"scenarios/{scenario_id}/indicators_values",
+        f"/api/v1/scenarios/{scenario_id}/indicators_values",
         json=scenario_indicator_value_post_req,
         headers=headers,
     )

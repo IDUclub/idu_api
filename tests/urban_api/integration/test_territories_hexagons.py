@@ -67,7 +67,6 @@ async def test_add_hexagons_by_territory_id(
     client: AsyncClient,
     hexagon_post_req: HexagonPost,
     region: dict[str, Any],
-    country: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     territory_id_param: int | None,
@@ -75,10 +74,11 @@ async def test_add_hexagons_by_territory_id(
     """Test POST /territory/{territory_id}/hexagons method."""
 
     # Arrange
-    territory = region if expected_status == 409 else country
-    territory_id = territory_id_param or territory["territory_id"]
+    territory_id = territory_id_param or region["territory_id"]
 
     # Act
+    if expected_status == 409:
+        await client.post(f"/api/v1/territory/{territory_id}/hexagons", json=[hexagon_post_req.model_dump()])
     response = await client.post(f"/api/v1/territory/{territory_id}/hexagons", json=[hexagon_post_req.model_dump()])
 
     # Assert
@@ -99,7 +99,7 @@ async def test_add_hexagons_by_territory_id(
 )
 async def test_delete_hexagons_by_territory_id(
     client: AsyncClient,
-    country: dict[str, Any],
+    region: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     territory_id_param: int | None,
@@ -107,7 +107,7 @@ async def test_delete_hexagons_by_territory_id(
     """Test DELETE /territory/{territory_id}/hexagons method."""
 
     # Arrange
-    territory_id = territory_id_param or country["territory_id"]
+    territory_id = territory_id_param or region["territory_id"]
 
     # Act
     response = await client.delete(f"/api/v1/territory/{territory_id}/hexagons")

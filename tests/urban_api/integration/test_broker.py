@@ -36,21 +36,14 @@ async def test_urban_objects_update(client: AsyncClient, kafka_consumer: KafkaCo
 
     # Act
     await asyncio.sleep(5)
-    response = await client.post(
-        "/api/broker/urban_events/urban_objects_updated",
-        json=event.model_dump(),
-    )
-    await asyncio.sleep(5)
+    response = await client.post("/api/broker/urban_events/urban_objects_updated", json=event.model_dump())
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
-
     assert len(new_handler.received_events) == 1, "No event was received"
-
     received = new_handler.received_events[0]
-
     assert isinstance(received, UrbanObjectsUpdated), "Received event is not UrbanObjectsUpdated"
-
     assert received == event, "Event data does not match"
 
 
@@ -64,9 +57,9 @@ async def test_functional_zones_update(client: AsyncClient, kafka_consumer: Kafk
     event = FunctionalZonesUpdated(territory_id=1)
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     response = await client.post("/api/broker/urban_events/zones_updated", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -86,9 +79,9 @@ async def test_territories_update(client: AsyncClient, kafka_consumer: KafkaCons
     event = TerritoriesUpdated(territory_ids=[1])
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     response = await client.post("/api/broker/urban_events/territories_updated", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -108,9 +101,9 @@ async def test_territories_delete(client: AsyncClient, kafka_consumer: KafkaCons
     event = TerritoriesDeleted(parent_ids=[1])
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     response = await client.post("/api/broker/urban_events/territories_deleted", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -130,9 +123,9 @@ async def test_regional_scenario_create(client: AsyncClient, kafka_consumer: Kaf
     event = RegionalScenarioCreated(scenario_id=1, territory_id=1)
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     response = await client.post("/api/broker/scenario_events/regional_scenario_created", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -152,9 +145,9 @@ async def test_scenario_objects_update(client: AsyncClient, kafka_consumer: Kafk
     event = ScenarioObjectsUpdated(project_id=1, scenario_id=1, service_types=[1], physical_object_types=[1])
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     response = await client.post("/api/broker/scenario_events/scenario_objects_updated", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)
@@ -174,9 +167,9 @@ async def test_scenario_zones_update(client: AsyncClient, kafka_consumer: KafkaC
     event = ScenarioZonesUpdated(project_id=1, scenario_id=1)
 
     # Act
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
     response = await client.post("/api/broker/scenario_events/scenario_zones_updated", json=event.model_dump())
-    await asyncio.sleep(5)
+    await asyncio.sleep(2)
 
     # Assert
     assert_response(response, 200, OkResponse, None)

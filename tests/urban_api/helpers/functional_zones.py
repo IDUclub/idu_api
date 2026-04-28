@@ -107,7 +107,7 @@ async def scenario_functional_zone(client, functional_zone_type, scenario, super
         name="Test Functional Zone Name",
         functional_zone_type_id=functional_zone_type["functional_zone_type_id"],
         year=datetime.today().year,
-        source="Test Source",
+        source="User",
         geometry=Geometry(
             type="Polygon",
             coordinates=[[[30.22, 59.86], [30.22, 59.85], [30.25, 59.85], [30.25, 59.86], [30.22, 59.86]]],
@@ -117,7 +117,7 @@ async def scenario_functional_zone(client, functional_zone_type, scenario, super
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
     response = await client.post(
-        f"/scenarios/{scenario_id}/functional_zones",
+        f"/api/v1/scenarios/{scenario_id}/functional_zones",
         json=[scenario_functional_zone_post_req.model_dump()],
         headers=headers,
     )

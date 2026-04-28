@@ -132,12 +132,7 @@ async def test_patch_service(
 )
 async def test_delete_service(
     client: AsyncClient,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
-    service_post_req: ServicePost,
-    physical_object_type: dict[str, Any],
-    city: dict[str, Any],
-    service_type: dict[str, Any],
-    territory_type: dict[str, Any],
+    service: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     service_id_param: int | None,
@@ -145,25 +140,10 @@ async def test_delete_service(
     """Test DELETE /services method."""
 
     # Arrange
-    new_object = physical_object_with_geometry_post_req.model_dump()
-    new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
-    new_object["territory_id"] = city["territory_id"]
-    response = await client.post("/api/v1/physical_objects", json=new_object)
-    physical_object_id = response.json()["physical_object"]["physical_object_id"]
-    object_geometry_id = response.json()["object_geometry"]["object_geometry_id"]
-    new_service = service_post_req.model_dump()
-    new_service["physical_object_id"] = physical_object_id
-    new_service["object_geometry_id"] = object_geometry_id
-    new_service["service_type_id"] = service_type["service_type_id"]
-    new_service["territory_type_id"] = territory_type["territory_type_id"]
+    service_id = service_id_param or service["service_id"]
 
     # Act
-    if service_id_param is None:
-        response = await client.post("/api/v1/services", json=new_service)
-        service_id = response.json()["service_id"]
-        response = await client.delete(f"/api/v1/services/{service_id}")
-    else:
-        response = await client.delete(f"/api/v1/services/{service_id_param}")
+    response = await client.delete(f"/api/v1/services/{service_id}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

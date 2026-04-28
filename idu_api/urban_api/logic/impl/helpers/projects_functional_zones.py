@@ -288,7 +288,7 @@ async def patch_scenario_functional_zone_to_db(
     ):
         raise EntityNotFoundById(functional_zone_id, "scenario functional zone")
 
-    values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True)
+    values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True, allow_null_geometry=True)
 
     statement = (
         update(projects_functional_zones)

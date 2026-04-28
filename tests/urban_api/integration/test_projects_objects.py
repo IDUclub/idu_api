@@ -253,14 +253,16 @@ async def test_get_projects_territories(
     [
         (201, None, None, False),
         (201, None, None, True),
-        (403, "not authenticated", None, False),
+        (401, "для доступа необходима авторизация", None, False),
         (404, "не найден", 1e9, False),
     ],
-    ids=["success_common", "success_regional", "forbidden", "not_found"],
+    ids=["success_common", "success_regional", "not_auth", "not_found"],
 )
 async def test_add_project(
     client: AsyncClient,
     project_post_req: ProjectPost,
+    regional_scenario: dict[str, Any],
+    functional_zone_type: dict[str, Any],
     region: dict[str, Any],
     kafka_consumer: KafkaConsumerService,
     expected_status: int,
@@ -278,7 +280,7 @@ async def test_add_project(
     new_project["is_regional"] = is_regional_param
     new_project["territory"] = new_project["territory"] if not is_regional_param else None
     new_project["territory_id"] = territory_id_param or region["territory_id"]
-    headers = {"Authorization": f"Bearer {superuser_token}"} if expected_status != 403 else {}
+    headers = {"Authorization": f"Bearer {superuser_token}"} if expected_status != 401 else {}
 
     # Act
     if expected_status == 201:
@@ -337,6 +339,8 @@ async def test_create_base_scenario(
     # Act
     if expected_status == 201:
         await asyncio.sleep(5)
+    if expected_status == 409:
+        await client.post(f"/api/v1/projects/{project_id}/base_scenario/{scenario_id}", headers=headers)
     response = await client.post(f"/api/v1/projects/{project_id}/base_scenario/{scenario_id}", headers=headers)
     if expected_status == 201:
         await asyncio.sleep(5)
@@ -362,9 +366,8 @@ async def test_create_base_scenario(
 )
 async def test_patch_project(
     client: AsyncClient,
-    project_post_req: ProjectPost,
     project_patch_req: ProjectPatch,
-    region: dict[str, Any],
+    project: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -374,15 +377,8 @@ async def test_patch_project(
     """Test PATCH /projects/{project_id} method."""
 
     # Arrange
-    project_id = project_id_param
-    if project_id_param is None:
-        new_project = project_post_req.model_dump()
-        new_project["territory_id"] = region["territory_id"]
-        response = await client.post(
-            "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
-        )
-        project_id = response.json()["project_id"]
-    new_project = project_patch_req.model_dump()
+    project_id = project_id_param or project["project_id"]
+    new_project = project_patch_req.model_dump(exclude_unset=True)
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
@@ -404,8 +400,7 @@ async def test_patch_project(
 )
 async def test_delete_project(
     client: AsyncClient,
-    project_post_req: ProjectPost,
-    region: dict[str, Any],
+    project: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -415,19 +410,11 @@ async def test_delete_project(
     """Test DELETE /projects/{project_id} method."""
 
     # Arrange
-    new_project = project_post_req.model_dump()
-    new_project["territory_id"] = region["territory_id"]
+    project_id = project_id_param or project["project_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    if project_id_param is None:
-        response = await client.post(
-            "/projects", json=new_project, headers={"Authorization": f"Bearer {superuser_token}"}
-        )
-        project_id = response.json()["project_id"]
-        response = await client.delete(f"/api/v1/projects/{project_id}", headers=headers)
-    else:
-        response = await client.delete(f"/api/v1/projects/{project_id_param}", headers=headers)
+    response = await client.delete(f"/api/v1/projects/{project_id}", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -515,7 +502,7 @@ async def test_upload_project_main_image(
 
     # Act
     response = await client.put(
-        f"/projects/{project_id}/image",
+        f"/api/v1/projects/{project_id}/image",
         headers=headers,
         files=files,
     )
@@ -558,7 +545,7 @@ async def test_upload_gallery_image(
 
     # Act
     response = await client.post(
-        f"/projects/{project_id}/gallery",
+        f"/api/v1/projects/{project_id}/gallery",
         headers=headers,
         files=files,
     )
@@ -602,7 +589,7 @@ async def test_set_project_main_image(
     if expected_status == 200:
         files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
         response = await client.post(
-            f"/projects/{project_id}/gallery",
+            f"/api/v1/projects/{project_id}/gallery",
             headers=headers,
             files=files,
         )
@@ -684,7 +671,7 @@ async def test_delete_project_gallery_image(
     if expected_status == 200:
         files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
         response = await client.post(
-            f"/projects/{project_id}/gallery",
+            f"/api/v1/projects/{project_id}/gallery",
             headers=headers,
             files=files,
         )
@@ -710,6 +697,7 @@ async def test_delete_project_gallery_image(
 async def test_get_full_project_image(
     client: AsyncClient,
     project: dict[str, Any],
+    project_image: bytes,
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -723,6 +711,20 @@ async def test_get_full_project_image(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        await client.post(
+            f"/api/v1/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        response = await client.post(
+            f"/api/v1/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
+        await client.put(f"/api/v1/projects/{project_id}/gallery/{image_id}", headers=headers)
     response = await client.get(f"/api/v1/projects/{project_id}/image", headers=headers)
 
     # Assert
@@ -749,6 +751,7 @@ async def test_get_full_project_image(
 async def test_get_preview_project_image(
     client: AsyncClient,
     project: dict[str, Any],
+    project_image: bytes,
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -762,6 +765,20 @@ async def test_get_preview_project_image(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        await client.post(
+            f"/api/v1/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        response = await client.post(
+            f"/api/v1/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
+        await client.put(f"/api/v1/projects/{project_id}/gallery/{image_id}", headers=headers)
     response = await client.get(f"/api/v1/projects/{project_id}/preview", headers=headers)
 
     # Assert
@@ -788,6 +805,7 @@ async def test_get_preview_project_image(
 async def test_get_full_project_image_url(
     client: AsyncClient,
     project: dict[str, Any],
+    project_image: bytes,
     expected_status: int,
     error_message: str | None,
     valid_token: str,
@@ -801,6 +819,20 @@ async def test_get_full_project_image_url(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        await client.post(
+            f"/api/v1/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        response = await client.post(
+            f"/api/v1/projects/{project_id}/gallery",
+            headers=headers,
+            files=files,
+        )
+        image_id = response.json().split("?")[0].split("/")[-1].split(".")[0]
+        await client.put(f"/api/v1/projects/{project_id}/gallery/{image_id}", headers=headers)
     response = await client.get(f"/api/v1/projects/{project_id}/image_url", headers=headers)
 
     # Assert
@@ -884,7 +916,7 @@ async def test_upload_project_logo(
 
     # Act
     response = await client.put(
-        f"/projects/{project_id}/logo",
+        f"/api/v1/projects/{project_id}/logo",
         headers=headers,
         files=files,
     )
@@ -944,6 +976,7 @@ async def test_get_project_logo_url(
 async def test_delete_project_logo(
     client: AsyncClient,
     project: dict[str, Any],
+    project_image: bytes,
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -957,6 +990,13 @@ async def test_delete_project_logo(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        await client.put(
+            f"/api/v1/projects/{project_id}/logo",
+            headers=headers,
+            files=files,
+        )
     response = await client.delete(f"/api/v1/projects/{project_id}/logo", headers=headers)
 
     # Assert
@@ -1029,7 +1069,7 @@ async def test_upload_phase_document(
 
     # Act
     response = await client.post(
-        f"/projects/{project_id}/phases/documents",
+        f"/api/v1/projects/{project_id}/phases/documents",
         headers=headers,
         files=files,
         params=params,
@@ -1056,6 +1096,7 @@ async def test_upload_phase_document(
 async def test_rename_phase_document(
     client: AsyncClient,
     project: dict[str, Any],
+    project_image: bytes,
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -1070,8 +1111,16 @@ async def test_rename_phase_document(
     params = {"phase": "construction", "old_key": "image.jpg", "new_key": "renamed_image.jpg"}
 
     # Act
+    if expected_status == 200:
+        files = {"file": ("image.jpg", BytesIO(project_image), "image/jpeg")}
+        await client.post(
+            f"/api/v1/projects/{project_id}/phases/documents",
+            headers=headers,
+            files=files,
+            params={"phase": "construction"},
+        )
     response = await client.patch(
-        f"/projects/{project_id}/phases/documents",
+        f"/api/v1/projects/{project_id}/phases/documents",
         headers=headers,
         params=params,
     )
@@ -1097,6 +1146,7 @@ async def test_rename_phase_document(
 async def test_delete_project_phase_document(
     client: AsyncClient,
     project: dict[str, Any],
+    project_image: bytes,
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -1109,12 +1159,20 @@ async def test_delete_project_phase_document(
     project_id = project_id_param or project["project_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
     if expected_status != 404:
-        filename = "renamed_image.jpg"
+        filename = "image.jpg"
     else:
         filename = "fake.file"
     params = {"phase": "construction", "filename": filename}
 
     # Act
+    if expected_status == 200:
+        files = {"file": (filename, BytesIO(project_image), "image/jpeg")}
+        await client.post(
+            f"/api/v1/projects/{project_id}/phases/documents",
+            headers=headers,
+            files=files,
+            params={"phase": "construction"},
+        )
     response = await client.delete(f"/api/v1/projects/{project_id}/phases/documents", headers=headers, params=params)
 
     # Assert

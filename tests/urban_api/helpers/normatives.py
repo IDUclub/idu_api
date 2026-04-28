@@ -37,7 +37,7 @@ async def normative(client, service_type, country) -> dict[str, Any]:
     )
 
     response = await client.post(
-        f"territory/{country['territory_id']}/normatives", json=[normative_post_req.model_dump()]
+        f"/api/v1/territory/{country['territory_id']}/normatives", json=[normative_post_req.model_dump()]
     )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."

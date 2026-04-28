@@ -214,7 +214,7 @@ async def put_normatives_by_territory_id_in_db(
     if len(service_type_ids) > len(service_types):
         raise EntitiesNotFoundByIds("service type")
 
-    statement = select(urban_functions_dict.c.urban_function_id).where(
+    statement = select(service_types_dict.c.urban_function_id).where(
         service_types_dict.c.urban_function_id.in_(urban_function_ids)
     )
     urban_functions = (await conn.execute(statement)).scalars().all()
@@ -292,7 +292,7 @@ async def patch_normatives_by_territory_id_in_db(
     if len(service_type_ids) > len(service_types):
         raise EntitiesNotFoundByIds("service type")
 
-    statement = select(urban_functions_dict.c.urban_function_id).where(
+    statement = select(service_types_dict.c.urban_function_id).where(
         service_types_dict.c.urban_function_id.in_(urban_function_ids)
     )
     urban_functions = (await conn.execute(statement)).scalars().all()
@@ -368,7 +368,7 @@ async def delete_normatives_by_territory_id_in_db(
     if len(service_type_ids) > len(service_types):
         raise EntitiesNotFoundByIds("service type")
 
-    statement = select(urban_functions_dict.c.urban_function_id).where(
+    statement = select(service_types_dict.c.urban_function_id).where(
         service_types_dict.c.urban_function_id.in_(urban_function_ids)
     )
     urban_functions = (await conn.execute(statement)).scalars().all()
@@ -437,10 +437,14 @@ async def get_normatives_values_by_parent_id_from_db(  # pylint: disable=too-man
         .select_from(
             territories_data.join(
                 territory_types_dict,
-                territory_types_dict.c.territory_type_id == territories_data.c.territory_id,
+                territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id,
             )
         )
-        .where(territories_data.c.parent_id == parent_id)
+        .where(
+            territories_data.c.parent_id == parent_id
+            if parent_id is not None
+            else territories_data.c.parent_id.is_(None)
+        )
     )
 
     child_territories = list((await conn.execute(statement)).mappings().all())

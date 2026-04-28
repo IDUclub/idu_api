@@ -225,11 +225,9 @@ async def test_get_context_geometries_with_all_objects(
 async def test_put_scenario_geometry(
     client: AsyncClient,
     object_geometries_put_req: ObjectGeometryPut,
-    project: dict[str, Any],
     scenario: dict[str, Any],
     scenario_geometry: dict[str, Any],
     object_geometry: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -241,16 +239,6 @@ async def test_put_scenario_geometry(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     object_geometry_id = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
     )
@@ -260,8 +248,15 @@ async def test_put_scenario_geometry(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
+    if expected_status == 409:
+        await client.put(
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+            json=new_object_geometry,
+            headers=headers,
+            params=params,
+        )
     response = await client.put(
-        f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+        f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
         json=new_object_geometry,
         headers=headers,
         params=params,
@@ -289,8 +284,6 @@ async def test_patch_scenario_geometry(
     scenario: dict[str, Any],
     scenario_geometry: dict[str, Any],
     object_geometry: dict[str, Any],
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -302,16 +295,6 @@ async def test_patch_scenario_geometry(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     object_geometry_id = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
     )
@@ -321,8 +304,15 @@ async def test_patch_scenario_geometry(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
+    if expected_status == 409:
+        await client.patch(
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+            json=new_object_geometry,
+            headers=headers,
+            params=params,
+        )
     response = await client.patch(
-        f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+        f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
         json=new_object_geometry,
         headers=headers,
         params=params,
@@ -382,26 +372,26 @@ async def test_delete_object_geometry(
     # Act
     if expected_status == 200 and is_scenario_param:
         response = await client.post(
-            f"scenarios/{scenario_id}/physical_objects",
+            f"/api/v1/scenarios/{scenario_id}/physical_objects",
             json=new_object,
             headers=headers,
         )
         object_geometry_id = response.json()["object_geometry"]["object_geometry_id"]
         response = await client.delete(
-            f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
             headers=headers,
             params=params,
         )
     elif not is_scenario_param:
         object_geometry_id = object_geometry["object_geometry_id"]
         response = await client.delete(
-            f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
             headers=headers,
             params=params,
         )
     else:
         response = await client.delete(
-            f"/scenarios/{scenario_id}/geometries/1",
+            f"/api/v1/scenarios/{scenario_id}/geometries/1",
             headers=headers,
             params=params,
         )

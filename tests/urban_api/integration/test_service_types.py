@@ -13,10 +13,9 @@ from idu_api.urban_api.schemas import (
     ServiceTypePut,
     ServiceTypesHierarchy,
     SocGroupWithServiceTypes,
-    SocValueWithServiceTypes,
     UrbanFunction,
     UrbanFunctionPost,
-    UrbanFunctionPut,
+    UrbanFunctionPut, SocValue,
 )
 from tests.urban_api.helpers.utils import assert_response
 
@@ -72,6 +71,8 @@ async def test_add_service_type(
     new_type["urban_function_id"] = function_id_param or urban_function["urban_function_id"]
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/service_types", json=new_type)
     response = await client.post("/api/v1/service_types", json=new_type)
 
     # Assert
@@ -137,6 +138,9 @@ async def test_patch_service_type(
     service_type_id = type_id_param or service_type["service_type_id"]
 
     # Act
+    if expected_status == 409:
+        new_type["name"] = "conflict type"
+        await client.post("/api/v1/service_types", json=new_type)
     response = await client.patch(f"/api/v1/service_types/{service_type_id}", json=new_type)
 
     # Assert
@@ -154,8 +158,7 @@ async def test_patch_service_type(
 )
 async def test_delete_service_type(
     client: AsyncClient,
-    service_type_post_req: ServiceTypePost,
-    urban_function: dict[str, Any],
+    service_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     type_id_param: int | None,
@@ -163,17 +166,10 @@ async def test_delete_service_type(
     """Test DELETE /service_types method."""
 
     # Arrange
-    new_type = service_type_post_req.model_dump()
-    new_type["name"] = "type for deletion"
-    new_type["urban_function_id"] = urban_function["urban_function_id"]
+    type_id = type_id_param or service_type["service_type_id"]
 
     # Act
-    if type_id_param is None:
-        response = await client.post("/api/v1/service_types", json=new_type)
-        service_type_id = response.json()["service_type_id"]
-        response = await client.delete(f"/api/v1/service_types/{service_type_id}")
-    else:
-        response = await client.delete(f"/api/v1/service_types/{type_id_param}")
+    response = await client.delete(f"/api/v1/service_types/{type_id}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -241,6 +237,8 @@ async def test_add_urban_function(
     new_function["parent_id"] = parent_id_param
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/urban_functions", json=new_function)
     response = await client.post("/api/v1/urban_functions", json=new_function)
 
     # Assert
@@ -305,6 +303,9 @@ async def test_patch_urban_function(
     urban_function_id = function_id_param or urban_function["urban_function_id"]
 
     # Act
+    if expected_status == 409:
+        new_function["name"] = "conflict function"
+        await client.post("/api/v1/urban_functions", json=new_function)
     response = await client.patch(f"/api/v1/urban_functions/{urban_function_id}", json=new_function)
 
     # Assert
@@ -322,7 +323,7 @@ async def test_patch_urban_function(
 )
 async def test_delete_urban_function(
     client: AsyncClient,
-    urban_function_post_req: UrbanFunctionPost,
+    urban_function: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     function_id_param: int | None,
@@ -330,17 +331,10 @@ async def test_delete_urban_function(
     """Test DELETE /urban_functions method."""
 
     # Arrange
-    new_function = urban_function_post_req.model_dump()
-    new_function["name"] = "function for deletion"
-    new_function["parent_id"] = None
+    function_id = function_id_param or urban_function["urban_function_id"]
 
     # Act
-    if function_id_param is None:
-        response = await client.post("/api/v1/urban_functions", json=new_function)
-        urban_function_id = response.json()["urban_function_id"]
-        response = await client.delete(f"/api/v1/urban_functions/{urban_function_id}")
-    else:
-        response = await client.delete(f"/api/v1/urban_functions/{function_id_param}")
+    response = await client.delete(f"/api/v1/urban_functions/{function_id}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -358,6 +352,8 @@ async def test_delete_urban_function(
 )
 async def test_get_service_types_hierarchy(
     client: AsyncClient,
+    urban_function: dict[str, Any],
+    service_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     ids_param: str | None,
@@ -423,6 +419,7 @@ async def test_get_physical_object_types(
 async def test_get_social_groups(
     client: AsyncClient,
     service_type: dict[str, Any],
+    social_group: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     type_id_param: str | None,
@@ -454,6 +451,7 @@ async def test_get_social_groups(
 async def test_get_social_values(
     client: AsyncClient,
     service_type: dict[str, Any],
+    social_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     type_id_param: str,
@@ -468,6 +466,6 @@ async def test_get_social_values(
 
     # Assert
     if response.status_code == 200:
-        assert_response(response, expected_status, SocValueWithServiceTypes, error_message, result_type="list")
+        assert_response(response, expected_status, SocValue, error_message, result_type="list")
     else:
-        assert_response(response, expected_status, SocValueWithServiceTypes, error_message)
+        assert_response(response, expected_status, SocValue, error_message)

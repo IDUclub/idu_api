@@ -412,7 +412,7 @@ async def test_get_normatives_values_by_parent_id_from_db(mock_conn: MockConnect
         .select_from(
             territories_data.join(
                 territory_types_dict,
-                territory_types_dict.c.territory_type_id == territories_data.c.territory_id,
+                territory_types_dict.c.territory_type_id == territories_data.c.territory_type_id,
             )
         )
         .where(territories_data.c.parent_id == parent_id)

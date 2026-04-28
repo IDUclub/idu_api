@@ -27,7 +27,7 @@ async def hexagon(client, region) -> dict[str, Any]:
     )
 
     response = await client.post(
-        f"/v1territory/{region['territory_id']}/hexagons", json=[hexagon_post_req.model_dump()]
+        f"/api/v1/territory/{region['territory_id']}/hexagons", json=[hexagon_post_req.model_dump()]
     )
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."

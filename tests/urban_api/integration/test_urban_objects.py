@@ -66,7 +66,7 @@ async def test_get_urban_objects_by_physical_object_id(
     physical_object_id = object_id_param or physical_object["physical_object_id"]
 
     # Act
-    response = await client.get("/urban_objects_by_physical_object", params={"physical_object_id": physical_object_id})
+    response = await client.get("/api/v1/urban_objects_by_physical_object", params={"physical_object_id": physical_object_id})
 
     # Assert
     if response.status_code == 200:
@@ -98,7 +98,7 @@ async def test_get_urban_objects_by_object_geometry_id(
     object_geometry_id = object_id_param or object_geometry["object_geometry_id"]
 
     # Act
-    response = await client.get("/urban_objects_by_object_geometry", params={"object_geometry_id": object_geometry_id})
+    response = await client.get("/api/v1/urban_objects_by_object_geometry", params={"object_geometry_id": object_geometry_id})
 
     # Assert
     if response.status_code == 200:
@@ -188,6 +188,7 @@ async def test_delete_urban_object(
 )
 async def test_get_urban_objects_by_territory_id(
     client: AsyncClient,
+    urban_object: dict[str, Any],
     city: dict[str, Any],
     physical_object_type: dict[str, Any],
     service_type: dict[str, Any],

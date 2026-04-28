@@ -200,7 +200,7 @@ async def test_get_context_functional_zones(
     params = {"year": functional_zone["year"], "source": functional_zone["source"]}
 
     # Act
-    response = await client.get(f"/scenarios/{scenario_id}/context/functional_zones", headers=headers, params=params)
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/functional_zones", headers=headers, params=params)
     result = response.json()
 
     # Assert
@@ -265,7 +265,7 @@ async def test_add_scenario_functional_zones(
 
     # Act
     response = await client.post(
-        f"/scenarios/{scenario_id}/functional_zones", json=[new_functional_zone], headers=headers
+        f"/api/v1/scenarios/{scenario_id}/functional_zones", json=[new_functional_zone], headers=headers
     )
 
     # Assert
@@ -306,13 +306,13 @@ async def test_patch_scenario_functional_zone(
         regional_scenario["scenario_id"] if is_regional_param else scenario["scenario_id"]
     )
     functional_zone_id = scenario_functional_zone["functional_zone_id"]
-    new_functional_zone = scenario_functional_zone_patch_req.model_dump()
+    new_functional_zone = scenario_functional_zone_patch_req.model_dump(exclude_unset=True)
     new_functional_zone["functional_zone_type_id"] = scenario_functional_zone["functional_zone_type"]["id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
     response = await client.patch(
-        f"/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
+        f"/api/v1/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
         json=new_functional_zone,
         headers=headers,
     )
@@ -358,9 +358,8 @@ async def test_delete_functional_zones_by_scenario_id(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{client}/api/v1") as client:
-            response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     else:
         scenario_id = scenario_id_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}

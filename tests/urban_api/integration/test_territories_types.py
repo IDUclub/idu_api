@@ -50,6 +50,8 @@ async def test_add_territory_type(
     new_type["name"] = "new name"
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/territory_types", json=new_type)
     response = await client.post("/api/v1/territory_types", json=new_type)
 
     # Assert
@@ -93,6 +95,8 @@ async def test_add_target_city_type(
     new_type["name"] = "new name"
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/target_city_types", json=new_type)
     response = await client.post("/api/v1/target_city_types", json=new_type)
 
     # Assert

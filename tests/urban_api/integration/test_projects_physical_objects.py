@@ -7,18 +7,16 @@ from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
-    BuildingPost,
     OkResponse,
     PhysicalObject,
     PhysicalObjectPut,
     PhysicalObjectType,
     PhysicalObjectWithGeometryPost,
-    ScenarioBuildingPatch,
     ScenarioBuildingPost,
     ScenarioBuildingPut,
     ScenarioPhysicalObject,
     ScenarioPhysicalObjectWithGeometryAttributes,
-    ScenarioUrbanObject,
+    ScenarioUrbanObject, BuildingPut,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.utils import assert_response
@@ -158,7 +156,7 @@ async def test_get_physical_objects_with_geometry_by_scenario_id(
 
     # Act
     response = await client.get(
-        f"/scenarios/{scenario_id}/physical_objects_with_geometry", headers=headers, params=params
+        f"/api/v1/scenarios/{scenario_id}/physical_objects_with_geometry", headers=headers, params=params
     )
     result = response.json()
 
@@ -209,7 +207,7 @@ async def test_get_context_physical_objects(
         params["physical_object_function_id"] = physical_object_function["id"]
 
     # Act
-    response = await client.get(f"/scenarios/{scenario_id}/context/physical_objects", headers=headers, params=params)
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/physical_objects", headers=headers, params=params)
     result = response.json()
 
     # Assert
@@ -260,7 +258,7 @@ async def test_get_context_physical_objects_with_geometry(
 
     # Act
     response = await client.get(
-        f"/scenarios/{scenario_id}/context/physical_objects_with_geometry", headers=headers, params=params
+        f"/api/v1/scenarios/{scenario_id}/context/physical_objects_with_geometry", headers=headers, params=params
     )
     result = response.json()
 
@@ -307,7 +305,7 @@ async def test_add_physical_object_with_geometry(
 
     # Act
     response = await client.post(
-        f"/scenarios/{scenario_id}/physical_objects",
+        f"/api/v1/scenarios/{scenario_id}/physical_objects",
         json=new_object,
         headers=headers,
     )
@@ -347,16 +345,6 @@ async def test_put_scenario_physical_object(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     physical_object_id = (
         scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     )
@@ -366,8 +354,15 @@ async def test_put_scenario_physical_object(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
+    if expected_status == 409:
+        await client.put(
+            f"/api/v1/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+            json=new_object,
+            headers=headers,
+            params=params,
+        )
     response = await client.put(
-        f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+        f"/api/v1/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
         json=new_object,
         headers=headers,
         params=params,
@@ -408,16 +403,6 @@ async def test_patch_scenario_physical_object(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
     physical_object_id = (
         scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     )
@@ -427,8 +412,15 @@ async def test_patch_scenario_physical_object(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
+    if expected_status == 409:
+        await client.patch(
+            f"/api/v1/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+            json=new_object,
+            headers=headers,
+            params=params,
+        )
     response = await client.patch(
-        f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+        f"/api/v1/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
         json=new_object,
         headers=headers,
         params=params,
@@ -451,13 +443,9 @@ async def test_patch_scenario_physical_object(
 )
 async def test_delete_physical_object(
     client: AsyncClient,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
-    scenario_geometry: dict[str, Any],
     physical_object: dict[str, Any],
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -469,48 +457,16 @@ async def test_delete_physical_object(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-        scenario_id = response.json()["scenario_id"]
-    new_object = physical_object_with_geometry_post_req.model_dump()
-    new_object["physical_object_type_id"] = scenario_physical_object["physical_object_type"]["physical_object_type_id"]
-    new_object["territory_id"] = scenario_geometry["territory"]["id"]
-    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
+    pid = scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     params = {"is_scenario_object": is_scenario_param}
+    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    if expected_status == 200 and is_scenario_param:
-        response = await client.post(
-            f"scenarios/{scenario_id}/physical_objects",
-            json=new_object,
-            headers=headers,
-        )
-        physical_object_id = response.json()["physical_object"]["physical_object_id"]
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
-            headers=headers,
-            params=params,
-        )
-    elif not is_scenario_param:
-        physical_object_id = physical_object["physical_object_id"]
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
-            headers=headers,
-            params=params,
-        )
-    else:
-        response = await client.delete(
-            f"/scenarios/{scenario_id}/physical_objects/1",
-            headers=headers,
-            params=params,
-        )
+    response = await client.delete(
+        f"/api/v1/scenarios/{scenario_id}/physical_objects/{pid}",
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -531,11 +487,9 @@ async def test_delete_physical_object(
 async def test_add_scenario_building(
     client: AsyncClient,
     scenario_building_post_req: ScenarioBuildingPost,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
-    physical_object_type: dict[str, Any],
-    city: dict[str, Any],
+    physical_object: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -547,19 +501,15 @@ async def test_add_scenario_building(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    physical_object_id = scenario_physical_object["physical_object_id"]
-    if not is_scenario_param:
-        new_object = physical_object_with_geometry_post_req.model_dump()
-        new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
-        new_object["territory_id"] = city["territory_id"]
-        response = await client.post("/api/v1/physical_objects", json=new_object)
-        physical_object_id = response.json()["physical_object"]["physical_object_id"]
+    pid = scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     new_building = scenario_building_post_req.model_dump()
-    new_building["physical_object_id"] = physical_object_id
+    new_building["physical_object_id"] = pid
     new_building["is_scenario_object"] = is_scenario_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
+    if expected_status == 409:
+        await client.post(f"/api/v1/scenarios/{scenario_id}/buildings", json=new_building, headers=headers)
     response = await client.post(f"/api/v1/scenarios/{scenario_id}/buildings", json=new_building, headers=headers)
 
     # Assert
@@ -580,11 +530,9 @@ async def test_add_scenario_building(
 async def test_put_scenario_building(
     client: AsyncClient,
     scenario_building_put_req: ScenarioBuildingPut,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
-    physical_object_type: dict[str, Any],
-    city: dict[str, Any],
+    physical_object: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -596,15 +544,9 @@ async def test_put_scenario_building(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    physical_object_id = scenario_physical_object["physical_object_id"]
-    if not is_scenario_param:
-        new_object = physical_object_with_geometry_post_req.model_dump()
-        new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
-        new_object["territory_id"] = city["territory_id"]
-        response = await client.post("/api/v1/physical_objects", json=new_object)
-        physical_object_id = response.json()["physical_object"]["physical_object_id"]
+    pid = scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     new_building = scenario_building_put_req.model_dump()
-    new_building["physical_object_id"] = physical_object_id
+    new_building["physical_object_id"] = pid
     new_building["is_scenario_object"] = is_scenario_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
@@ -628,14 +570,11 @@ async def test_put_scenario_building(
 )
 async def test_patch_scenario_building(
     client: AsyncClient,
-    building_post_req: BuildingPost,
+    building_put_req: BuildingPut,
     scenario_building_put_req: ScenarioBuildingPut,
-    scenario_building_patch_req: ScenarioBuildingPatch,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
-    physical_object_type: dict[str, Any],
-    city: dict[str, Any],
+    physical_object: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -647,32 +586,27 @@ async def test_patch_scenario_building(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
+    pid = scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     if not is_scenario_param:
-        new_object = physical_object_with_geometry_post_req.model_dump()
-        new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
-        new_object["territory_id"] = city["territory_id"]
-        response = await client.post("/api/v1/physical_objects", json=new_object)
-        physical_object_id = response.json()["physical_object"]["physical_object_id"]
-        new_building = building_post_req.model_dump()
-        new_building["physical_object_id"] = physical_object_id
-        response = await client.post("/api/v1/buildings", json=new_building)
+        new_building = building_put_req.model_dump()
+        new_building["physical_object_id"] = pid
+        response = await client.put("/api/v1/buildings", json=new_building)
         building_id = response.json()["building"]["id"]
     else:
         new_building = scenario_building_put_req.model_dump()
-        new_building["physical_object_id"] = scenario_physical_object["physical_object_id"]
+        new_building["physical_object_id"] = pid
         new_building["is_scenario_object"] = is_scenario_param
         headers = {"Authorization": f"Bearer {superuser_token}"}
         response = await client.put(
-            f"/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
+            f"/api/v1/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
         )
         building_id = response.json()["building"]["id"]
-    new_building = scenario_building_patch_req.model_dump()
     params = {"is_scenario_object": is_scenario_param}
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
     response = await client.patch(
-        f"/scenarios/{scenario_id}/buildings/{building_id}",
+        f"/api/v1/scenarios/{scenario_id}/buildings/{building_id}",
         json=new_building,
         params=params,
         headers=headers,
@@ -695,13 +629,11 @@ async def test_patch_scenario_building(
 )
 async def test_delete_scenario_building(
     client: AsyncClient,
-    building_post_req: BuildingPost,
+    building_put_req: BuildingPut,
     scenario_building_put_req: ScenarioBuildingPut,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
-    physical_object_type: dict[str, Any],
-    city: dict[str, Any],
+    physical_object: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -713,23 +645,19 @@ async def test_delete_scenario_building(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
+    pid = scenario_physical_object["physical_object_id"] if is_scenario_param else physical_object["physical_object_id"]
     if not is_scenario_param:
-        new_object = physical_object_with_geometry_post_req.model_dump()
-        new_object["physical_object_type_id"] = physical_object_type["physical_object_type_id"]
-        new_object["territory_id"] = city["territory_id"]
-        response = await client.post("/api/v1/physical_objects", json=new_object)
-        physical_object_id = response.json()["physical_object"]["physical_object_id"]
-        new_building = building_post_req.model_dump()
-        new_building["physical_object_id"] = physical_object_id
+        new_building = building_put_req.model_dump()
+        new_building["physical_object_id"] = pid
         response = await client.post("/api/v1/buildings", json=new_building)
         building_id = response.json()["building"]["id"]
     else:
         new_building = scenario_building_put_req.model_dump()
-        new_building["physical_object_id"] = scenario_physical_object["physical_object_id"]
+        new_building["physical_object_id"] = pid
         new_building["is_scenario_object"] = is_scenario_param
         headers = {"Authorization": f"Bearer {superuser_token}"}
         response = await client.put(
-            f"/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
+            f"/api/v1/scenarios/{scenario['scenario_id']}/buildings", json=new_building, headers=headers
         )
         building_id = response.json()["building"]["id"]
     params = {"is_scenario_object": is_scenario_param}
@@ -737,7 +665,7 @@ async def test_delete_scenario_building(
 
     # Act
     response = await client.delete(
-        f"/scenarios/{scenario_id}/buildings/{building_id}",
+        f"/api/v1/scenarios/{scenario_id}/buildings/{building_id}",
         params=params,
         headers=headers,
     )

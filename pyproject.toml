@@ -1,6 +1,6 @@
 [project]
 name = "idu-api"
-version = "2.0.0a1"
+version = "2.0.0a2"
 description = "This is a Digital Territories Platform API in two versions to access and manipulate basic territories data."
 authors = [
     {name = "Babayev Ruslan",email = "rus.babaef@yandex.ru"}

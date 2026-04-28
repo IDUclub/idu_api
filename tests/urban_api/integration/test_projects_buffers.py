@@ -127,13 +127,10 @@ async def test_get_context_buffers(
 async def test_put_scenario_buffer(
     client: AsyncClient,
     scenario_buffer_put_req: ScenarioBufferPut,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_urban_object: dict[str, Any],
     buffer: dict[str, Any],
     buffer_type: dict[str, Any],
-    default_buffer_value: dict[str, Any],
-    city: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -164,8 +161,14 @@ async def test_put_scenario_buffer(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
+    if expected_status == 409:
+        await client.put(
+            f"/api/v1/scenarios/{scenario_id}/buffers",
+            json=new_buffer,
+            headers=headers,
+        )
     response = await client.put(
-        f"/scenarios/{scenario_id}/buffers",
+        f"/api/v1/scenarios/{scenario_id}/buffers",
         json=new_buffer,
         headers=headers,
     )
@@ -193,7 +196,6 @@ async def test_delete_scenario_buffer(
     scenario: dict[str, Any],
     default_buffer_value: dict[str, Any],
     city: dict[str, Any],
-    buffer_type: dict[str, Any],
     buffer: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -208,13 +210,13 @@ async def test_delete_scenario_buffer(
     scenario_id = scenario_id_param or scenario["scenario_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
     new_buffer = scenario_buffer_delete_req.model_dump()
-    new_buffer["buffer_type_id"] = buffer_type["buffer_type_id"]
+    new_buffer["buffer_type_id"] = buffer["buffer_type"]["id"]
     if is_scenario_param:
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = default_buffer_value["physical_object_type"]["id"]
         new_object["territory_id"] = city["territory_id"]
         response = await client.post(
-            f"/scenarios/{scenario['scenario_id']}/physical_objects",
+            f"/api/v1/scenarios/{scenario['scenario_id']}/physical_objects",
             headers={"Authorization": f"Bearer {superuser_token}"},
             json=new_object,
         )
@@ -225,19 +227,20 @@ async def test_delete_scenario_buffer(
         new_buffer["is_scenario_geometry"] = True
         new_buffer["service_id"] = None
         new_buffer["is_scenario_service"] = True
-    elif expected_status == 409:
-        new_buffer["physical_object_id"] = buffer["urban_object"]["physical_object"]["id"]
-        new_buffer["is_scenario_physical_object"] = False
-        new_buffer["object_geometry_id"] = buffer["urban_object"]["object_geometry"]["id"]
-        new_buffer["is_scenario_geometry"] = False
-        new_buffer["service_id"] = buffer["urban_object"]["service"]["id"]
-        new_buffer["is_scenario_service"] = False
     else:
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = default_buffer_value["physical_object_type"]["id"]
         new_object["territory_id"] = city["territory_id"]
         response = await client.post("/api/v1/physical_objects", json=new_object)
         result = response.json()
+        if expected_status == 409:
+            physical_object_id = result["physical_object"]["physical_object_id"]
+            await client.patch(
+                f"/api/v1/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+                headers={"Authorization": f"Bearer {superuser_token}"},
+                params={"is_scenario_object": False},
+                json={"name": "new name"},
+            )
         new_buffer["physical_object_id"] = result["physical_object"]["physical_object_id"]
         new_buffer["is_scenario_physical_object"] = False
         new_buffer["object_geometry_id"] = result["object_geometry"]["object_geometry_id"]
@@ -248,7 +251,7 @@ async def test_delete_scenario_buffer(
     # Act
     response = await client.request(
         "DELETE",
-        f"/scenarios/{scenario_id}/buffers",
+        f"/api/v1/scenarios/{scenario_id}/buffers",
         headers=headers,
         json=new_buffer,
     )

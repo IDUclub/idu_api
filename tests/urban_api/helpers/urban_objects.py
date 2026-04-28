@@ -102,7 +102,7 @@ async def scenario_urban_object(
     )
 
     response = await client.post(
-        f"/scenarios/{scenario_id}/physical_objects",
+        f"/api/v1/scenarios/{scenario_id}/physical_objects",
         json=physical_object_with_geometry_post_req.model_dump(),
         headers=headers,
     )
@@ -122,7 +122,7 @@ async def scenario_urban_object(
     )
 
     response = await client.post(
-        f"/scenarios/{scenario_id}/services",
+        f"/api/v1/scenarios/{scenario_id}/services",
         json=service_post_req.model_dump(),
         headers=headers,
     )

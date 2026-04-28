@@ -61,6 +61,8 @@ async def test_add_functional_zone_type(
     new_zone_type["name"] = "new name"
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/functional_zones_types", json=new_zone_type)
     response = await client.post("/api/v1/functional_zones_types", json=new_zone_type)
 
     # Assert
@@ -134,6 +136,8 @@ async def test_add_profiles_reclamation_data(
     new_profiles_reclamation["territory_id"] = territory_id_param or region["territory_id"]
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/profiles_reclamation", json=new_profiles_reclamation)
     response = await client.post("/api/v1/profiles_reclamation", json=new_profiles_reclamation)
 
     # Assert
@@ -176,33 +180,31 @@ async def test_put_profiles_reclamation_data(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "expected_status, error_message, type_id_param, territory_id_param",
+    "expected_status, error_message, type_id_param",
     [
-        (200, None, None, None),
-        (404, "не найден", 1e9, 1e9),
+        (200, None, None),
+        (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
 async def test_delete_profiles_reclamation_data(
     client,
-    functional_zone_type: dict[str, Any],
-    region: dict[str, Any],
+    profiles_reclamation_data: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     type_id_param: int | None,
-    territory_id_param: int | None,
 ):
     """Test DELETE /profiles_reclamation method."""
 
     # Arrange
     json_data = {
-        "source_profile_id": type_id_param or functional_zone_type["functional_zone_type_id"],
-        "target_profile_id": type_id_param or functional_zone_type["functional_zone_type_id"],
-        "territory_id": territory_id_param or region["territory_id"],
+        "source_profile_id": type_id_param or profiles_reclamation_data["source_profile_id"],
+        "target_profile_id": type_id_param or profiles_reclamation_data["target_profile_id"],
+        "territory_id": None,
     }
 
     # Act
-    response = await client.request("DELETE", "/profiles_reclamation", json=json_data)
+    response = await client.request("DELETE", "/api/v1/profiles_reclamation", json=json_data)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

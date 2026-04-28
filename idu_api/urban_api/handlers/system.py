@@ -15,7 +15,7 @@ from starlette import status
 
 from idu_api.common.exceptions import IduApiError
 from idu_api.urban_api.logic.system import SystemService
-from idu_api.urban_api.schemas import PingResponse
+from idu_api.urban_api.schemas import OkResponse, PingResponse
 from idu_api.urban_api.schemas.geometries import AllPossibleGeometry
 
 from ..schemas.geojson import GeoJSONResponse
@@ -35,10 +35,24 @@ async def redirect_to_swagger_docs():
     status_code=status.HTTP_200_OK,
 )
 async def health_check():
-    """
-    Return health check response.
-    """
+    """Return health check response."""
     return PingResponse()
+
+
+@system_router.get(
+    "/health_check/db",
+    response_model=OkResponse,
+    status_code=status.HTTP_200_OK,
+)
+async def health_check_db(request: Request):
+    """Return health check database response."""
+    system_service: SystemService = request.state.system_service
+
+    health = await system_service.health_check_db()
+    if not health:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="База данных недоступна")
+
+    return OkResponse()
 
 
 @system_router.post("/debug/raise_error")

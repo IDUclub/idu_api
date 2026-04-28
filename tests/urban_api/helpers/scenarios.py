@@ -29,11 +29,11 @@ __all__ = [
 
 
 @pytest_asyncio.fixture(scope="function")
-async def base_regional_scenario(database, regional_project, client, superuser_token) -> dict[str, Any]:
+async def base_regional_scenario(config, regional_project, client, superuser_token) -> dict[str, Any]:
     """Returns created base regional scenario."""
     logger = structlog.getLogger("test")
     connection_manager: PostgresConnectionManager = PostgresConnectionManager(
-        master=database.master,
+        master=config.db.master,
         replicas=[],
         logger=logger,
         application_name="duty_fix_geometry",
@@ -92,13 +92,13 @@ async def regional_scenario(client, regional_project, base_regional_scenario, su
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
     response = await client.post(
-        f"/scenarios/{base_regional_scenario['scenario_id']}",
+        f"/api/v1/scenarios/{base_regional_scenario['scenario_id']}",
         json=scenario_post_req.model_dump(),
         headers=headers,
     )
     scenario_id = response.json()["scenario_id"]
-    client.post(
-        f"/scenarios/{scenario_id}/physical_objects",
+    await client.post(
+        f"/api/v1/scenarios/{scenario_id}/physical_objects",
         json=physical_object_post_req.model_dump(),
         headers=headers,
     )
@@ -118,7 +118,7 @@ async def scenario(client, project, functional_zone_type, superuser_token) -> di
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
     response = await client.post(
-        f"/scenarios/{project['base_scenario']['id']}",
+        f"/api/v1/scenarios/{project['base_scenario']['id']}",
         json=scenario_post_req.model_dump(),
         headers=headers,
     )

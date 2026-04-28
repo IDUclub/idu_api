@@ -117,7 +117,7 @@ async def scenario_buffer(client, buffer_type, scenario, scenario_urban_object, 
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
     response = await client.put(
-        f"/scenarios/{scenario_id}/buffers",
+        f"/api/v1/scenarios/{scenario_id}/buffers",
         json=scenario_buffer_post_req.model_dump(),
         headers=headers,
     )

@@ -29,6 +29,12 @@ Geom = (
 )
 
 
+async def health_check_database(conn: AsyncConnection) -> bool:
+    """Check database health by SELECT 1."""
+    result = await conn.execute(select(1))
+    return result.scalar() == 1
+
+
 async def fix_geometry_by_postgis(conn: AsyncConnection, geom: Geom, logger: structlog.stdlib.BoundLogger) -> Geom:
     """Fix geometry by PostGIS methods using binary (WKB/EWKB) representation for efficiency."""
 

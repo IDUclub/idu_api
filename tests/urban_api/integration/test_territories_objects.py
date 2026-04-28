@@ -118,7 +118,7 @@ async def test_patch_territory(
     """Test PATCH /territory method."""
 
     # Arrange
-    new_territory = territory_patch_req.model_dump()
+    new_territory = territory_patch_req.model_dump(exclude_unset=True)
     new_territory["parent_id"] = country["territory_id"]
     new_territory["territory_type_id"] = territory_type["territory_type_id"]
     new_territory["target_city_type_id"] = target_city_type["target_city_type_id"]
@@ -409,7 +409,7 @@ async def test_intersecting_territories(
 
     # Act
     response = await client.post(
-        f"/territory/{territory_id}/intersecting_territories", json=geometry_param.model_dump()
+        f"/api/v1/territory/{territory_id}/intersecting_territories", json=geometry_param.model_dump()
     )
     result = response.json()
 

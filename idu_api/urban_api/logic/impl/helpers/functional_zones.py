@@ -340,6 +340,7 @@ async def patch_functional_zone_to_db(
         raise EntityNotFoundById(functional_zone_id, "functional zone")
 
     values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True)
+
     statement = (
         update(functional_zones_data)
         .where(functional_zones_data.c.functional_zone_id == functional_zone_id)

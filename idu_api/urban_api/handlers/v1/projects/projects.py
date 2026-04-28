@@ -10,11 +10,11 @@ from otteroad import KafkaProducerClient
 from starlette import status
 from structlog.stdlib import BoundLogger
 
-from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep, project_storage_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
-from idu_api.urban_api.minio.services import ProjectStorageManager, get_project_storage_manager
+from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
     MinioFile,
     MinioImageURL,
@@ -353,7 +353,7 @@ async def add_project(
     project: ProjectPost,
     user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
 ) -> Project:
     """
     ## Create a new project with its territory and base scenario.
@@ -472,7 +472,7 @@ async def patch_project(
 async def delete_project(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
@@ -520,7 +520,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     ordering: Ordering = Query(
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     user: UserDTO = Depends(auth_dep.from_request_optional),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> Page[MinioImageURL]:
@@ -604,7 +604,7 @@ async def upload_project_main_image(
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -658,7 +658,7 @@ async def upload_project_gallery_image(
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -707,7 +707,7 @@ async def set_project_main_image(
     project_id: int = Path(..., description="project identifier", gt=0),
     image_id: str = Path(..., description="image identifier"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
@@ -746,7 +746,7 @@ async def get_project_gallery_images_urls(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[str]:
     """
@@ -785,7 +785,7 @@ async def delete_project_gallery_image(
     project_id: int = Path(..., description="project identifier", gt=0),
     image_id: str = Path(..., description="image identifier"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
@@ -822,7 +822,7 @@ async def get_full_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
     """
@@ -863,7 +863,7 @@ async def get_preview_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
     """
@@ -905,7 +905,7 @@ async def get_full_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -947,7 +947,7 @@ async def get_preview_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -989,7 +989,7 @@ async def get_project_logo_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -1028,7 +1028,7 @@ async def upload_project_logo(
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -1074,7 +1074,7 @@ async def delete_project_logo(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
@@ -1113,7 +1113,7 @@ async def get_project_phase_documents_urls(
     project_id: int = Path(..., description="project identifier", gt=0),
     phase: ProjectPhase = Query(..., description="phase name"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[MinioFile]:
     """
@@ -1154,7 +1154,7 @@ async def upload_phase_document(
     phase: ProjectPhase = Query(..., description="phase name"),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> MinioFile:
     """
@@ -1200,7 +1200,7 @@ async def rename_phase_document(
     old_key: str = Query(..., description="file name (with extension)"),
     new_key: str = Query(..., description="file name (with extension)"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> MinioFile:
     """
@@ -1242,7 +1242,7 @@ async def delete_project_phase_document(
     phase: ProjectPhase = Query(..., description="phase name"),
     filename: str = Query(..., description="file name (with extension)"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """

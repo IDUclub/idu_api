@@ -186,6 +186,8 @@ async def test_add_building(
     new_object["physical_object_id"] = object_id_param or physical_object["physical_object_id"]
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/buildings", json=new_object)
     response = await client.post("/api/v1/buildings", json=new_object)
     result = response.json()
 
@@ -254,6 +256,7 @@ async def test_patch_building(
     # Arrange
     new_object = building_put_req.model_dump()
     new_object["physical_object_id"] = physical_object["physical_object_id"]
+    await client.put("/api/v1/buildings", json=new_object)
 
     # Act
     if building_id_param is None:
@@ -278,6 +281,7 @@ async def test_patch_building(
 )
 async def test_delete_building(
     client: AsyncClient,
+    building_put_req: BuildingPut,
     physical_object: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -286,11 +290,13 @@ async def test_delete_building(
     """Test DELETE /buildings method."""
 
     # Arrange
-    physical_object_id = physical_object["physical_object_id"]
+    new_object = building_put_req.model_dump()
+    new_object["physical_object_id"] = physical_object["physical_object_id"]
+    await client.put("/api/v1/buildings", json=new_object)
 
     # Act
     if building_id_param is None:
-        response = await client.get(f"/api/v1/physical_object/{physical_object_id}")
+        response = await client.get(f"/api/v1/physical_object/{new_object['physical_object_id']}")
         building_id = response.json()["building"]["id"]
         response = await client.delete(f"/api/v1/buildings/{building_id}")
     else:

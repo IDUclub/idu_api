@@ -12,6 +12,10 @@ class SystemService(Protocol):
     """Service for system tasks."""
 
     @abc.abstractmethod
+    async def health_check_db(self):
+        """Return health check database response."""
+
+    @abc.abstractmethod
     async def fix_geometry(self, geom: Geom) -> Geom:
         """Returns fixed shapely geometry."""
 

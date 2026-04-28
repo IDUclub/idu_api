@@ -238,7 +238,7 @@ async def add_functional_zone(
     response_model=FunctionalZone,
     status_code=status.HTTP_200_OK,
 )
-async def patch_functional_zone_for_territory(
+async def patch_functional_zone(
     request: Request,
     functional_zone: FunctionalZonePatch,
     functional_zone_id: int = Path(..., description="functional zone identifier", gt=0),

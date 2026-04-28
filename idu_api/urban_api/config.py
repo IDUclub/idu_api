@@ -55,9 +55,9 @@ class AuthConfig:
 
     verify: bool  # проверять ли токен вообще
 
-    server_url: str  # https://.../realms/<realm>
+    server_url: str | None = None  # https://.../realms/<realm>
 
-    client_id: str
+    client_id: str | None = None
 
     verify_aud: bool = True
     valid_audiences: list[str] = field(default_factory=list)
@@ -70,7 +70,9 @@ class AuthConfig:
 
     def __post_init__(self):
         """Ensure server URL has a valid scheme."""
-        if not self.server_url.startswith("http"):
+        if self.verify and (not self.server_url or not self.client_id):
+            raise ValueError("Server URL and Client ID are required, if verify is set to True.")
+        elif self.verify and not self.server_url.startswith("http"):
             self.server_url = "http://" + self.server_url
 
     @property
@@ -97,9 +99,9 @@ class FileServerConfig:
     projects_bucket: str
     access_key: str
     secret_key: SecretStr
-    region_name: str
-    connect_timeout: int
-    read_timeout: int
+    region_name: str = "us-west-rack-2"
+    connect_timeout: int = 5
+    read_timeout: int = 20
 
     def __post_init__(self):
         """Normalize URL and wrap secret key."""
@@ -116,7 +118,7 @@ class BrokerConfig:
     bootstrap_servers: str
     schema_registry_url: str
     enable_idempotence: bool
-    max_in_flight: int
+    max_in_flight: int = 5
 
 
 @dataclass

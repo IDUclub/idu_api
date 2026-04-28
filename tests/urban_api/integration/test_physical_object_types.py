@@ -76,6 +76,8 @@ async def test_add_physical_object_type(
     )
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/physical_object_types", json=new_type)
     response = await client.post("/api/v1/physical_object_types", json=new_type)
 
     # Assert
@@ -84,32 +86,34 @@ async def test_add_physical_object_type(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "expected_status, error_message, type_name_param, type_id_param",
+    "expected_status, error_message, type_id_param",
     [
-        (200, None, "updated name", None),
-        (404, "не найден", "updated name", 1e9),
-        (409, "уже существует", "new name", None),
+        (200, None, None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_physical_object_type(
     client: AsyncClient,
     physical_object_type_patch_req: PhysicalObjectTypePatch,
-    physical_object_type: dict[str, Any],
+    physical_object_function: dict[str, Any],
     expected_status: int,
     error_message: str | None,
-    type_name_param: str,
     type_id_param: int | None,
 ):
     """Test PATCH /physical_object_types method."""
 
     # Arrange
     new_type = physical_object_type_patch_req.model_dump()
-    new_type["name"] = type_name_param
-    new_type["physical_object_function_id"] = physical_object_type["physical_object_function"]["id"]
-    physical_object_type_id = type_id_param or physical_object_type["physical_object_type_id"]
+    new_type["physical_object_function_id"] = physical_object_function["physical_object_function_id"]
+    response = await client.post("/api/v1/physical_object_types", json=new_type)
+    physical_object_type_id = type_id_param or response.json().get("physical_object_type_id")
 
     # Act
+    if expected_status == 409:
+        new_type["name"] = "conflict type"
+        await client.post("/api/v1/physical_object_types", json=new_type)
     response = await client.patch(f"/api/v1/physical_object_types/{physical_object_type_id}", json=new_type)
 
     # Assert
@@ -127,8 +131,7 @@ async def test_patch_physical_object_type(
 )
 async def test_delete_physical_object_type(
     client: AsyncClient,
-    physical_object_type_post_req: PhysicalObjectTypePost,
-    physical_object_function: dict[str, Any],
+    physical_object_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     type_id_param: int | None,
@@ -136,17 +139,10 @@ async def test_delete_physical_object_type(
     """Test DELETE /physical_object_types method."""
 
     # Arrange
-    new_type = physical_object_type_post_req.model_dump()
-    new_type["name"] = "type for deletion"
-    new_type["physical_object_function_id"] = physical_object_function["physical_object_function_id"]
+    type_id = type_id_param or physical_object_type["physical_object_type_id"]
 
     # Act
-    if type_id_param is None:
-        response = await client.post("/api/v1/physical_object_types", json=new_type)
-        physical_object_type_id = response.json()["physical_object_type_id"]
-        response = await client.delete(f"/api/v1/physical_object_types/{physical_object_type_id}")
-    else:
-        response = await client.delete(f"/api/v1/physical_object_types/{type_id_param}")
+    response = await client.delete(f"/api/v1/physical_object_types/{type_id}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -214,6 +210,8 @@ async def test_add_physical_object_function(
     new_function["parent_id"] = parent_id_param
 
     # Act
+    if expected_status == 409:
+        await client.post("/api/v1/physical_object_functions", json=new_function)
     response = await client.post("/api/v1/physical_object_functions", json=new_function)
 
     # Assert
@@ -252,32 +250,33 @@ async def test_put_physical_object_function(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    "expected_status, error_message, function_name_param, function_id_param",
+    "expected_status, error_message, function_id_param",
     [
-        (200, None, "updated name", None),
-        (404, "не найден", "updated name", 1e9),
-        (409, "уже существует", "new name", None),
+        (200, None, None),
+        (404, "не найден", 1e9),
+        (409, "уже существует", None),
     ],
     ids=["success", "not_found", "conflict"],
 )
 async def test_patch_physical_object_function(
     client: AsyncClient,
     physical_object_function_put_req: PhysicalObjectFunctionPut,
-    physical_object_function: dict[str, Any],
     expected_status: int,
     error_message: str | None,
-    function_name_param: str | None,
     function_id_param: int | None,
 ):
     """Test PATCH /physical_object_functions method."""
 
     # Arrange
     new_function = physical_object_function_put_req.model_dump()
-    new_function["name"] = function_name_param
     new_function["parent_id"] = None
-    physical_object_function_id = function_id_param or physical_object_function["physical_object_function_id"]
+    response = await client.post("/api/v1/physical_object_functions", json=new_function)
+    physical_object_function_id = function_id_param or response.json().get("physical_object_function_id")
 
     # Act
+    if expected_status == 409:
+        new_function["name"] = "conflict function"
+        await client.post("/api/v1/physical_object_functions", json=new_function)
     response = await client.patch(f"/api/v1/physical_object_functions/{physical_object_function_id}", json=new_function)
 
     # Assert
@@ -295,7 +294,7 @@ async def test_patch_physical_object_function(
 )
 async def test_delete_physical_object_function(
     client: AsyncClient,
-    physical_object_function_post_req: PhysicalObjectFunctionPost,
+    physical_object_function: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     function_id_param: int | None,
@@ -303,17 +302,10 @@ async def test_delete_physical_object_function(
     """Test DELETE /physical_object_functions method."""
 
     # Arrange
-    new_function = physical_object_function_post_req.model_dump()
-    new_function["name"] = "function for deletion"
-    new_function["parent_id"] = None
+    function_id = function_id_param or physical_object_function["physical_object_function_id"]
 
     # Act
-    if function_id_param is None:
-        response = await client.post("/api/v1/physical_object_functions", json=new_function)
-        physical_object_function_id = response.json()["physical_object_function_id"]
-        response = await client.delete(f"/api/v1/physical_object_functions/{physical_object_function_id}")
-    else:
-        response = await client.delete(f"/api/v1/physical_object_functions/{function_id_param}")
+    response = await client.delete(f"/api/v1/physical_object_functions/{function_id}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -331,6 +323,8 @@ async def test_delete_physical_object_function(
 )
 async def test_get_physical_object_types_hierarchy(
     client: AsyncClient,
+    physical_object_function: dict[str, Any],
+    physical_object_type: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     ids_param: str | None,

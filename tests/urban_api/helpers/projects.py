@@ -1,5 +1,5 @@
 """All fixtures for projects tests are defined here."""
-
+import asyncio
 import io
 from datetime import date
 from typing import Any
@@ -73,6 +73,7 @@ async def project(
     )
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
+    await asyncio.sleep(5)
     response = await client.post("/api/v1/projects", json=project_post_req.model_dump(), headers=headers, timeout=10000)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}.\n{response.json()}"

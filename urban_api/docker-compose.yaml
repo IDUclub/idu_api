@@ -3,7 +3,9 @@ name: urban-api
 services:
   database:
     container_name: ${POSTGRES_CONTAINER_NAME:-urban_db}
-    image: postgis/postgis:16-3.4
+    build:
+      context: .
+      dockerfile: postgis.Dockerfile
     restart: on-failure
     env_file:
       - ./db.env

@@ -49,13 +49,15 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                     url_attributes.URL_QUERY: str(request.query_params),
                     "request_client": request.client.host,
                     "request_id": request_id,
-                    "user": user.id if user is not None else "",
+                    "azp": user.azp if user is not None else "",
+                    "user": user.username if user is not None else "",
                 }
             )
 
             await logger.ainfo(
                 "http begin",
                 client=request.client.host,
+                azp=user.azp if user is not None else "unknown",
                 path_params=request.path_params,
                 method=request.method,
                 url=str(request.url),
