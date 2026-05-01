@@ -49,13 +49,15 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
                     url_attributes.URL_QUERY: str(request.query_params),
                     "request_client": request.client.host,
                     "request_id": request_id,
-                    "user": user.id if user is not None else "",
+                    "azp": user.azp if user is not None else "",
+                    "user": user.username if user is not None else "",
                 }
             )
 
             await logger.ainfo(
                 "http begin",
                 client=request.client.host,
+                azp=user.azp if user is not None else "unknown",
                 path_params=request.path_params,
                 method=request.method,
                 url=str(request.url),
@@ -92,6 +94,7 @@ class ObservabilityMiddleware(BaseHTTPMiddleware):  # pylint: disable=too-few-pu
 
 
 def _try_get_parent_span_id(request: Request) -> None:
+    """Try to restore tracing context from incoming request headers."""
     trace_id_str = request.headers.get("X-Trace-Id")
     span_id_str = request.headers.get("X-Span-Id")
 

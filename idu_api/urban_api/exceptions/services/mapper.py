@@ -9,10 +9,12 @@ from . import auth, external, minio
 
 
 def _get_response(status_code: int, error: str, detail: str) -> JSONResponse:
+    """Create a JSON HTTP error response with a standard structure."""
     return JSONResponse({"error": error, "detail": detail}, status_code=status_code)
 
 
 def register_exceptions(mapper: ExceptionMapper) -> None:
+    """Register authentication, external service, and storage-related exceptions."""
     mapper.register_simple(auth.AuthTokenExpiredError, status.HTTP_403_FORBIDDEN, "Срок действия токена истёк.")
     mapper.register_simple(auth.JWTDecodeError, status.HTTP_403_FORBIDDEN, "Ошибка декодирования JWT.")
     mapper.register_simple(auth.InvalidTokenSignature, status.HTTP_403_FORBIDDEN, "Недопустимая подпись токена.")

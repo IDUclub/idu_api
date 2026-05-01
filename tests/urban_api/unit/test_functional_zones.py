@@ -22,7 +22,6 @@ from idu_api.urban_api.dto import (
 )
 from idu_api.urban_api.exceptions.logic.common import (
     EntitiesNotFoundByIds,
-    EntityAlreadyExists,
     EntityNotFoundById,
     EntityNotFoundByParams,
     TooManyObjectsError,
@@ -40,7 +39,6 @@ from idu_api.urban_api.logic.impl.helpers.functional_zones import (
     get_profiles_reclamation_data_by_id_from_db,
     get_profiles_reclamation_data_matrix_from_db,
     patch_functional_zone_to_db,
-    put_functional_zone_to_db,
     put_profiles_reclamation_data_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT, SRID
@@ -48,7 +46,6 @@ from idu_api.urban_api.schemas import (
     FunctionalZone,
     FunctionalZonePatch,
     FunctionalZonePost,
-    FunctionalZonePut,
     FunctionalZoneType,
     FunctionalZoneTypePost,
     ProfilesReclamationData,
@@ -395,37 +392,6 @@ async def test_add_functional_zone_to_db(mock_conn: MockConnection, functional_z
 
     # Act
     result = await add_functional_zone_to_db(mock_conn, functional_zone_post_req)
-
-    # Assert
-    assert isinstance(result, FunctionalZoneDTO), "Result should be a FunctionalZoneDTO."
-    assert isinstance(FunctionalZone.from_dto(result), FunctionalZone), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement))
-    mock_conn.commit_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_put_functional_zone_to_db(mock_conn: MockConnection, functional_zone_put_req: FunctionalZonePut):
-    """Test the put_functional_zone_to_db function."""
-
-    # Arrange
-    functional_zone_id = 1
-    statement = (
-        update(functional_zones_data)
-        .where(functional_zones_data.c.functional_zone_id == functional_zone_id)
-        .values(
-            territory_id=functional_zone_put_req.territory_id,
-            functional_zone_type_id=functional_zone_put_req.functional_zone_type_id,
-            name=functional_zone_put_req.name,
-            geometry=ST_GeomFromWKB(functional_zone_put_req.geometry.as_shapely_geometry().wkb, text(str(SRID))),
-            year=functional_zone_put_req.year,
-            source=functional_zone_put_req.source,
-            properties=functional_zone_put_req.properties,
-            updated_at=datetime.now(timezone.utc),
-        )
-    )
-
-    # Act
-    result = await put_functional_zone_to_db(mock_conn, functional_zone_id, functional_zone_put_req)
 
     # Assert
     assert isinstance(result, FunctionalZoneDTO), "Result should be a FunctionalZoneDTO."

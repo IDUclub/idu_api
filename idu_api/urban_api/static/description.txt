@@ -1,0 +1,11 @@
+Urban API provides access to a comprehensive dataset of urban and territorial information across the Russian Federation.
+
+The API enables clients to retrieve, analyze, and manage data related to administrative units, physical objects, infrastructure, functional zones, and spatial geometries. In addition to baseline territorial data, it supports working with urban development scenarios, including renovation and land reclamation processes.
+
+Designed for integration with analytical systems and decision-support tools, the API allows users to:
+- explore hierarchical territorial structures (regions, districts, and cities),
+- access detailed attributes of physical and infrastructural objects,
+- work with geospatial data and object geometries,
+- manage and evaluate redevelopment scenarios and planning alternatives.
+
+This API is a core component of the Renovation Platform named "<a href='https://prostor.idu.actcognitive.org' target='_blank' rel='noopener noreferrer'>Простор</a>", aimed at supporting data-driven urban planning and territorial management at scale.

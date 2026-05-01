@@ -28,6 +28,7 @@ class ProfilesReclamationData(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ProfilesReclamationDataDTO) -> "ProfilesReclamationData":
+        """Construct from DTO."""
         return cls(
             profile_reclamation_id=dto.profile_reclamation_id,
             source_profile_id=dto.source_profile_id,
@@ -120,6 +121,7 @@ class ProfilesReclamationDataMatrix(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ProfilesReclamationDataMatrixDTO) -> "ProfilesReclamationDataMatrix":
+        """Construct from DTO."""
         return cls(
             labels=dto.labels,
             technical_price=dto.technical_price,

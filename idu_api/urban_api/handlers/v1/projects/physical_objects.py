@@ -1,10 +1,8 @@
 """Physical objects projects-related endpoints are defined here."""
 
-from fastapi import Depends, HTTPException, Path, Query, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, HTTPException, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from pydantic import conlist
 from starlette import status
 
 from idu_api.urban_api.dependencies import auth_dep
@@ -318,7 +316,6 @@ async def get_context_physical_objects_with_geometry(
     "/scenarios/{scenario_id}/physical_objects",
     response_model=ScenarioUrbanObject,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def add_physical_object_with_geometry(
     request: Request,
@@ -354,61 +351,10 @@ async def add_physical_object_with_geometry(
     return ScenarioUrbanObject.from_dto(urban_object)
 
 
-@projects_router.post(
-    "/scenarios/{scenario_id}/all_physical_objects",
-    response_model=list[ScenarioUrbanObject],
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
-)
-async def update_physical_objects_by_function_id(
-    request: Request,
-    physical_object: conlist(PhysicalObjectWithGeometryPost, min_length=1),
-    scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    physical_object_function_id: int = Query(..., description="physical object function identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
-) -> list[ScenarioUrbanObject]:
-    """
-    ## Update physical objects by function identifier for a given scenario.
-
-    **NOTE:** This operation deletes all physical objects with the specified function identifier
-    for a given scenario and uploads new objects with the same function.
-
-    ### Parameters:
-    - **scenario_id** (int, Path): Unique identifier of the scenario.
-    - **physical_object_function_id** (int, Query): Unique identifier of the physical object function.
-    - **physical_object** (list[PhysicalObjectWithGeometryPost], Body): List of physical objects to be added.
-
-    ### Returns:
-    - **list[ScenarioUrbanObject]**: A list of updated urban objects (physical objects + geometry + service).
-
-    ### Errors:
-    - **400 Bad Request**: If a list of physical objects contains physical objects with another function.
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario or physical object function (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    try:
-        urban_objects = await user_project_service.update_physical_objects_by_function_id(
-            physical_object,
-            scenario_id,
-            user,
-            physical_object_function_id,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
-
-    return [ScenarioUrbanObject.from_dto(urban_object) for urban_object in urban_objects]
-
-
 @projects_router.put(
     "/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
     response_model=ScenarioPhysicalObject,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def put_physical_object(
     request: Request,
@@ -456,7 +402,6 @@ async def put_physical_object(
     "/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
     response_model=ScenarioPhysicalObject,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_physical_object(
     request: Request,
@@ -504,7 +449,6 @@ async def patch_physical_object(
     "/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_physical_object(
     request: Request,

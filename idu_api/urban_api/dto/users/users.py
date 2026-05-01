@@ -8,7 +8,10 @@ class UserDTO:
     """User data transfer object"""
 
     id: str
+    username: str
+    roles: list[str]
     is_superuser: bool
+    azp: str
 
     def __str__(self) -> str:
         return self.id

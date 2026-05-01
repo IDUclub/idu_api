@@ -1,6 +1,6 @@
 """Object geometries data table is defined here."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from geoalchemy2.types import Geometry
 from sqlalchemy import TIMESTAMP, Column, ForeignKey, Integer, Sequence, String, Table, func

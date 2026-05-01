@@ -32,9 +32,7 @@ class MeasurementUnit(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: MeasurementUnitDTO) -> "MeasurementUnit":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(measurement_unit_id=dto.measurement_unit_id, name=dto.name)
 
 
@@ -53,6 +51,7 @@ class IndicatorsGroup(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: IndicatorsGroupDTO) -> "IndicatorsGroup":
+        """Construct from DTO."""
         return cls(
             indicators_group_id=dto.indicators_group_id,
             name=dto.name,
@@ -111,9 +110,7 @@ class Indicator(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: IndicatorDTO) -> "Indicator":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             indicator_id=dto.indicator_id,
             name_full=dto.name_full,
@@ -238,6 +235,7 @@ class IndicatorValue(BaseModel):
     @field_validator("date_type", mode="before")
     @staticmethod
     def date_type_to_string(date_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(date_type, Enum):
             return date_type.value
         return date_type
@@ -245,15 +243,14 @@ class IndicatorValue(BaseModel):
     @field_validator("value_type", mode="before")
     @staticmethod
     def value_type_to_string(value_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(value_type, Enum):
             return value_type.value
         return value_type
 
     @classmethod
     def from_dto(cls, dto: IndicatorValueDTO) -> "IndicatorValue":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             indicator_value_id=dto.indicator_value_id,
             indicator=ShortIndicatorInfo(
@@ -290,9 +287,7 @@ class BinnedIndicatorValue(IndicatorValue):
 
     @classmethod
     def from_dto(cls, dto: BinnedIndicatorValueDTO) -> "BinnedIndicatorValue":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             indicator_value_id=dto.indicator_value_id,
             indicator=ShortIndicatorInfo(
@@ -353,6 +348,7 @@ class IndicatorValuePost(BaseModel):
     @field_validator("date_type", mode="before")
     @staticmethod
     def date_type_to_string(date_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(date_type, Enum):
             return date_type.value
         return date_type
@@ -360,6 +356,7 @@ class IndicatorValuePost(BaseModel):
     @field_validator("value_type", mode="before")
     @staticmethod
     def value_type_to_string(value_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(value_type, Enum):
             return value_type.value
         return value_type
@@ -395,6 +392,7 @@ class IndicatorValuePut(BaseModel):
     @field_validator("date_type", mode="before")
     @staticmethod
     def date_type_to_string(date_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(date_type, Enum):
             return date_type.value
         return date_type
@@ -402,6 +400,7 @@ class IndicatorValuePut(BaseModel):
     @field_validator("value_type", mode="before")
     @staticmethod
     def value_type_to_string(value_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(value_type, Enum):
             return value_type.value
         return value_type
@@ -433,9 +432,7 @@ class ScenarioIndicatorValue(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ScenarioIndicatorValueDTO) -> "ScenarioIndicatorValue":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             indicator_value_id=dto.indicator_value_id,
             indicator=ShortIndicatorInfo(

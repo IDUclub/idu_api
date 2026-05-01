@@ -14,6 +14,7 @@ from .utils.translate import translate_db_constraint_error
 
 
 def register_exceptions(mapper: ExceptionMapper) -> None:
+    """Register application and database exception mappings to HTTP responses."""
     mapper.register_simple(IduApiError, status.HTTP_500_INTERNAL_SERVER_ERROR, "Unexpected error happened in IDU API")
     mapper.register_simple(
         UrbanApiError, status.HTTP_500_INTERNAL_SERVER_ERROR, "Unexpected error happened in Urban API"
@@ -23,6 +24,7 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
     register_services_errors(mapper)
 
     def translate_if_possible(mapper: ExceptionMapper, exc: Exception) -> JSONResponse:
+        """Translate DB constraint errors recursively before applying mapping."""
         exc_after_map = translate_db_constraint_error(exc)
         if exc_after_map != exc:
             return translate_if_possible(mapper, exc_after_map)

@@ -1,7 +1,7 @@
 """Object geometries internal logic is defined here."""
 
 from collections import defaultdict
-from typing import Callable
+from collections.abc import Callable
 
 from geoalchemy2.functions import ST_AsEWKB
 from sqlalchemy import delete, insert, select, update
@@ -24,7 +24,7 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
     check_existence,
     extract_values_from_model,
 )
-from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPost, ObjectGeometryPut
+from idu_api.urban_api.schemas import ObjectGeometryPatch, ObjectGeometryPost
 
 func: Callable
 
@@ -132,29 +132,6 @@ async def get_object_geometry_by_ids_from_db(conn: AsyncConnection, ids: list[in
         raise EntitiesNotFoundByIds("object geometry")
 
     return [ObjectGeometryDTO(**geom) for geom in result]
-
-
-async def put_object_geometry_to_db(
-    conn: AsyncConnection,
-    object_geometry: ObjectGeometryPut,
-    object_geometry_id: int,
-) -> ObjectGeometryDTO:
-    """Put object geometry."""
-
-    if not await check_existence(conn, object_geometries_data, conditions={"object_geometry_id": object_geometry_id}):
-        raise EntityNotFoundById(object_geometry_id, "object geometry")
-
-    values = extract_values_from_model(object_geometry, to_update=True)
-    statement = (
-        update(object_geometries_data)
-        .where(object_geometries_data.c.object_geometry_id == object_geometry_id)
-        .values(**values)
-    )
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return (await get_object_geometry_by_ids_from_db(conn, [object_geometry_id]))[0]
 
 
 async def patch_object_geometry_to_db(

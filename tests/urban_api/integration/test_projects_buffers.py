@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
@@ -34,7 +34,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success_common", "regional", "forbidden", "not_found"],
 )
 async def test_get_buffers_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     scenario_buffer: dict[str, Any],
@@ -54,9 +54,8 @@ async def test_get_buffers_by_scenario_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/buffers", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/buffers", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -80,7 +79,7 @@ async def test_get_buffers_by_scenario_id(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_buffers(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     buffer: dict[str, Any],
@@ -100,9 +99,8 @@ async def test_get_context_buffers(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/context/buffers", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/buffers", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -127,15 +125,12 @@ async def test_get_context_buffers(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_put_scenario_buffer(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_buffer_put_req: ScenarioBufferPut,
-    physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_urban_object: dict[str, Any],
     buffer: dict[str, Any],
     buffer_type: dict[str, Any],
-    default_buffer_value: dict[str, Any],
-    city: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -166,12 +161,17 @@ async def test_put_scenario_buffer(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/scenarios/{scenario_id}/buffers",
+    if expected_status == 409:
+        await client.put(
+            f"/api/v1/scenarios/{scenario_id}/buffers",
             json=new_buffer,
             headers=headers,
         )
+    response = await client.put(
+        f"/api/v1/scenarios/{scenario_id}/buffers",
+        json=new_buffer,
+        headers=headers,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioBuffer, error_message)
@@ -190,13 +190,12 @@ async def test_put_scenario_buffer(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_delete_scenario_buffer(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_buffer_delete_req: ScenarioBufferDelete,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     default_buffer_value: dict[str, Any],
     city: dict[str, Any],
-    buffer_type: dict[str, Any],
     buffer: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -211,38 +210,37 @@ async def test_delete_scenario_buffer(
     scenario_id = scenario_id_param or scenario["scenario_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
     new_buffer = scenario_buffer_delete_req.model_dump()
-    new_buffer["buffer_type_id"] = buffer_type["buffer_type_id"]
+    new_buffer["buffer_type_id"] = buffer["buffer_type"]["id"]
     if is_scenario_param:
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = default_buffer_value["physical_object_type"]["id"]
         new_object["territory_id"] = city["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(
-                f"/scenarios/{scenario['scenario_id']}/physical_objects",
-                headers={"Authorization": f"Bearer {superuser_token}"},
-                json=new_object,
-            )
-            result = response.json()
+        response = await client.post(
+            f"/api/v1/scenarios/{scenario['scenario_id']}/physical_objects",
+            headers={"Authorization": f"Bearer {superuser_token}"},
+            json=new_object,
+        )
+        result = response.json()
         new_buffer["physical_object_id"] = result["physical_object"]["physical_object_id"]
         new_buffer["is_scenario_physical_object"] = True
         new_buffer["object_geometry_id"] = result["object_geometry"]["object_geometry_id"]
         new_buffer["is_scenario_geometry"] = True
         new_buffer["service_id"] = None
         new_buffer["is_scenario_service"] = True
-    elif expected_status == 409:
-        new_buffer["physical_object_id"] = buffer["urban_object"]["physical_object"]["id"]
-        new_buffer["is_scenario_physical_object"] = False
-        new_buffer["object_geometry_id"] = buffer["urban_object"]["object_geometry"]["id"]
-        new_buffer["is_scenario_geometry"] = False
-        new_buffer["service_id"] = buffer["urban_object"]["service"]["id"]
-        new_buffer["is_scenario_service"] = False
     else:
         new_object = physical_object_with_geometry_post_req.model_dump()
         new_object["physical_object_type_id"] = default_buffer_value["physical_object_type"]["id"]
         new_object["territory_id"] = city["territory_id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post("/physical_objects", json=new_object)
-            result = response.json()
+        response = await client.post("/api/v1/physical_objects", json=new_object)
+        result = response.json()
+        if expected_status == 409:
+            physical_object_id = result["physical_object"]["physical_object_id"]
+            await client.patch(
+                f"/api/v1/scenarios/{scenario_id}/physical_objects/{physical_object_id}",
+                headers={"Authorization": f"Bearer {superuser_token}"},
+                params={"is_scenario_object": False},
+                json={"name": "new name"},
+            )
         new_buffer["physical_object_id"] = result["physical_object"]["physical_object_id"]
         new_buffer["is_scenario_physical_object"] = False
         new_buffer["object_geometry_id"] = result["object_geometry"]["object_geometry_id"]
@@ -251,13 +249,12 @@ async def test_delete_scenario_buffer(
         new_buffer["is_scenario_service"] = False
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.request(
-            "DELETE",
-            f"/scenarios/{scenario_id}/buffers",
-            headers=headers,
-            json=new_buffer,
-        )
+    response = await client.request(
+        "DELETE",
+        f"/api/v1/scenarios/{scenario_id}/buffers",
+        headers=headers,
+        json=new_buffer,
+    )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

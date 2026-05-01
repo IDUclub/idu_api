@@ -8,7 +8,6 @@ from idu_api.urban_api.schemas import (
     ObjectGeometry,
     ObjectGeometryPatch,
     ObjectGeometryPost,
-    ObjectGeometryPut,
     OkResponse,
     PhysicalObject,
     UrbanObject,
@@ -51,40 +50,6 @@ async def get_object_geometries_by_ids(
     object_geometries = await object_geometries_service.get_object_geometry_by_ids(object_geometries_ids)
 
     return [ObjectGeometry.from_dto(object_geometry) for object_geometry in object_geometries]
-
-
-@object_geometries_router.put(
-    "/object_geometries/{object_geometry_id}",
-    response_model=ObjectGeometry,
-    status_code=status.HTTP_200_OK,
-    deprecated=True,
-)
-async def put_object_geometry(
-    request: Request,
-    object_geometry: ObjectGeometryPut,
-    object_geometry_id: int = Path(..., description="object geometry identifier", gt=0),
-) -> ObjectGeometry:
-    """
-    ## Update an object geometry by replacing all attributes.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **object_geometry_id** (int, Path): Unique identifier of the object geometry.
-    - **object_geometry** (ObjectGeometryPut, Body): New data for the object geometry.
-
-    ### Returns:
-    - **ObjectGeometry**: The updated object geometry.
-
-    ### Errors:
-    - **404 Not Found**: If the object geometry does not exist.
-    """
-    object_geometries_service: ObjectGeometriesService = request.state.object_geometries_service
-
-    object_geometry_dto = await object_geometries_service.put_object_geometry(object_geometry, object_geometry_id)
-
-    return ObjectGeometry.from_dto(object_geometry_dto)
 
 
 @object_geometries_router.patch(

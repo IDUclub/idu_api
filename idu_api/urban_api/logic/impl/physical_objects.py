@@ -4,7 +4,6 @@ from shapely.geometry import LineString, MultiPolygon, Point, Polygon
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
 from idu_api.urban_api.dto import (
-    BuildingDTO,
     ObjectGeometryDTO,
     PhysicalObjectDTO,
     PhysicalObjectWithGeometryDTO,
@@ -18,7 +17,6 @@ from idu_api.urban_api.logic.impl.helpers.physical_objects import (
     add_physical_object_with_geometry_to_db,
     delete_building_from_db,
     delete_physical_object_from_db,
-    get_buildings_by_physical_object_id_from_db,
     get_physical_object_by_id_from_db,
     get_physical_object_geometries_from_db,
     get_physical_objects_around_from_db,
@@ -28,7 +26,6 @@ from idu_api.urban_api.logic.impl.helpers.physical_objects import (
     patch_building_to_db,
     patch_physical_object_to_db,
     put_building_to_db,
-    put_physical_object_to_db,
 )
 from idu_api.urban_api.logic.physical_objects import PhysicalObjectsService
 from idu_api.urban_api.schemas import (
@@ -37,7 +34,6 @@ from idu_api.urban_api.schemas import (
     BuildingPut,
     PhysicalObjectPatch,
     PhysicalObjectPost,
-    PhysicalObjectPut,
     PhysicalObjectWithGeometryPost,
 )
 
@@ -73,12 +69,6 @@ class PhysicalObjectsServiceImpl(PhysicalObjectsService):
         async with self._connection_manager.get_connection() as conn:
             return await add_physical_object_with_geometry_to_db(conn, physical_object)
 
-    async def put_physical_object(
-        self, physical_object: PhysicalObjectPut, physical_object_id: int
-    ) -> PhysicalObjectDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await put_physical_object_to_db(conn, physical_object, physical_object_id)
-
     async def patch_physical_object(
         self, physical_object: PhysicalObjectPatch, physical_object_id: int
     ) -> PhysicalObjectDTO:
@@ -104,10 +94,6 @@ class PhysicalObjectsServiceImpl(PhysicalObjectsService):
     async def delete_building(self, building_id: int) -> dict:
         async with self._connection_manager.get_connection() as conn:
             return await delete_building_from_db(conn, building_id)
-
-    async def get_buildings_by_physical_object_id(self, physical_object_id: int) -> list[BuildingDTO]:
-        async with self._connection_manager.get_ro_connection() as conn:
-            return await get_buildings_by_physical_object_id_from_db(conn, physical_object_id)
 
     async def get_services_by_physical_object_id(
         self,

@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
@@ -11,8 +11,8 @@ from idu_api.urban_api.schemas import (
     FunctionalZoneWithoutGeometry,
     OkResponse,
     ScenarioFunctionalZone,
+    ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePost,
-    ScenarioFunctionalZonePut,
     ScenarioFunctionalZoneWithoutGeometry,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
@@ -35,7 +35,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_functional_zone_sources_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     scenario_functional_zone: dict[str, Any],
@@ -55,9 +55,8 @@ async def test_get_functional_zone_sources_by_scenario_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/functional_zone_sources", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/functional_zone_sources", headers=headers)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -84,7 +83,7 @@ async def test_get_functional_zone_sources_by_scenario_id(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_functional_zones_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     scenario_functional_zone: dict[str, Any],
@@ -105,9 +104,8 @@ async def test_get_functional_zones_by_scenario_id(
     params = {"year": scenario_functional_zone["year"], "source": scenario_functional_zone["source"]}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/functional_zones", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/functional_zones", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -135,7 +133,7 @@ async def test_get_functional_zones_by_scenario_id(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_functional_zone_sources(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     functional_zone: dict[str, Any],
@@ -155,9 +153,8 @@ async def test_get_context_functional_zone_sources(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/context/functional_zone_sources", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/functional_zone_sources", headers=headers)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -182,7 +179,7 @@ async def test_get_context_functional_zone_sources(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_functional_zones(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     functional_zone: dict[str, Any],
@@ -203,11 +200,8 @@ async def test_get_context_functional_zones(
     params = {"year": functional_zone["year"], "source": functional_zone["source"]}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(
-            f"/scenarios/{scenario_id}/context/functional_zones", headers=headers, params=params
-        )
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/functional_zones", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -235,7 +229,7 @@ async def test_get_context_functional_zones(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_add_scenario_functional_zones(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_functional_zone_post_req: ScenarioFunctionalZonePost,
     project: dict[str, Any],
     base_regional_scenario: dict[str, Any],
@@ -261,9 +255,8 @@ async def test_add_scenario_functional_zones(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     else:
         scenario_id = scenario_id_param
     new_functional_zone = scenario_functional_zone_post_req.model_dump()
@@ -271,10 +264,9 @@ async def test_add_scenario_functional_zones(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(
-            f"/scenarios/{scenario_id}/functional_zones", json=[new_functional_zone], headers=headers
-        )
+    response = await client.post(
+        f"/api/v1/scenarios/{scenario_id}/functional_zones", json=[new_functional_zone], headers=headers
+    )
 
     # Assert
     if response.status_code == 201:
@@ -294,56 +286,9 @@ async def test_add_scenario_functional_zones(
     ],
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
-async def test_put_scenario_functional_zone(
-    urban_api_host: str,
-    scenario_functional_zone_put_req: ScenarioFunctionalZonePut,
-    scenario: dict[str, Any],
-    regional_scenario: dict[str, Any],
-    scenario_functional_zone: dict[str, Any],
-    valid_token: str,
-    superuser_token: str,
-    expected_status: int,
-    error_message: str | None,
-    scenario_id_param: int | None,
-    is_regional_param: bool,
-):
-    """Test PUT /scenarios/{scenario_id}/functional_zones method."""
-
-    # Arrange
-    scenario_id = scenario_id_param or (
-        regional_scenario["scenario_id"] if is_regional_param else scenario["scenario_id"]
-    )
-    functional_zone_id = scenario_functional_zone["functional_zone_id"]
-    new_functional_zone = scenario_functional_zone_put_req.model_dump()
-    new_functional_zone["functional_zone_type_id"] = scenario_functional_zone["functional_zone_type"]["id"]
-    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
-            json=new_functional_zone,
-            headers=headers,
-        )
-
-    # Assert
-    assert_response(response, expected_status, ScenarioFunctionalZone, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, scenario_id_param, is_regional_param",
-    [
-        (200, None, None, False),
-        (400, "этот метод недоступен в региональном сценарии", None, True),
-        (403, "запрещён", None, False),
-        (404, "не найден", 1e9, False),
-    ],
-    ids=["success", "regional_scenario", "forbidden", "not_found"],
-)
 async def test_patch_scenario_functional_zone(
-    urban_api_host: str,
-    scenario_functional_zone_put_req: ScenarioFunctionalZonePut,
+    client: AsyncClient,
+    scenario_functional_zone_patch_req: ScenarioFunctionalZonePatch,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     scenario_functional_zone: dict[str, Any],
@@ -361,17 +306,16 @@ async def test_patch_scenario_functional_zone(
         regional_scenario["scenario_id"] if is_regional_param else scenario["scenario_id"]
     )
     functional_zone_id = scenario_functional_zone["functional_zone_id"]
-    new_functional_zone = scenario_functional_zone_put_req.model_dump()
+    new_functional_zone = scenario_functional_zone_patch_req.model_dump(exclude_unset=True)
     new_functional_zone["functional_zone_type_id"] = scenario_functional_zone["functional_zone_type"]["id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
-            json=new_functional_zone,
-            headers=headers,
-        )
+    response = await client.patch(
+        f"/api/v1/scenarios/{scenario_id}/functional_zones/{functional_zone_id}",
+        json=new_functional_zone,
+        headers=headers,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioFunctionalZone, error_message)
@@ -389,7 +333,7 @@ async def test_patch_scenario_functional_zone(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_delete_functional_zones_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     base_regional_scenario: dict[str, Any],
     regional_project: dict[str, Any],
@@ -414,16 +358,14 @@ async def test_delete_functional_zones_by_scenario_id(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     else:
         scenario_id = scenario_id_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/scenarios/{scenario_id}/functional_zones", headers=headers)
+    response = await client.delete(f"/api/v1/scenarios/{scenario_id}/functional_zones", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

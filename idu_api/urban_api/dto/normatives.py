@@ -7,6 +7,8 @@ from typing import Literal
 
 @dataclass(frozen=True)
 class NormativeDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing normative service accessibility and capacity constraints."""
+
     service_type_id: int | None
     service_type_name: str | None
     urban_function_id: int | None

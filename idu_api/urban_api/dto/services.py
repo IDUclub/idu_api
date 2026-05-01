@@ -13,6 +13,8 @@ Geom = geom.Polygon | geom.MultiPolygon | geom.Point | geom.LineString | geom.Mu
 
 @dataclass(frozen=True)
 class ServiceDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a service with type, capacity, and territorial metadata."""
+
     service_id: int
     service_type_id: int
     urban_function_id: int
@@ -34,11 +36,14 @@ class ServiceDTO:  # pylint: disable=too-many-instance-attributes
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys()
 
 
 @dataclass
 class ServiceWithGeometryDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a service enriched with spatial geometry information."""
+
     service_id: int
     service_type_id: int
     urban_function_id: int
@@ -65,6 +70,7 @@ class ServiceWithGeometryDTO:  # pylint: disable=too-many-instance-attributes
     updated_at: datetime
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -73,6 +79,7 @@ class ServiceWithGeometryDTO:  # pylint: disable=too-many-instance-attributes
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         service = asdict(self)
         territory_type = service.pop("territory_type_id", None), service.pop("territory_type_name", None)
         service["territory_type"] = (
@@ -100,6 +107,8 @@ class ServiceWithGeometryDTO:  # pylint: disable=too-many-instance-attributes
 
 @dataclass(frozen=True)
 class ServicesCountCapacityDTO:
+    """DTO representing aggregated service count and capacity per territory."""
+
     territory_id: int
     count: int
     capacity: int
@@ -107,6 +116,8 @@ class ServicesCountCapacityDTO:
 
 @dataclass(frozen=True)
 class ShortServiceDTO:
+    """Compact DTO for service attributes without geometry."""
+
     service_id: int
     service_type_id: int
     service_type_name: str
@@ -120,21 +131,28 @@ class ShortServiceDTO:
 
 @dataclass(frozen=True)
 class ShortScenarioServiceDTO(ShortServiceDTO):
+    """Compact DTO for scenario service with scenario flag."""
+
     is_scenario_object: bool
 
 
 @dataclass(frozen=True)
 class ScenarioServiceDTO(ServiceDTO):
+    """DTO representing a service within a scenario context."""
+
     is_scenario_object: bool
     is_locked: bool = False
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys() | super().__annotations__.keys()
 
 
 @dataclass
 class ScenarioServiceWithGeometryDTO(ServiceWithGeometryDTO):
+    """DTO representing scenario service with geometry and scenario flags."""
+
     is_scenario_service: bool
     is_scenario_geometry: bool
     is_locked: bool = False

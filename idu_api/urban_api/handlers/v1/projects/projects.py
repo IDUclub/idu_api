@@ -2,20 +2,19 @@
 
 from datetime import date
 
-from fastapi import Depends, File, HTTPException, Path, Query, Request, Security, UploadFile
+from fastapi import Depends, File, HTTPException, Path, Query, Request, UploadFile
 from fastapi.responses import StreamingResponse
-from fastapi.security import HTTPBearer
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from otteroad import KafkaProducerClient
 from starlette import status
 from structlog.stdlib import BoundLogger
 
-from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep
+from idu_api.urban_api.dependencies import auth_dep, kafka_producer_dep, logger_dep, project_storage_dep
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
-from idu_api.urban_api.minio.services import ProjectStorageManager, get_project_storage_manager
+from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
     MinioFile,
     MinioImageURL,
@@ -26,7 +25,6 @@ from idu_api.urban_api.schemas import (
     ProjectPhases,
     ProjectPhasesPut,
     ProjectPost,
-    ProjectPut,
     ProjectTerritory,
     Scenario,
 )
@@ -349,14 +347,13 @@ async def get_projects_territories(
     "/projects",
     response_model=Project,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def add_project(
     request: Request,
     project: ProjectPost,
     user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
 ) -> Project:
     """
     ## Create a new project with its territory and base scenario.
@@ -387,7 +384,6 @@ async def add_project(
     "/projects/{project_id}/base_scenario/{scenario_id}",
     response_model=Scenario,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def create_base_scenario(
     request: Request,
@@ -434,51 +430,10 @@ async def create_base_scenario(
     return Scenario.from_dto(scenario)
 
 
-@projects_router.put(
-    "/projects/{project_id}",
-    response_model=Project,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def put_project(
-    request: Request,
-    project: ProjectPut,
-    project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
-) -> Project:
-    """
-    ## Update all attributes of the given project.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **project_id** (int, Path): Unique identifier of the project.
-    - **project** (ProjectPut, Body): The updated project data.
-
-    ### Returns:
-    - **Project**: The updated project with related base scenario and region short information.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the project (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    project_dto = await user_project_service.put_project(project, project_id, user)
-
-    return Project.from_dto(project_dto)
-
-
 @projects_router.patch(
     "/projects/{project_id}",
     response_model=Project,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_project(
     request: Request,
@@ -513,12 +468,11 @@ async def patch_project(
 @projects_router.delete(
     "/projects/{project_id}",
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     user: UserDTO = Depends(auth_dep.from_request),
 ) -> OkResponse:
     """
@@ -566,7 +520,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     ordering: Ordering = Query(
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     user: UserDTO = Depends(auth_dep.from_request_optional),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> Page[MinioImageURL]:
@@ -644,14 +598,13 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     "/projects/{project_id}/image",
     response_model=str,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -699,14 +652,13 @@ async def upload_project_main_image(
     "/projects/{project_id}/gallery",
     response_model=str,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_project_gallery_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -749,14 +701,13 @@ async def upload_project_gallery_image(
     "/projects/{project_id}/gallery/{image_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def set_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     image_id: str = Path(..., description="image identifier"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
@@ -795,7 +746,7 @@ async def get_project_gallery_images_urls(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[str]:
     """
@@ -828,14 +779,13 @@ async def get_project_gallery_images_urls(
     "/projects/{project_id}/gallery/{image_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project_gallery_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     image_id: str = Path(..., description="image identifier"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
@@ -872,7 +822,7 @@ async def get_full_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
     """
@@ -913,7 +863,7 @@ async def get_preview_project_main_image(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> StreamingResponse:
     """
@@ -955,7 +905,7 @@ async def get_full_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -997,7 +947,7 @@ async def get_preview_project_main_image_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -1039,7 +989,7 @@ async def get_project_logo_url(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -1072,14 +1022,13 @@ async def get_project_logo_url(
     "/projects/{project_id}/logo",
     response_model=str,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_project_logo(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> str:
     """
@@ -1120,13 +1069,12 @@ async def upload_project_logo(
     "/projects/{project_id}/logo",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project_logo(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """
@@ -1165,7 +1113,7 @@ async def get_project_phase_documents_urls(
     project_id: int = Path(..., description="project identifier", gt=0),
     phase: ProjectPhase = Query(..., description="phase name"),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> list[MinioFile]:
     """
@@ -1199,7 +1147,6 @@ async def get_project_phase_documents_urls(
     "/projects/{project_id}/phases/documents",
     response_model=MinioFile,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def upload_phase_document(
     request: Request,
@@ -1207,7 +1154,7 @@ async def upload_phase_document(
     phase: ProjectPhase = Query(..., description="phase name"),
     file: UploadFile = File(...),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> MinioFile:
     """
@@ -1245,7 +1192,6 @@ async def upload_phase_document(
     "/projects/{project_id}/phases/documents",
     response_model=MinioFile,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def rename_phase_document(
     request: Request,
@@ -1254,7 +1200,7 @@ async def rename_phase_document(
     old_key: str = Query(..., description="file name (with extension)"),
     new_key: str = Query(..., description="file name (with extension)"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> MinioFile:
     """
@@ -1289,7 +1235,6 @@ async def rename_phase_document(
     "/projects/{project_id}/phases/documents",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_project_phase_document(
     request: Request,
@@ -1297,7 +1242,7 @@ async def delete_project_phase_document(
     phase: ProjectPhase = Query(..., description="phase name"),
     filename: str = Query(..., description="file name (with extension)"),
     user: UserDTO = Depends(auth_dep.from_request),
-    project_storage_manager: ProjectStorageManager = Depends(get_project_storage_manager),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> OkResponse:
     """

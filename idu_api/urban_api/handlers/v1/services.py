@@ -9,7 +9,6 @@ from idu_api.urban_api.schemas import (
     Service,
     ServicePatch,
     ServicePost,
-    ServicePut,
     UrbanObject,
 )
 
@@ -65,40 +64,6 @@ async def add_service(request: Request, service: ServicePost) -> Service:
     services_data_service: ServicesDataService = request.state.services_data_service
 
     service_dto = await services_data_service.add_service(service)
-
-    return Service.from_dto(service_dto)
-
-
-@services_router.put(
-    "/services/{service_id}",
-    response_model=Service,
-    status_code=status.HTTP_200_OK,
-    deprecated=True,
-)
-async def put_service(
-    request: Request,
-    service: ServicePut,
-    service_id: int = Path(..., description="service identifier", gt=0),
-) -> Service:
-    """
-    ## Update a service by replacing all attributes.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **service_id** (int, Path): Unique identifier of the service.
-    - **service** (ServicePut, Body): New data for the service.
-
-    ### Returns:
-    - **Service**: The updated service.
-
-    ### Errors:
-    - **404 Not Found**: If the service (or related entity) does not exist.
-    """
-    services_data_service: ServicesDataService = request.state.services_data_service
-
-    service_dto = await services_data_service.put_service(service, service_id)
 
     return Service.from_dto(service_dto)
 

@@ -1,7 +1,7 @@
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import BufferAttributes
@@ -21,7 +21,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "bad_request_1", "bad_request_2", "not_found"],
 )
 async def test_get_buffers_geojson_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     buffer: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -41,9 +41,8 @@ async def test_get_buffers_geojson_by_territory_id(
         params["service_type_id"] = 1
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/buffers_geojson", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/buffers_geojson", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)

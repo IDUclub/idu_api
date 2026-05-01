@@ -1,3 +1,5 @@
+"""Urban objects schemas are defined here."""
+
 from pydantic import BaseModel, Field
 
 from idu_api.urban_api.dto import ScenarioUrbanObjectDTO, UrbanObjectDTO
@@ -21,7 +23,8 @@ class UrbanObject(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: UrbanObjectDTO) -> "UrbanObject":
-        urban_object = cls(
+        """Construct from DTO."""
+        return cls(
             urban_object_id=dto.urban_object_id,
             physical_object=PhysicalObject(
                 physical_object_id=dto.physical_object_id,
@@ -95,7 +98,6 @@ class UrbanObject(BaseModel):
                 else None
             ),
         )
-        return urban_object
 
 
 class ScenarioUrbanObject(BaseModel):
@@ -112,6 +114,7 @@ class ScenarioUrbanObject(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ScenarioUrbanObjectDTO) -> "ScenarioUrbanObject":
+        """Construct from DTO."""
         return cls(
             urban_object_id=dto.urban_object_id,
             scenario_id=dto.scenario_id,

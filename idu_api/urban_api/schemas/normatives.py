@@ -38,12 +38,14 @@ class Normative(BaseModel):
     @staticmethod
     @field_validator("normative_type", mode="before")
     def value_type_to_string(normative_type: Any) -> str:
+        """Convert enum to string."""
         if isinstance(normative_type, Enum):
             return normative_type.value
         return normative_type
 
     @model_validator(mode="after")
     def validate_service_type_or_urban_function(self):
+        """Ensure that exactly one of service_type or urban_function is provided."""
         if self.service_type is None and self.urban_function is None:
             raise ValueError("service_type and urban_function cannot both be unset")
         if self.service_type is not None and self.urban_function is not None:
@@ -52,6 +54,7 @@ class Normative(BaseModel):
 
     @model_validator(mode="after")
     def validate_radius_or_time_availability(self):
+        """Ensure that exactly one of radius or time availability is provided."""
         if self.radius_availability_meters is None and self.time_availability_minutes is None:
             raise ValueError("radius_availability_meters and time_availability_minutes cannot both be unset")
         if self.radius_availability_meters is not None and self.time_availability_minutes is not None:
@@ -60,6 +63,7 @@ class Normative(BaseModel):
 
     @model_validator(mode="after")
     def validate_services_or_capacity_normative(self):
+        """Ensure that exactly one services or capacity normative is provided."""
         if self.services_per_1000_normative is None and self.services_capacity_per_1000_normative is None:
             raise ValueError(
                 "services_per_1000_normative and services_capacity_per_1000_normative cannot both be unset"
@@ -70,10 +74,7 @@ class Normative(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: NormativeDTO) -> "Normative":
-        """
-        Construct from DTO.
-        """
-
+        """Construct from DTO."""
         return cls(
             service_type=(
                 ServiceTypeBasic(id=dto.service_type_id, name=dto.service_type_name)
@@ -126,6 +127,7 @@ class NormativePost(BaseModel):
 
     @model_validator(mode="after")
     def validate_service_type_or_urban_function(self):
+        """Ensure that exactly one of service_type or urban_function is provided."""
         if self.service_type_id is None and self.urban_function_id is None:
             raise ValueError("service_type and urban_function cannot both be unset")
         if self.service_type_id is not None and self.urban_function_id is not None:
@@ -134,6 +136,7 @@ class NormativePost(BaseModel):
 
     @model_validator(mode="after")
     def validate_radius_or_time_availability(self):
+        """Ensure that exactly one of radius or time availability is provided."""
         if self.radius_availability_meters is None and self.time_availability_minutes is None:
             raise ValueError("radius_availability_meters and time_availability_minutes cannot both be unset")
         if self.radius_availability_meters is not None and self.time_availability_minutes is not None:
@@ -142,6 +145,7 @@ class NormativePost(BaseModel):
 
     @model_validator(mode="after")
     def validate_services_or_capacity_normative(self):
+        """Ensure that exactly one services or capacity normative is provided."""
         if self.services_per_1000_normative is None and self.services_capacity_per_1000_normative is None:
             raise ValueError(
                 "services_per_1000_normative and services_capacity_per_1000_normative cannot both be unset"
@@ -177,6 +181,7 @@ class NormativePatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_service_type_or_urban_function(self):
+        """Ensure that exactly one of service_type or urban_function is provided."""
         if self.service_type_id is not None and self.urban_function_id is not None:
             raise ValueError("service_type and urban_function cannot both be set")
         if self.service_type_id is None and self.urban_function_id is None:
@@ -185,6 +190,7 @@ class NormativePatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_radius_or_time_availability(self):
+        """Ensure that exactly one of radius or time availability is provided."""
         radius_is_set = "radius_availability_meters" in self.model_fields_set
         time_is_set = "time_availability_minutes" in self.model_fields_set
         if radius_is_set and time_is_set:
@@ -196,6 +202,7 @@ class NormativePatch(BaseModel):
 
     @model_validator(mode="after")
     def validate_services_or_capacity_normative(self):
+        """Ensure that exactly one services or capacity normative is provided."""
         services_is_set = "services_per_1000_normative" in self.model_fields_set
         capacity_is_set = "services_capacity_per_1000_normative" in self.model_fields_set
         if services_is_set and capacity_is_set:

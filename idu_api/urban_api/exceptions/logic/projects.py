@@ -15,7 +15,3 @@ class NotAllowedInRegionalProject(UrbanApiError):
     """
     Exception to raise when attempting to access entities that can only be retrieved in a non-regional project only.
     """
-
-
-class InvalidBaseScenario(UrbanApiError):
-    """Exception to raise when attempting to change base scenario by editing itself."""

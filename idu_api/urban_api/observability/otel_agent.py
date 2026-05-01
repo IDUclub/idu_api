@@ -15,7 +15,15 @@ from .metrics_server import PrometheusServer
 
 
 class OpenTelemetryAgent:  # pylint: disable=too-few-public-methods
+    """Initializes and manages OpenTelemetry observability components."""
+
     def __init__(self, prometheus_config: PrometheusConfig | None, jaeger_config: JaegerConfig | None):
+        """Set up metrics (Prometheus) and tracing (Jaeger/OTLP) providers.
+
+        Args:
+            prometheus_config: Configuration for Prometheus metrics server.
+            jaeger_config: Configuration for trace exporter.
+        """
         self._resource = Resource.create(
             attributes={
                 SERVICE_NAME: "urban_api",

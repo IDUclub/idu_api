@@ -1,9 +1,10 @@
 """Connection manager class and get_connection function are defined here."""
 
 from asyncio import Lock
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from itertools import cycle
-from typing import Any, AsyncIterator
+from typing import Any
 
 import structlog
 from sqlalchemy import select, text
@@ -12,10 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine, create_async_en
 from idu_api.common.db.config import DBConfig
 
 
-class PostgresConnectionManager:  # pylint: disable=too-many-instance-attributes
+class PostgresConnectionManager:
     """Connection manager for PostgreSQL database"""
 
-    def __init__(  # pylint: disable=too-many-arguments
+    def __init__(
         self,
         master: DBConfig,
         replicas: list[DBConfig] | None,
@@ -36,7 +37,7 @@ class PostgresConnectionManager:  # pylint: disable=too-many-instance-attributes
         # Iterator for round-robin through replicas
         self._replica_cycle = None
 
-    async def update(  # pylint: disable=too-many-arguments
+    async def update(
         self,
         *,
         master: DBConfig | None = None,
@@ -57,6 +58,7 @@ class PostgresConnectionManager:  # pylint: disable=too-many-instance-attributes
 
     @property
     def initialized(self) -> bool:
+        """Property to check if SQLAlchemy engine is defined."""
         return self._master_engine is not None
 
     async def refresh(self, no_force_refresh: bool = False) -> None:

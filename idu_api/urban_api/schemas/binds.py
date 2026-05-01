@@ -17,6 +17,7 @@ class ShortTerritoryIndicatorBind(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ShortTerritoryIndicatorBindDTO) -> "ShortTerritoryIndicatorBind":
+        """Construct from DTO."""
         return cls(
             indicator_id=dto.indicator_id,
             indicator_name=dto.indicator_name,
@@ -37,6 +38,7 @@ class TerritoryIndicatorBind(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: TerritoryIndicatorBindDTO) -> "TerritoryIndicatorBind":
+        """Construct from DTO."""
         return cls(
             indicator=ShortIndicatorInfo(
                 indicator_id=dto.indicator_id,

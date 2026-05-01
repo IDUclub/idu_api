@@ -14,7 +14,6 @@ from idu_api.urban_api.dto import (
 from idu_api.urban_api.schemas import (
     FunctionalZonePatch,
     FunctionalZonePost,
-    FunctionalZonePut,
     FunctionalZoneTypePost,
     ProfilesReclamationDataPost,
     ProfilesReclamationDataPut,
@@ -65,12 +64,6 @@ class FunctionalZonesService(Protocol):
     @abc.abstractmethod
     async def add_functional_zone(self, functional_zone: FunctionalZonePost) -> FunctionalZoneDTO:
         """Add a functional zone."""
-
-    @abc.abstractmethod
-    async def put_functional_zone(
-        self, functional_zone_id: int, functional_zone: FunctionalZonePut
-    ) -> FunctionalZoneDTO:
-        """Update functional zone by all its attributes."""
 
     @abc.abstractmethod
     async def patch_functional_zone(

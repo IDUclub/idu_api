@@ -1,3 +1,5 @@
+"""Project storage utilities for MinIO-based file management."""
+
 import asyncio
 import io
 import json
@@ -68,26 +70,32 @@ class ProjectStorageManager:
 
     @staticmethod
     def _project_prefix(project_id: int) -> str:
+        """Return base project path prefix."""
         return f"{project_id}/"
 
     @staticmethod
     def _gallery_original_prefix(project_id: int) -> str:
+        """Return prefix for original gallery images."""
         return f"{project_id}/gallery/original/"
 
     @staticmethod
     def _gallery_preview_prefix(project_id: int) -> str:
+        """Return prefix for gallery preview images."""
         return f"{project_id}/gallery/preview/"
 
     @staticmethod
     def _logo_prefix(project_id: int) -> str:
+        """Return prefix for project logo files."""
         return f"{project_id}/logo/"
 
     @staticmethod
     def _phase_prefix(project_id: int, phase: str) -> str:
+        """Return prefix for phase documents."""
         return f"{project_id}/phases/{phase}/"
 
     @staticmethod
     def _metadata_path(project_id: int) -> str:
+        """Return metadata JSON path."""
         return f"{project_id}/metadata.json"
 
     # ========== Metadata ==========
@@ -112,7 +120,7 @@ class ProjectStorageManager:
             await logger.aexception("Failed to load metadata", project_ids=ids, error=repr(exc))
             raise FileNotFound(ids, "metadata.json") from exc
 
-    async def load_metadata(self, session, project_id: int, logger: BoundLogger) -> dict:
+    async def load_metadata(self, session: aioboto3.Session, project_id: int, logger: BoundLogger) -> dict:
         """
         Load metadata JSON for a single project.
 
@@ -126,7 +134,9 @@ class ProjectStorageManager:
         """
         return (await self.load_list_of_metadata(session, [project_id], logger))[0]
 
-    async def save_metadata(self, session, project_id: int, metadata: dict, logger: BoundLogger) -> None:
+    async def save_metadata(
+        self, session: aioboto3.Session, project_id: int, metadata: dict, logger: BoundLogger
+    ) -> None:
         """
         Save metadata JSON for a given project.
 
@@ -566,8 +576,10 @@ class ProjectStorageManager:
 
 
 def get_project_storage_manager_from_config(app_config: UrbanAPIConfig) -> ProjectStorageManager:
+    """Create storage manager from config."""
     return ProjectStorageManager(app_config)
 
 
 def get_project_storage_manager():
+    """Create storage manager from environment config."""
     return get_project_storage_manager_from_config(UrbanAPIConfig.from_file(os.environ["CONFIG_PATH"]))

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import (
     PhysicalObject,
@@ -34,14 +35,14 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def physical_object(urban_object) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def physical_object(urban_object) -> dict[str, Any]:
     """Returns created physical object."""
     return urban_object["physical_object"]
 
 
-@pytest.fixture(scope="session")
-def scenario_physical_object(scenario_urban_object) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def scenario_physical_object(scenario_urban_object) -> dict[str, Any]:
     """Returns created physical object."""
     return scenario_urban_object["physical_object"]
 

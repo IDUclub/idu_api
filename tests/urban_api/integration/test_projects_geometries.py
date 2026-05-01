@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
@@ -36,7 +36,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_get_geometries_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     valid_token: str,
@@ -55,9 +55,8 @@ async def test_get_geometries_by_scenario_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/geometries", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/geometries", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -81,7 +80,7 @@ async def test_get_geometries_by_scenario_id(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_get_geometries_with_all_objects_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     valid_token: str,
@@ -100,9 +99,8 @@ async def test_get_geometries_with_all_objects_by_scenario_id(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/geometries_with_all_objects", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -126,7 +124,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_geometries(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     object_geometry: dict[str, Any],
@@ -146,9 +144,8 @@ async def test_get_context_geometries(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/context/geometries", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/geometries", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -176,7 +173,7 @@ async def test_get_context_geometries(
     ids=["success", "regional_scenario", "forbidden", "not_found"],
 )
 async def test_get_context_geometries_with_all_objects(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
     object_geometry: dict[str, Any],
@@ -196,9 +193,8 @@ async def test_get_context_geometries_with_all_objects(
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/context/geometries_with_all_objects", headers=headers)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/geometries_with_all_objects", headers=headers)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -227,13 +223,11 @@ async def test_get_context_geometries_with_all_objects(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_put_scenario_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     object_geometries_put_req: ObjectGeometryPut,
-    project: dict[str, Any],
     scenario: dict[str, Any],
     scenario_geometry: dict[str, Any],
     object_geometry: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -245,17 +239,6 @@ async def test_put_scenario_geometry(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
     object_geometry_id = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
     )
@@ -265,13 +248,19 @@ async def test_put_scenario_geometry(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(
-            f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+    if expected_status == 409:
+        await client.put(
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
             json=new_object_geometry,
             headers=headers,
             params=params,
         )
+    response = await client.put(
+        f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+        json=new_object_geometry,
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioObjectGeometry, error_message)
@@ -290,13 +279,11 @@ async def test_put_scenario_geometry(
     ids=["success_1", "success_2", "forbidden", "not_found", "conflict"],
 )
 async def test_patch_scenario_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     object_geometries_put_req: ObjectGeometryPut,
     scenario: dict[str, Any],
     scenario_geometry: dict[str, Any],
     object_geometry: dict[str, Any],
-    project: dict[str, Any],
-    functional_zone_type: dict[str, Any],
     valid_token: str,
     superuser_token: str,
     expected_status: int,
@@ -308,17 +295,6 @@ async def test_patch_scenario_geometry(
 
     # Arrange
     scenario_id = scenario_id_param or scenario["scenario_id"]
-    if expected_status != 409 and not is_scenario_param:
-        base_scenario_id = project["base_scenario"]["id"]
-        headers = {"Authorization": f"Bearer {superuser_token}"}
-        new_scenario = {
-            "project_id": project["project_id"],
-            "name": "Test Scenario Name",
-            "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
-        }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
     object_geometry_id = (
         scenario_geometry["object_geometry_id"] if is_scenario_param else object_geometry["object_geometry_id"]
     )
@@ -328,13 +304,19 @@ async def test_patch_scenario_geometry(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+    if expected_status == 409:
+        await client.patch(
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
             json=new_object_geometry,
             headers=headers,
             params=params,
         )
+    response = await client.patch(
+        f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+        json=new_object_geometry,
+        headers=headers,
+        params=params,
+    )
 
     # Assert
     assert_response(response, expected_status, ScenarioObjectGeometry, error_message)
@@ -352,7 +334,7 @@ async def test_patch_scenario_geometry(
     ids=["success_1", "success_2", "forbidden", "not_found"],
 )
 async def test_delete_object_geometry(
-    urban_api_host: str,
+    client: AsyncClient,
     physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost,
     scenario: dict[str, Any],
     scenario_physical_object: dict[str, Any],
@@ -379,9 +361,8 @@ async def test_delete_object_geometry(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     new_object = physical_object_with_geometry_post_req.model_dump()
     new_object["physical_object_type_id"] = scenario_physical_object["physical_object_type"]["physical_object_type_id"]
     new_object["territory_id"] = scenario_geometry["territory"]["id"]
@@ -389,32 +370,31 @@ async def test_delete_object_geometry(
     params = {"is_scenario_object": is_scenario_param}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if expected_status == 200 and is_scenario_param:
-            response = await client.post(
-                f"scenarios/{scenario_id}/physical_objects",
-                json=new_object,
-                headers=headers,
-            )
-            object_geometry_id = response.json()["object_geometry"]["object_geometry_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
-                headers=headers,
-                params=params,
-            )
-        elif not is_scenario_param:
-            object_geometry_id = object_geometry["object_geometry_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/geometries/{object_geometry_id}",
-                headers=headers,
-                params=params,
-            )
-        else:
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/geometries/1",
-                headers=headers,
-                params=params,
-            )
+    if expected_status == 200 and is_scenario_param:
+        response = await client.post(
+            f"/api/v1/scenarios/{scenario_id}/physical_objects",
+            json=new_object,
+            headers=headers,
+        )
+        object_geometry_id = response.json()["object_geometry"]["object_geometry_id"]
+        response = await client.delete(
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+            headers=headers,
+            params=params,
+        )
+    elif not is_scenario_param:
+        object_geometry_id = object_geometry["object_geometry_id"]
+        response = await client.delete(
+            f"/api/v1/scenarios/{scenario_id}/geometries/{object_geometry_id}",
+            headers=headers,
+            params=params,
+        )
+    else:
+        response = await client.delete(
+            f"/api/v1/scenarios/{scenario_id}/geometries/1",
+            headers=headers,
+            params=params,
+        )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

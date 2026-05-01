@@ -26,7 +26,6 @@ class ProjectTerritory(BaseModel):
     @classmethod
     def from_dto(cls, dto: ProjectTerritoryDTO) -> "ProjectTerritory":
         """Construct from DTO"""
-
         return cls(
             project_territory_id=dto.project_territory_id,
             project=ShortProjectWithScenario(
@@ -76,6 +75,7 @@ class Project(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ProjectDTO) -> "Project":
+        """Construct from DTO."""
         return cls(
             project_id=dto.project_id,
             user_id=dto.user_id,
@@ -112,24 +112,12 @@ class ProjectPost(BaseModel):
 
     @model_validator(mode="after")
     def check_project_territory(self) -> "ProjectPost":
+        """Validate if regional project does not have own territory or vice versa."""
         if self.is_regional and self.territory is not None:
             raise ValueError("regional projects cannot have their own territory")
         if not self.is_regional and self.territory is None:
             raise ValueError("non-regional projects must have a territory")
         return self
-
-
-class ProjectPut(BaseModel):
-    """Project schema for PUT request."""
-
-    name: str = Field(..., description="project name", examples=["--"])
-    description: str = Field(..., description="project description", examples=["--"])
-    public: bool = Field(..., description="project publicity", examples=[True])
-    properties: dict[str, Any] = Field(
-        ...,
-        description="project's additional properties",
-        examples=[{"additional_attribute_name": "additional_attribute_value"}],
-    )
 
 
 class ProjectPatch(BaseModel):
@@ -174,6 +162,7 @@ class ProjectPhases(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ProjectPhasesDTO) -> "ProjectPhases":
+        """Construct from DTO."""
         return cls(
             actual_start_date=dto.actual_start_date,
             actual_end_date=dto.actual_end_date,

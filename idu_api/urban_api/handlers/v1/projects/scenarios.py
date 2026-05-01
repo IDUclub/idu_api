@@ -1,7 +1,6 @@
 """Scenarios endpoints are defined here."""
 
-from fastapi import Depends, HTTPException, Path, Query, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, HTTPException, Path, Query, Request
 from starlette import status
 
 from idu_api.urban_api.dependencies import auth_dep
@@ -13,7 +12,6 @@ from idu_api.urban_api.schemas import (
     Scenario,
     ScenarioPatch,
     ScenarioPost,
-    ScenarioPut,
 )
 
 
@@ -114,46 +112,9 @@ async def get_scenario_by_id(
 
 
 @projects_router.post(
-    "/scenarios",
-    response_model=Scenario,
-    status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def add_scenario(
-    request: Request, scenario: ScenarioPost, user: UserDTO = Depends(auth_dep.from_request)
-) -> Scenario:
-    """
-    ## Create a new scenario by copying base scenario for relevant project.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use method **POST /scenarios/{scenario_id}** with `scenario_id` = base scenario identifier.
-
-    ### Parameters:
-    - **scenario** (ScenarioPost, Body): Data for the new scenario.
-
-    ### Returns:
-    - **Scenario**: The newly created scenario based on the base scenario.
-
-    ### Errors:
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the related entity does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    scenario = await user_project_service.add_scenario(scenario, user)
-
-    return Scenario.from_dto(scenario)
-
-
-@projects_router.post(
     "/scenarios/{scenario_id}",
     response_model=Scenario,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def copy_scenario(
     request: Request,
@@ -185,55 +146,10 @@ async def copy_scenario(
     return Scenario.from_dto(scenario)
 
 
-@projects_router.put(
-    "/scenarios/{scenario_id}",
-    response_model=Scenario,
-    status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
-    deprecated=True,
-)
-async def put_scenario(
-    request: Request,
-    scenario: ScenarioPut,
-    scenario_id: int = Path(..., description="scenario identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request),
-) -> Scenario:
-    """
-    ## Update all attributes of the given scenario.
-
-    **NOTE:** If you want to make a base scenario from common, set `is_based = True` in the request body.
-    Thus, the old base scenario will become common.
-
-    **WARNING 2:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **scenario_id** (int, Path): Unique identifier of the scenario.
-    - **scenario** (ScenarioPut, Body): The updated scenario data.
-
-    ### Returns:
-    - **Scenario**: The updated scenario.
-
-    ### Errors:
-    - **400 Bad Request**: If you try to make base scenario – non-based.
-    - **403 Forbidden**: If the user does not have access rights.
-    - **404 Not Found**: If the scenario (or related entity) does not exist.
-
-    ### Constraints:
-    - The user must be the owner of the relevant project.
-    """
-    user_project_service: UserProjectService = request.state.user_project_service
-
-    scenario = await user_project_service.put_scenario(scenario, scenario_id, user)
-
-    return Scenario.from_dto(scenario)
-
-
 @projects_router.patch(
     "/scenarios/{scenario_id}",
     response_model=Scenario,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def patch_scenario(
     request: Request,
@@ -273,7 +189,6 @@ async def patch_scenario(
     "/scenarios/{scenario_id}",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_scenario(
     request: Request,

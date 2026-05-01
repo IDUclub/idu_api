@@ -55,6 +55,12 @@ class URLsMapper:
 
 
 def get_tracing_headers() -> dict[str, str]:
+    """Extract tracing headers from the current OpenTelemetry span context.
+
+    Returns:
+        A dictionary containing span and trace identifiers if tracing is active,
+        otherwise an empty dictionary.
+    """
     ctx = trace.get_current_span().get_span_context()
     if ctx.trace_id == 0:
         return {}

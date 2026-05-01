@@ -1,6 +1,5 @@
-"""Projects DTOs are defined here."""
-
 # pylint: disable=too-many-instance-attributes
+"""Projects DTOs are defined here."""
 
 from dataclasses import asdict, dataclass
 from datetime import date, datetime
@@ -12,6 +11,8 @@ from shapely.wkb import loads as wkb_loads
 
 @dataclass(frozen=True)
 class ProjectDTO:
+    """DTO representing a project with metadata and scenario/territory linkage."""
+
     project_id: int
     user_id: str
     territory_id: int
@@ -30,6 +31,8 @@ class ProjectDTO:
 
 @dataclass
 class ProjectTerritoryDTO:
+    """DTO representing a project territory with geometry and spatial data."""
+
     project_territory_id: int
     project_id: int
     project_name: str
@@ -43,6 +46,7 @@ class ProjectTerritoryDTO:
     properties: dict[str, Any] | None
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -53,6 +57,8 @@ class ProjectTerritoryDTO:
 
 @dataclass
 class ProjectWithTerritoryDTO:
+    """DTO representing a project enriched with territory geometry data."""
+
     project_id: int
     user_id: str
     territory_id: int
@@ -71,6 +77,7 @@ class ProjectWithTerritoryDTO:
     centre_point: geom.Point
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -79,6 +86,7 @@ class ProjectWithTerritoryDTO:
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self):
+        """Serialize DTO to a GeoJSON-like dictionary."""
         project = asdict(self)
         project["territory"] = {"id": project.pop("territory_id"), "name": project.pop("territory_name")}
         project["base_scenario"] = {"id": project.pop("scenario_id"), "name": project.pop("scenario_name")}
@@ -88,6 +96,8 @@ class ProjectWithTerritoryDTO:
 
 @dataclass
 class ProjectPhasesDTO:
+    """DTO representing project lifecycle phases and investment distribution."""
+
     actual_start_date: date | None
     actual_end_date: date | None
     planned_start_date: date | None

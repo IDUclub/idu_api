@@ -1,6 +1,6 @@
 """Projects indicators values data table is defined here."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import (
     TIMESTAMP,

@@ -1,3 +1,4 @@
+# pylint: disable=too-many-instance-attributes
 """Physical objects DTOs are defined here."""
 
 from collections.abc import Iterable
@@ -8,14 +9,13 @@ from typing import Any
 import shapely.geometry as geom
 from shapely.wkb import loads as wkb_loads
 
-# pylint: disable=too-many-instance-attributes
-
-
 Geom = geom.Polygon | geom.MultiPolygon | geom.Point | geom.LineString | geom.MultiLineString
 
 
 @dataclass(frozen=True)
 class PhysicalObjectDTO:
+    """DTO representing a physical object with attributes and metadata."""
+
     physical_object_id: int
     physical_object_type_id: int
     physical_object_type_name: str
@@ -39,11 +39,14 @@ class PhysicalObjectDTO:
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys()
 
 
 @dataclass
 class PhysicalObjectWithGeometryDTO:
+    """DTO representing a physical object enriched with geometry data."""
+
     physical_object_id: int
     physical_object_type_id: int
     physical_object_type_name: str
@@ -72,6 +75,7 @@ class PhysicalObjectWithGeometryDTO:
     updated_at: datetime
 
     def __post_init__(self) -> None:
+        """Normalize geometry and centre point from WKB and ensure geometry is set."""
         if isinstance(self.centre_point, bytes):
             self.centre_point = wkb_loads(self.centre_point)
         if self.geometry is None:
@@ -80,6 +84,7 @@ class PhysicalObjectWithGeometryDTO:
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict[str, Any]:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         physical_object = asdict(self)
 
         physical_object_type = {
@@ -126,6 +131,8 @@ class PhysicalObjectWithGeometryDTO:
 
 @dataclass(frozen=True)
 class ShortPhysicalObjectDTO:
+    """Compact DTO for physical object attributes without geometry."""
+
     physical_object_id: int
     physical_object_type_id: int
     physical_object_type_name: str
@@ -145,21 +152,28 @@ class ShortPhysicalObjectDTO:
 
 @dataclass(frozen=True)
 class ShortScenarioPhysicalObjectDTO(ShortPhysicalObjectDTO):
+    """Compact DTO for scenario physical object with scenario flag."""
+
     is_scenario_object: bool
 
 
 @dataclass(frozen=True)
 class ScenarioPhysicalObjectDTO(PhysicalObjectDTO):
+    """DTO representing a physical object within a scenario context."""
+
     is_scenario_object: bool
     is_locked: bool = False
 
     @classmethod
     def fields(cls) -> Iterable[str]:
+        """Return list of field names for the DTO."""
         return cls.__annotations__.keys() | super().__annotations__.keys()
 
 
 @dataclass
 class ScenarioPhysicalObjectWithGeometryDTO(PhysicalObjectWithGeometryDTO):
+    """DTO representing scenario physical object with geometry and flags."""
+
     is_scenario_physical_object: bool
     is_scenario_geometry: bool
     is_locked: bool = False

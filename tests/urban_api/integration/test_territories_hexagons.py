@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import Hexagon, HexagonAttributes, HexagonPost, OkResponse
@@ -25,7 +25,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "not_found"],
 )
 async def test_get_hexagons_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     region: dict[str, Any],
     hexagon: dict[str, Any],
     expected_status: int,
@@ -38,9 +38,8 @@ async def test_get_hexagons_by_territory_id(
     territory_id = territory_id_param or region["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/hexagons")
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/hexagons")
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -65,10 +64,9 @@ async def test_get_hexagons_by_territory_id(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_hexagons_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     hexagon_post_req: HexagonPost,
     region: dict[str, Any],
-    country: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     territory_id_param: int | None,
@@ -76,12 +74,12 @@ async def test_add_hexagons_by_territory_id(
     """Test POST /territory/{territory_id}/hexagons method."""
 
     # Arrange
-    territory = region if expected_status == 409 else country
-    territory_id = territory_id_param or territory["territory_id"]
+    territory_id = territory_id_param or region["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/territory/{territory_id}/hexagons", json=[hexagon_post_req.model_dump()])
+    if expected_status == 409:
+        await client.post(f"/api/v1/territory/{territory_id}/hexagons", json=[hexagon_post_req.model_dump()])
+    response = await client.post(f"/api/v1/territory/{territory_id}/hexagons", json=[hexagon_post_req.model_dump()])
 
     # Assert
     if response.status_code == 201:
@@ -100,8 +98,8 @@ async def test_add_hexagons_by_territory_id(
     ids=["success", "not_found"],
 )
 async def test_delete_hexagons_by_territory_id(
-    urban_api_host: str,
-    country: dict[str, Any],
+    client: AsyncClient,
+    region: dict[str, Any],
     expected_status: int,
     error_message: str | None,
     territory_id_param: int | None,
@@ -109,11 +107,10 @@ async def test_delete_hexagons_by_territory_id(
     """Test DELETE /territory/{territory_id}/hexagons method."""
 
     # Arrange
-    territory_id = territory_id_param or country["territory_id"]
+    territory_id = territory_id_param or region["territory_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/territory/{territory_id}/hexagons")
+    response = await client.delete(f"/api/v1/territory/{territory_id}/hexagons")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

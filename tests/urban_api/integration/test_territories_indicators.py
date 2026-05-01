@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import Indicator, IndicatorValue, SocValueIndicatorValue, TerritoryWithIndicators
@@ -26,7 +26,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "not_found"],
 )
 async def test_get_indicators_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -38,9 +38,8 @@ async def test_get_indicators_by_territory_id(
     territory_id = territory_id_param or indicator_value["territory"]["id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/indicators")
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/indicators")
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -61,7 +60,7 @@ async def test_get_indicators_by_territory_id(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_indicator_values_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     indicator_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -83,9 +82,8 @@ async def test_get_indicator_values_by_territory_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/indicator_values", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/indicator_values", params=params)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -105,7 +103,7 @@ async def test_get_indicator_values_by_territory_id(
     ids=["success", "not_found"],
 )
 async def test_get_indicator_values_by_parent_id(
-    urban_api_host: str,
+    client: AsyncClient,
     country: dict[str, Any],
     indicator_value: dict[str, Any],
     expected_status: int,
@@ -126,9 +124,8 @@ async def test_get_indicator_values_by_parent_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/territory/indicator_values", params=params)
-        result = response.json()
+    response = await client.get("/api/v1/territory/indicator_values", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -158,7 +155,7 @@ async def test_get_indicator_values_by_parent_id(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_soc_values_indicator_values_by_territory_id(
-    urban_api_host: str,
+    client: AsyncClient,
     social_value_indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -175,9 +172,8 @@ async def test_get_soc_values_indicator_values_by_territory_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/soc_values/indicators", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/territory/{territory_id}/soc_values/indicators", params=params)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:

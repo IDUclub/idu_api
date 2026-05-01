@@ -33,9 +33,7 @@ class ObjectGeometry(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ObjectGeometryDTO) -> "ObjectGeometry":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             object_geometry_id=dto.object_geometry_id,
             territory=ShortTerritory(id=dto.territory_id, name=dto.territory_name),
@@ -55,9 +53,7 @@ class ScenarioObjectGeometry(ObjectGeometry):
 
     @classmethod
     def from_dto(cls, dto: ScenarioGeometryDTO) -> "ScenarioObjectGeometry":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             object_geometry_id=dto.object_geometry_id,
             territory=ShortTerritory(id=dto.territory_id, name=dto.territory_name),
@@ -103,9 +99,7 @@ class ObjectGeometryPatch(GeometryValidationModel):
     @model_validator(mode="before")
     @classmethod
     def check_empty_request(cls, values):
-        """
-        Ensure the request body is not empty.
-        """
+        """Ensure the request body is not empty."""
         if not values:
             raise ValueError("request body cannot be empty")
         return values

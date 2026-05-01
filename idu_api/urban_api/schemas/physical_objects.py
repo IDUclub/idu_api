@@ -39,9 +39,7 @@ class PhysicalObject(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: PhysicalObjectDTO) -> "PhysicalObject":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             physical_object_id=dto.physical_object_id,
             physical_object_type=PhysicalObjectType(
@@ -111,9 +109,7 @@ class PhysicalObjectWithGeometry(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: PhysicalObjectWithGeometryDTO) -> "PhysicalObjectWithGeometry":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             physical_object_id=dto.physical_object_id,
             physical_object_type=PhysicalObjectType(
@@ -211,9 +207,7 @@ class PhysicalObjectPatch(BaseModel):
     @model_validator(mode="before")
     @classmethod
     def check_empty_request(cls, values):
-        """
-        Ensure the request body is not empty.
-        """
+        """Ensure the request body is not empty."""
         if not values:
             raise ValueError("request body cannot be empty")
         return values
@@ -227,9 +221,7 @@ class ScenarioPhysicalObject(PhysicalObject):
 
     @classmethod
     def from_dto(cls, dto: ScenarioPhysicalObjectDTO) -> "ScenarioPhysicalObject":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             physical_object_id=dto.physical_object_id,
             physical_object_type=PhysicalObjectType(

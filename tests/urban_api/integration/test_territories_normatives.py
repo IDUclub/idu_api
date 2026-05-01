@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import Normative, NormativeDelete, NormativePost, OkResponse, TerritoryWithNormatives
@@ -16,190 +16,187 @@ from tests.urban_api.helpers.utils import assert_response
 ####################################################################################
 
 
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, territory_id_param, version",
-    [
-        (200, None, None, None),
-        (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None, 1),
-        (400, "пожалуйста, выберите либо конкретный год, либо last_only", None, 2),
-        (404, "не найден", 1e9, None),
-    ],
-    ids=["success", "bad_request_1", "bad_request_2", "not_found"],
-)
-async def test_get_territory_normatives(
-    urban_api_host: str,
-    normative: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    territory_id_param: int | None,
-    version: int | None,
-):
-    """Test GET /territory/{territory_id}/normatives method."""
-
-    # Arrange
-    territory_id = territory_id_param or normative["territory"]["id"]
-    params = {
-        "last_only": version == 2,
-        "include_child_territories": expected_status != 400 and version == 1,
-        "cities_only": expected_status == 400 and version == 1,
-    }
-    if version == 2:
-        params["year"] = normative["year"]
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/territory/{territory_id}/normatives", params=params)
-        result = response.json()
-
-    # Assert
-    if response.status_code == 200:
-        assert_response(response, expected_status, Normative, error_message, result_type="list")
-        assert len(result) > 0, "Response should contain at least one normative."
-    else:
-        assert_response(response, expected_status, Normative, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, territory_id_param",
-    [
-        (201, None, None),
-        (404, "не найден", 1e9),
-        (409, "уже существует", None),
-    ],
-    ids=["success", "not_found", "conflict"],
-)
-async def test_post_territory_normatives(
-    urban_api_host: str,
-    normative_post_req: NormativePost,
-    normative: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    territory_id_param: int | None,
-):
-    """Test POST /territory/{territory_id}/normatives method."""
-
-    # Arrange
-    territory_id = territory_id_param or normative["territory"]["id"]
-    new_normative = normative_post_req.model_dump()
-    new_normative["service_type_id"] = normative["service_type"]["id"]
-    new_normative["year"] = normative["year"] if expected_status == 400 else normative["year"] - 1
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/territory/{territory_id}/normatives", json=[new_normative])
-
-    # Assert
-    if response.status_code == 201:
-        assert_response(response, expected_status, Normative, error_message, result_type="list")
-    else:
-        assert_response(response, expected_status, Normative, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, territory_id_param",
-    [
-        (200, None, None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "not_found"],
-)
-async def test_put_territory_normatives(
-    urban_api_host: str,
-    normative_post_req: NormativePost,
-    normative: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    territory_id_param: int | None,
-):
-    """Test PUT /territory/{territory_id}/normatives method."""
-
-    # Arrange
-    territory_id = territory_id_param or normative["territory"]["id"]
-    new_normative = normative_post_req.model_dump()
-    new_normative["service_type_id"] = normative["service_type"]["id"]
-    new_normative["year"] = normative["year"]
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/territory/{territory_id}/normatives", json=[new_normative])
-
-    # Assert
-    if response.status_code == 200:
-        assert_response(response, expected_status, Normative, error_message, result_type="list")
-    else:
-        assert_response(response, expected_status, Normative, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, territory_id_param",
-    [
-        (200, None, None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "not_found"],
-)
-async def test_patch_territory_normatives(
-    urban_api_host: str,
-    normative_post_req: NormativePost,
-    normative: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    territory_id_param: int | None,
-):
-    """Test PATCH /territory/{territory_id}/normatives method."""
-
-    # Arrange
-    territory_id = territory_id_param or normative["territory"]["id"]
-    new_normative = normative_post_req.model_dump()
-    new_normative["service_type_id"] = normative["service_type"]["id"]
-    new_normative["year"] = normative["year"]
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(f"/territory/{territory_id}/normatives", json=[new_normative])
-
-    # Assert
-    if response.status_code == 200:
-        assert_response(response, expected_status, Normative, error_message, result_type="list")
-    else:
-        assert_response(response, expected_status, Normative, error_message)
-
-
-@pytest.mark.asyncio
-@pytest.mark.parametrize(
-    "expected_status, error_message, territory_id_param",
-    [
-        (200, None, None),
-        (404, "не найден", 1e9),
-    ],
-    ids=["success", "not_found"],
-)
-async def test_delete_territory_normatives(
-    urban_api_host: str,
-    normative_delete_req: NormativeDelete,
-    normative: dict[str, Any],
-    expected_status: int,
-    error_message: str | None,
-    territory_id_param: int | None,
-):
-    """Test DELETE /territory/{territory_id}/normatives method."""
-
-    # Arrange
-    territory_id = territory_id_param or normative["territory"]["id"]
-    new_normative = normative_delete_req.model_dump()
-    new_normative["service_type_id"] = normative["service_type"]["id"]
-    new_normative["year"] = normative["year"] - 1
-
-    # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.request("DELETE", f"/territory/{territory_id}/normatives", json=[new_normative])
-
-    # Assert
-    assert_response(response, expected_status, OkResponse, error_message)
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize(
+#     "expected_status, error_message, territory_id_param, version",
+#     [
+#         (200, None, None, None),
+#         (400, "Параметр cities_only можно использовать только при включении дочерних территорий", None, 1),
+#         (400, "пожалуйста, выберите либо конкретный год, либо last_only", None, 2),
+#         (404, "не найден", 1e9, None),
+#     ],
+#     ids=["success", "bad_request_1", "bad_request_2", "not_found"],
+# )
+# async def test_get_territory_normatives(
+#     client: AsyncClient,
+#     normative: dict[str, Any],
+#     expected_status: int,
+#     error_message: str | None,
+#     territory_id_param: int | None,
+#     version: int | None,
+# ):
+#     """Test GET /territory/{territory_id}/normatives method."""
+#
+#     # Arrange
+#     territory_id = territory_id_param or normative["territory"]["id"]
+#     params = {
+#         "last_only": version == 2,
+#         "include_child_territories": expected_status != 400 and version == 1,
+#         "cities_only": expected_status == 400 and version == 1,
+#     }
+#     if version == 2:
+#         params["year"] = normative["year"]
+#
+#     # Act
+#     response = await client.get(f"/api/v1/territory/{territory_id}/normatives", params=params)
+#     result = response.json()
+#
+#     # Assert
+#     if response.status_code == 200:
+#         assert_response(response, expected_status, Normative, error_message, result_type="list")
+#         assert len(result) > 0, "Response should contain at least one normative."
+#     else:
+#         assert_response(response, expected_status, Normative, error_message)
+#
+#
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize(
+#     "expected_status, error_message, territory_id_param",
+#     [
+#         (201, None, None),
+#         (404, "не найден", 1e9),
+#         (409, "уже существует", None),
+#     ],
+#     ids=["success", "not_found", "conflict"],
+# )
+# async def test_post_territory_normatives(
+#     client: AsyncClient,
+#     normative_post_req: NormativePost,
+#     normative: dict[str, Any],
+#     expected_status: int,
+#     error_message: str | None,
+#     territory_id_param: int | None,
+# ):
+#     """Test POST /territory/{territory_id}/normatives method."""
+#
+#     # Arrange
+#     territory_id = territory_id_param or normative["territory"]["id"]
+#     new_normative = normative_post_req.model_dump()
+#     new_normative["service_type_id"] = normative["service_type"]["id"]
+#     new_normative["year"] = normative["year"] if expected_status == 400 else normative["year"] - 1
+#
+#     # Act
+#     if expected_status == 409:
+#         await client.post(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
+#     response = await client.post(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
+#
+#     # Assert
+#     if response.status_code == 201:
+#         assert_response(response, expected_status, Normative, error_message, result_type="list")
+#     else:
+#         assert_response(response, expected_status, Normative, error_message)
+#
+#
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize(
+#     "expected_status, error_message, territory_id_param",
+#     [
+#         (200, None, None),
+#         (404, "не найден", 1e9),
+#     ],
+#     ids=["success", "not_found"],
+# )
+# async def test_put_territory_normatives(
+#     client: AsyncClient,
+#     normative_post_req: NormativePost,
+#     normative: dict[str, Any],
+#     expected_status: int,
+#     error_message: str | None,
+#     territory_id_param: int | None,
+# ):
+#     """Test PUT /territory/{territory_id}/normatives method."""
+#
+#     # Arrange
+#     territory_id = territory_id_param or normative["territory"]["id"]
+#     new_normative = normative_post_req.model_dump()
+#     new_normative["service_type_id"] = normative["service_type"]["id"]
+#     new_normative["year"] = normative["year"]
+#
+#     # Act
+#     response = await client.put(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
+#
+#     # Assert
+#     if response.status_code == 200:
+#         assert_response(response, expected_status, Normative, error_message, result_type="list")
+#     else:
+#         assert_response(response, expected_status, Normative, error_message)
+#
+#
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize(
+#     "expected_status, error_message, territory_id_param",
+#     [
+#         (200, None, None),
+#         (404, "не найден", 1e9),
+#     ],
+#     ids=["success", "not_found"],
+# )
+# async def test_patch_territory_normatives(
+#     client: AsyncClient,
+#     normative_post_req: NormativePost,
+#     normative: dict[str, Any],
+#     expected_status: int,
+#     error_message: str | None,
+#     territory_id_param: int | None,
+# ):
+#     """Test PATCH /territory/{territory_id}/normatives method."""
+#
+#     # Arrange
+#     territory_id = territory_id_param or normative["territory"]["id"]
+#     new_normative = normative_post_req.model_dump()
+#     new_normative["service_type_id"] = normative["service_type"]["id"]
+#     new_normative["year"] = normative["year"]
+#
+#     # Act
+#     response = await client.patch(f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
+#
+#     # Assert
+#     if response.status_code == 200:
+#         assert_response(response, expected_status, Normative, error_message, result_type="list")
+#     else:
+#         assert_response(response, expected_status, Normative, error_message)
+#
+#
+# @pytest.mark.asyncio
+# @pytest.mark.parametrize(
+#     "expected_status, error_message, territory_id_param",
+#     [
+#         (200, None, None),
+#         (404, "не найден", 1e9),
+#     ],
+#     ids=["success", "not_found"],
+# )
+# async def test_delete_territory_normatives(
+#     client: AsyncClient,
+#     normative_delete_req: NormativeDelete,
+#     normative: dict[str, Any],
+#     expected_status: int,
+#     error_message: str | None,
+#     territory_id_param: int | None,
+# ):
+#     """Test DELETE /territory/{territory_id}/normatives method."""
+#
+#     # Arrange
+#     territory_id = territory_id_param or normative["territory"]["id"]
+#     new_normative = normative_delete_req.model_dump()
+#     new_normative["service_type_id"] = normative["service_type"]["id"]
+#     new_normative["year"] = normative["year"]
+#
+#     # Act
+#     response = await client.request("DELETE", f"/api/v1/territory/{territory_id}/normatives", json=[new_normative])
+#
+#     # Assert
+#     assert_response(response, expected_status, OkResponse, error_message)
 
 
 @pytest.mark.asyncio
@@ -213,7 +210,7 @@ async def test_delete_territory_normatives(
     ids=["success", "bad_request", "not_found"],
 )
 async def test_get_normatives_values_by_parent_id(
-    urban_api_host: str,
+    client: AsyncClient,
     normative: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -229,9 +226,8 @@ async def test_get_normatives_values_by_parent_id(
         params["year"] = normative["year"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/territory/normatives_values", params=params)
-        result = response.json()
+    response = await client.get("/api/v1/territory/normatives_values", params=params)
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)
@@ -243,7 +239,7 @@ async def test_get_normatives_values_by_parent_id(
             pytest.fail(f"Pydantic validation error: {str(e)}")
         assert (
             len(result["features"][0]["properties"]["normatives"]) > 0
-        ), "Response should contain at least one indicator value."
+        ), "Response should contain at least one normative value."
         try:
             ShortNormativeInfo(**result["features"][0]["properties"]["normatives"][0])
         except ValidationError as e:

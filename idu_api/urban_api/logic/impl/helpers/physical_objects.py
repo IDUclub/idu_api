@@ -1,7 +1,7 @@
 """Physical objects internal logic is defined here."""
 
 from collections import defaultdict
-from typing import Callable
+from collections.abc import Callable
 
 from geoalchemy2 import Geography, Geometry
 from geoalchemy2.functions import ST_AsEWKB, ST_GeomFromWKB
@@ -24,7 +24,6 @@ from idu_api.common.db.entities import (
     urban_objects_data,
 )
 from idu_api.urban_api.dto import (
-    BuildingDTO,
     ObjectGeometryDTO,
     PhysicalObjectDTO,
     PhysicalObjectWithGeometryDTO,
@@ -50,7 +49,6 @@ from idu_api.urban_api.schemas import (
     BuildingPut,
     PhysicalObjectPatch,
     PhysicalObjectPost,
-    PhysicalObjectPut,
     PhysicalObjectWithGeometryPost,
 )
 from idu_api.urban_api.utils.query_filters import EqFilter, apply_filters
@@ -263,27 +261,6 @@ async def add_physical_object_with_geometry_to_db(
     return (await get_urban_objects_by_ids_from_db(conn, [urban_object_id]))[0]
 
 
-async def put_physical_object_to_db(
-    conn: AsyncConnection, physical_object: PhysicalObjectPut, physical_object_id: int
-) -> PhysicalObjectDTO:
-    """Update physical object by given all its attributes."""
-
-    if not await check_existence(conn, physical_objects_data, conditions={"physical_object_id": physical_object_id}):
-        raise EntityNotFoundById(physical_object_id, "physical object")
-
-    values = extract_values_from_model(physical_object, to_update=True)
-    statement = (
-        update(physical_objects_data)
-        .where(physical_objects_data.c.physical_object_id == physical_object_id)
-        .values(**values)
-    )
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return await get_physical_object_by_id_from_db(conn, physical_object_id)
-
-
 async def patch_physical_object_to_db(
     conn: AsyncConnection,
     physical_object: PhysicalObjectPatch,
@@ -379,41 +356,6 @@ async def delete_building_from_db(conn: AsyncConnection, building_id: int) -> di
     await conn.commit()
 
     return {"status": "ok"}
-
-
-async def get_buildings_by_physical_object_id_from_db(
-    conn: AsyncConnection,
-    physical_object_id: int,
-) -> list[BuildingDTO]:
-    """Get living building or list of living buildings by physical object id."""
-
-    if not await check_existence(conn, physical_objects_data, conditions={"physical_object_id": physical_object_id}):
-        raise EntityNotFoundById(physical_object_id, "physical object")
-
-    statement = (
-        select(
-            buildings_data,
-            physical_objects_data.c.name.label("physical_object_name"),
-            physical_objects_data.c.properties.label("physical_object_properties"),
-            physical_object_types_dict.c.physical_object_type_id,
-            physical_object_types_dict.c.name.label("physical_object_type_name"),
-        )
-        .select_from(
-            buildings_data.join(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == buildings_data.c.physical_object_id,
-            ).join(
-                physical_object_types_dict,
-                physical_objects_data.c.physical_object_type_id == physical_object_types_dict.c.physical_object_type_id,
-            )
-        )
-        .where(buildings_data.c.physical_object_id == physical_object_id)
-        .distinct()
-    )
-
-    result = (await conn.execute(statement)).mappings().all()
-
-    return [BuildingDTO(**building) for building in result]
 
 
 async def get_services_by_physical_object_id_from_db(

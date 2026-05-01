@@ -8,7 +8,6 @@ from idu_api.urban_api.schemas import (
     FunctionalZone,
     FunctionalZonePatch,
     FunctionalZonePost,
-    FunctionalZonePut,
     FunctionalZoneType,
     FunctionalZoneTypePost,
     OkResponse,
@@ -234,46 +233,12 @@ async def add_functional_zone(
     return FunctionalZone.from_dto(functional_zone_dto)
 
 
-@functional_zones_router.put(
-    "/functional_zones/{functional_zone_id}",
-    response_model=FunctionalZone,
-    status_code=status.HTTP_200_OK,
-    deprecated=True,
-)
-async def put_functional_zone(
-    request: Request,
-    functional_zone: FunctionalZonePut,
-    functional_zone_id: int = Path(..., description="functional zone identifier", gt=0),
-) -> FunctionalZone:
-    """
-    ## Update a functional zone by replacing all attributes.
-
-    **WARNING:** This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **functional_zone_id** (int, Path): Unique identifier of the functional zone.
-    - **functional_zone** (FunctionalZonePut, Body): New data for the functional zone.
-
-    ### Returns:
-    - **FunctionalZone**: The updated functional zone.
-
-    ### Errors:
-    - **404 Not Found**: If the functional zone (or related entity) does not exist.
-    """
-    functional_zones_service: FunctionalZonesService = request.state.functional_zones_service
-
-    functional_zone_dto = await functional_zones_service.put_functional_zone(functional_zone_id, functional_zone)
-
-    return FunctionalZone.from_dto(functional_zone_dto)
-
-
 @functional_zones_router.patch(
     "/functional_zones/{functional_zone_id}",
     response_model=FunctionalZone,
     status_code=status.HTTP_200_OK,
 )
-async def patch_functional_zone_for_territory(
+async def patch_functional_zone(
     request: Request,
     functional_zone: FunctionalZonePatch,
     functional_zone_id: int = Path(..., description="functional zone identifier", gt=0),

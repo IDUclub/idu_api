@@ -25,10 +25,9 @@ from idu_api.urban_api.logic.impl.helpers.territories_objects import (
     get_territories_by_parent_id_from_db,
     get_territories_without_geometry_by_parent_id_from_db,
     patch_territory_to_db,
-    put_territory_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import OBJECTS_NUMBER_LIMIT, SRID, build_recursive_query
-from idu_api.urban_api.schemas import Territory, TerritoryPatch, TerritoryPost, TerritoryPut, TerritoryWithoutGeometry
+from idu_api.urban_api.schemas import Territory, TerritoryPatch, TerritoryPost, TerritoryWithoutGeometry
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.connection import MockConnection
 
@@ -130,53 +129,6 @@ async def test_add_territory_to_db(mock_conn: MockConnection, territory_post_req
     assert isinstance(result, TerritoryDTO), "Result should be an TerritoryDTO."
     assert isinstance(Territory.from_dto(result), Territory), "Couldn't create pydantic model from DTO."
     mock_conn.execute_mock.assert_any_call(str(statement))
-    mock_conn.commit_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_put_territory_to_db(mock_conn: MockConnection, territory_put_req: TerritoryPut):
-    """Test the put_territory_to_db function."""
-
-    # Arrange
-    territory_id = 1
-
-    async def check_territory(conn, table, conditions):
-        if table == territories_data and conditions == {"territory_id": territory_id}:
-            return False
-        return True
-
-    statement_update = (
-        update(territories_data)
-        .where(territories_data.c.territory_id == territory_id)
-        .values(
-            name=territory_put_req.name,
-            geometry=ST_GeomFromWKB(territory_put_req.geometry.as_shapely_geometry().wkb, text(str(SRID))),
-            centre_point=ST_GeomFromWKB(territory_put_req.centre_point.as_shapely_geometry().wkb, text(str(SRID))),
-            territory_type_id=territory_put_req.territory_type_id,
-            parent_id=territory_put_req.parent_id,
-            properties=territory_put_req.properties,
-            admin_center_id=territory_put_req.admin_center_id,
-            target_city_type_id=territory_put_req.target_city_type_id,
-            okato_code=territory_put_req.okato_code,
-            oktmo_code=territory_put_req.oktmo_code,
-            is_city=territory_put_req.is_city,
-            updated_at=datetime.now(timezone.utc),
-        )
-    )
-
-    # Act
-    with patch(
-        "idu_api.urban_api.logic.impl.helpers.territories_objects.check_existence",
-        new=AsyncMock(side_effect=check_territory),
-    ):
-        with pytest.raises(EntityNotFoundById):
-            await put_territory_to_db(mock_conn, territory_id, territory_put_req)
-    result = await put_territory_to_db(mock_conn, territory_id, territory_put_req)
-
-    # Assert
-    assert isinstance(result, TerritoryDTO), "Result should be an TerritoryDTO."
-    assert isinstance(Territory.from_dto(result), Territory), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(statement_update))
     mock_conn.commit_mock.assert_called_once()
 
 

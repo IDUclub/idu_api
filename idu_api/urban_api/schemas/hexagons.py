@@ -25,7 +25,6 @@ class Hexagon(BaseModel):
     @classmethod
     def from_dto(cls, dto: HexagonDTO) -> "Hexagon":
         """Construct from DTO"""
-
         return cls(
             hexagon_id=dto.hexagon_id,
             territory=ShortTerritory(

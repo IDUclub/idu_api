@@ -32,6 +32,7 @@ class Scenario(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ScenarioDTO) -> "Scenario":
+        """Construct from DTO."""
         return cls(
             scenario_id=dto.scenario_id,
             parent_scenario=(
@@ -76,21 +77,6 @@ class ScenarioPost(BaseModel):
     )
 
 
-class ScenarioPut(BaseModel):
-    """Scenario schema for PUT requests."""
-
-    functional_zone_type_id: int | None = Field(
-        ..., description="target profile identifier for the scenario", examples=[1]
-    )
-    name: str = Field(..., description="name of the scenario", examples=["--"])
-    is_based: bool = Field(..., description="boolean parameter to determine base scenario")
-    properties: dict[str, Any] = Field(
-        ...,
-        description="scenario additional properties",
-        examples=[{"attribute_name": "attribute_value"}],
-    )
-
-
 class ScenarioPatch(BaseModel):
     """Scenario schema for PATCH requests."""
 
@@ -98,7 +84,6 @@ class ScenarioPatch(BaseModel):
         None, description="target profile identifier for the scenario", examples=[1]
     )
     name: str | None = Field(None, description="name of the scenario", examples=["--"])
-    is_based: bool | None = Field(None, description="boolean parameter to determine base scenario")
     properties: dict[str, Any] | None = Field(
         None,
         description="scenario additional properties",

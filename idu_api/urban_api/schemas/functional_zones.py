@@ -23,6 +23,7 @@ class FunctionalZoneSource(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: FunctionalZoneSourceDTO) -> "FunctionalZoneSource":
+        """Construct from DTO."""
         return cls(year=dto.year, source=dto.source)
 
 
@@ -36,6 +37,7 @@ class FunctionalZoneType(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: FunctionalZoneTypeDTO) -> "FunctionalZoneType":
+        """Construct from DTO."""
         return cls(
             functional_zone_type_id=dto.functional_zone_type_id,
             name=dto.name,
@@ -77,6 +79,7 @@ class FunctionalZone(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: FunctionalZoneDTO) -> "FunctionalZone":
+        """Construct from DTO."""
         return cls(
             functional_zone_id=dto.functional_zone_id,
             territory=ShortTerritory(id=dto.territory_id, name=dto.territory_name),
@@ -135,22 +138,6 @@ class FunctionalZonePost(NotPointGeometryValidationModel):
     )
 
 
-class FunctionalZonePut(NotPointGeometryValidationModel):
-    """Functional zone schema for PUT requests."""
-
-    territory_id: int = Field(..., description="territory identifier where functional zone is", examples=[1])
-    functional_zone_type_id: int = Field(..., description="functional zone type identifier", examples=[1])
-    name: str = Field(..., description="functional zone name", examples=["--"])
-    geometry: Geometry
-    year: int = Field(..., description="year when functional zone was loaded", examples=[2024])
-    source: str = Field(..., description="source from which functional zone was loaded", examples=["--"])
-    properties: dict[str, Any] = Field(
-        ...,
-        description="functional zone additional properties",
-        examples=[{"additional_attribute_name": "additional_attribute_value"}],
-    )
-
-
 class FunctionalZonePatch(NotPointGeometryValidationModel):
     """Functional zone schema for PATCH requests."""
 
@@ -201,6 +188,7 @@ class ScenarioFunctionalZone(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ScenarioFunctionalZoneDTO) -> "ScenarioFunctionalZone":
+        """Construct from DTO."""
         return cls(
             functional_zone_id=dto.functional_zone_id,
             scenario=ShortScenario(id=dto.scenario_id, name=dto.scenario_name),
@@ -255,23 +243,6 @@ class ScenarioFunctionalZonePost(NotPointGeometryValidationModel):
     geometry: Geometry
     properties: dict[str, Any] = Field(
         default_factory=dict,
-        description="scenario functional zone additional properties",
-        examples=[{"additional_attribute_name": "additional_attribute_value"}],
-    )
-
-
-class ScenarioFunctionalZonePut(NotPointGeometryValidationModel):
-    """Project scenario functional zone schema for PUT requests."""
-
-    functional_zone_type_id: int = Field(
-        ..., description="functional zone type identifier for the scenario functional zone", examples=[1]
-    )
-    name: str | None = Field(..., description="functional zone name", examples=["--"])
-    geometry: Geometry
-    year: int = Field(..., description="year when functional zone was loaded", examples=[2024])
-    source: str = Field(..., description="source from which functional zone was loaded", examples=["--"])
-    properties: dict[str, Any] = Field(
-        ...,
         description="scenario functional zone additional properties",
         examples=[{"additional_attribute_name": "additional_attribute_value"}],
     )

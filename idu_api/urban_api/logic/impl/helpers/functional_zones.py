@@ -34,7 +34,6 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
 from idu_api.urban_api.schemas import (
     FunctionalZonePatch,
     FunctionalZonePost,
-    FunctionalZonePut,
     FunctionalZoneTypePost,
     ProfilesReclamationDataPost,
     ProfilesReclamationDataPut,
@@ -332,27 +331,6 @@ async def add_functional_zone_to_db(conn: AsyncConnection, functional_zone: Func
     return await get_functional_zone_by_id(conn, functional_zone_id)
 
 
-async def put_functional_zone_to_db(
-    conn: AsyncConnection, functional_zone_id: int, functional_zone: FunctionalZonePut
-) -> FunctionalZoneDTO:
-    """Update functional zone by all its attributes."""
-
-    if not await check_existence(conn, functional_zones_data, conditions={"functional_zone_id": functional_zone_id}):
-        raise EntityNotFoundById(functional_zone_id, "functional zone")
-
-    values = extract_values_from_model(functional_zone, to_update=True)
-    statement = (
-        update(functional_zones_data)
-        .where(functional_zones_data.c.functional_zone_id == functional_zone_id)
-        .values(**values)
-    )
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return await get_functional_zone_by_id(conn, functional_zone_id)
-
-
 async def patch_functional_zone_to_db(
     conn: AsyncConnection, functional_zone_id: int, functional_zone: FunctionalZonePatch
 ) -> FunctionalZoneDTO:
@@ -362,6 +340,7 @@ async def patch_functional_zone_to_db(
         raise EntityNotFoundById(functional_zone_id, "functional zone")
 
     values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True)
+
     statement = (
         update(functional_zones_data)
         .where(functional_zones_data.c.functional_zone_id == functional_zone_id)

@@ -1,7 +1,8 @@
 """Territories physical objects internal logic is defined here."""
 
 from collections import defaultdict
-from typing import Literal, Sequence
+from collections.abc import Sequence
+from typing import Literal
 
 from geoalchemy2.functions import ST_AsEWKB
 from sqlalchemy import RowMapping, select

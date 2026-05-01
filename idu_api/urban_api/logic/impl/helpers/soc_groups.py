@@ -413,7 +413,7 @@ async def delete_social_value_indicator_value_from_db(
         conditions["year"] = year
 
     if not await check_existence(conn, soc_value_indicators_data, conditions=conditions):
-        raise EntityNotFoundByParams("social value indicator value", soc_value_id, territory_id)
+        raise EntityNotFoundByParams("social value indicator value", soc_value_id, territory_id, year)
 
     statement = delete(soc_value_indicators_data).where(soc_value_indicators_data.c.soc_value_id == soc_value_id)
 

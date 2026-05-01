@@ -28,6 +28,7 @@ def configure_logging(
     config: LoggingConfig,
     tracing_enabled: bool,
 ) -> structlog.stdlib.BoundLogger:
+    """Configure structured logging, handlers, and optional OpenTelemetry export."""
     files = {logger_config.filename: logger_config.level for logger_config in config.files}
 
     level_name_mapping = {
@@ -122,6 +123,8 @@ def configure_logging(
 
 
 class AttrFilteredLoggingHandler(LoggingHandler):
+    """Logging handler that filters internal attributes before export."""
+
     DROP_ATTRIBUTES = ["_logger"]
 
     @staticmethod
@@ -137,6 +140,7 @@ class OtelLogPreparationProcessor(LogRecordProcessor):
     """Processor which moves everything except message from log record body to attributes."""
 
     def on_emit(self, log_record: ReadWriteLogRecord) -> None:
+        """Transform log record body into OpenTelemetry attributes."""
         if not isinstance(log_record.log_record.body, dict):
             return
         for key in log_record.log_record.body:
@@ -149,12 +153,13 @@ class OtelLogPreparationProcessor(LogRecordProcessor):
         log_record.log_record.body = log_record.log_record.body["event"]
 
     def _format_value(self, value: Any) -> str:
+        """Convert structured values into string format for telemetry."""
         if isinstance(value, (dict, list)):
             return json.dumps(value)
         return str(value)
 
     def force_flush(self, timeout_millis=30000):
-        pass
+        """Flush buffered telemetry (no-op)."""
 
     def shutdown(self):
-        pass
+        """Shutdown processor (no-op)."""

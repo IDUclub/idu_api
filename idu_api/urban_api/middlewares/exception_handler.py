@@ -113,6 +113,7 @@ class HandlerNotFoundError(Exception):
 
 
 def _get_tracebacks(exc: Exception) -> list[list[str]]:
+    """Extract full traceback chains from an exception and its causes."""
     tracebacks: list[list[str]] = []
     while exc is not None:
         tracebacks.append(

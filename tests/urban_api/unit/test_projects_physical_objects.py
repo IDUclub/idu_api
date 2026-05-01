@@ -38,7 +38,7 @@ from idu_api.urban_api.dto import (
     ScenarioUrbanObjectDTO,
     UserDTO,
 )
-from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById
+from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     add_building_to_db,
     add_physical_object_with_geometry_to_db,
@@ -56,7 +56,6 @@ from idu_api.urban_api.logic.impl.helpers.projects_physical_objects import (
     patch_physical_object_to_db,
     put_building_to_db,
     put_physical_object_to_db,
-    update_physical_objects_by_function_id_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_territories_cte
 from idu_api.urban_api.schemas import (
@@ -85,7 +84,7 @@ async def test_get_physical_object_types_by_scenario_id_from_db(mock_conn: MockC
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     territories_cte = include_child_territories_cte(1)
     public_urban_object_ids = (
@@ -178,7 +177,7 @@ async def test_get_context_physical_object_types_from_db(mock_conn: MockConnecti
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     mock_geom = str(MagicMock(spec=ScalarSelect))
 
     public_urban_object_ids = (
@@ -291,7 +290,7 @@ async def test_get_physical_objects_by_scenario_id_from_db(mock_conn: MockConnec
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     physical_object_function_id = None
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
@@ -506,7 +505,7 @@ async def test_get_physical_objects_with_geometry_by_scenario_id_from_db(mock_co
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     physical_object_function_id = None
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
@@ -742,7 +741,7 @@ async def test_get_physical_objects_around_geometry_by_scenario_id_from_db(mock_
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     geometry = shape({"type": "Point", "coordinates": [1, 2]})
 
@@ -764,7 +763,7 @@ async def test_get_context_physical_objects_from_db(mock_conn: MockConnection):
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     physical_object_function_id = None
     mock_geom = str(MagicMock(spec=ScalarSelect))
@@ -991,7 +990,7 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     physical_object_function_id = None
     mock_geom = str(MagicMock(spec=ScalarSelect))
@@ -1311,8 +1310,7 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
         .select_from(
             projects_urban_objects_data.outerjoin(
                 projects_physical_objects_data,
-                projects_physical_objects_data.c.physical_object_id
-                == projects_urban_objects_data.c.physical_object_id,
+                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
             )
             .join(
                 projects_object_geometries_data,
@@ -1321,8 +1319,7 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
             )
             .outerjoin(
                 physical_objects_data,
-                physical_objects_data.c.physical_object_id
-                == projects_urban_objects_data.c.public_physical_object_id,
+                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
             )
             .join(
                 object_geometries_data,
@@ -1365,7 +1362,12 @@ async def test_get_context_physical_objects_with_geometry_from_db(mock_conn: Moc
         )
     )
 
-    queries = [public_urban_objects_query, regional_scenario_geoms_query, project_scenario_geoms_query, scenario_objects_with_public_geoms_query]
+    queries = [
+        public_urban_objects_query,
+        regional_scenario_geoms_query,
+        project_scenario_geoms_query,
+        scenario_objects_with_public_geoms_query,
+    ]
     union_query = union_all(*queries).cte(name="union_query")
     statement = select(union_query).where(union_query.c.physical_object_type_id == physical_object_type_id)
 
@@ -1481,7 +1483,7 @@ async def test_add_physical_object_with_geometry_to_db(
     # Arrange
     scenario_id = 1
     physical_object_id, object_geometry_id = 1, 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_statement = (
         insert(projects_physical_objects_data)
         .values(
@@ -1546,7 +1548,7 @@ async def test_put_scenario_physical_object_to_db(
     scenario_id = 1
     physical_object_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_physical_objects_data)
         .where(projects_physical_objects_data.c.physical_object_id == physical_object_id)
@@ -1586,7 +1588,7 @@ async def test_patch_scenario_physical_object_to_db(
     scenario_id = 1
     physical_object_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_physical_objects_data)
         .where(projects_physical_objects_data.c.physical_object_id == physical_object_id)
@@ -1616,7 +1618,7 @@ async def test_delete_public_physical_object_from_db(mock_conn: MockConnection):
     scenario_id = 1
     physical_object_id = 1
     is_scenario_object = False
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_urban_objects_data).where(
         projects_urban_objects_data.c.public_physical_object_id == physical_object_id
     )
@@ -1675,7 +1677,7 @@ async def test_delete_scenario_physical_object_from_db(mock_conn: MockConnection
     scenario_id = 1
     physical_object_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_physical_objects_data).where(
         projects_physical_objects_data.c.physical_object_id == physical_object_id
     )
@@ -1698,142 +1700,6 @@ async def test_delete_scenario_physical_object_from_db(mock_conn: MockConnection
 
 
 @pytest.mark.asyncio
-async def test_update_physical_objects_by_function_id_to_db(
-    mock_conn: MockConnection, physical_object_with_geometry_post_req: PhysicalObjectWithGeometryPost
-):
-    """Test the update_physical_objects_by_function_id_to_db function."""
-
-    # Arrange
-    scenario_id = 1
-    physical_objects = [physical_object_with_geometry_post_req]
-    user = UserDTO(id="mock_string", is_superuser=False)
-    physical_object_function_id = 1
-    territories_statement = select(territories_data.c.territory_id).where(
-        territories_data.c.territory_id.in_({obj.territory_id for obj in physical_objects})
-    )
-    physical_object_types_statement = select(physical_object_types_dict.c.physical_object_function_id).where(
-        physical_object_types_dict.c.physical_object_type_id.in_(
-            {obj.physical_object_type_id for obj in physical_objects}
-        )
-    )
-    project_geometry = (
-        select(projects_territory_data.c.geometry).where(projects_territory_data.c.project_id == 1).scalar_subquery()
-    )
-    objects_intersecting = (
-        select(object_geometries_data.c.object_geometry_id)
-        .where(ST_Intersects(object_geometries_data.c.geometry, project_geometry))
-        .cte(name="objects_intersecting")
-    )
-    public_urban_object_ids = (
-        select(projects_urban_objects_data.c.public_urban_object_id).where(
-            projects_urban_objects_data.c.scenario_id == scenario_id,
-            projects_urban_objects_data.c.public_urban_object_id.isnot(None),
-        )
-    ).cte(name="public_urban_object_ids")
-    public_urban_objects_query = (
-        select(urban_objects_data.c.urban_object_id)
-        .select_from(
-            urban_objects_data.join(
-                physical_objects_data,
-                physical_objects_data.c.physical_object_id == urban_objects_data.c.physical_object_id,
-            )
-            .join(
-                physical_object_types_dict,
-                physical_object_types_dict.c.physical_object_type_id == physical_objects_data.c.physical_object_type_id,
-            )
-            .join(
-                object_geometries_data,
-                object_geometries_data.c.object_geometry_id == urban_objects_data.c.object_geometry_id,
-            )
-        )
-        .where(
-            urban_objects_data.c.urban_object_id.not_in(select(public_urban_object_ids)),
-            object_geometries_data.c.object_geometry_id.in_(select(objects_intersecting)),
-            physical_object_types_dict.c.physical_object_function_id == physical_object_function_id,
-        )
-        .cte(name="public_urban_objects_query")
-    )
-    insert_public_urban_objects_query = insert(projects_urban_objects_data).from_select(
-        (
-            projects_urban_objects_data.c.scenario_id,
-            projects_urban_objects_data.c.public_urban_object_id,
-        ),
-        select(
-            literal(scenario_id).label("scenario_id"),
-            public_urban_objects_query.c.urban_object_id,
-        ),
-    )
-    insert_physical_objects_statement = (
-        insert(projects_physical_objects_data)
-        .values(
-            [
-                {
-                    "public_physical_object_id": None,
-                    "physical_object_type_id": physical_object.physical_object_type_id,
-                    "name": physical_object.name,
-                    "properties": physical_object.properties,
-                }
-                for physical_object in physical_objects
-            ]
-        )
-        .returning(projects_physical_objects_data.c.physical_object_id)
-    )
-    insert_object_geometries_statement = (
-        insert(projects_object_geometries_data)
-        .values(
-            [
-                {
-                    "public_object_geometry_id": None,
-                    "territory_id": physical_object.territory_id,
-                    "geometry": ST_GeomFromWKB(physical_object.geometry.as_shapely_geometry().wkb, text(str(SRID))),
-                    "centre_point": ST_GeomFromWKB(
-                        physical_object.centre_point.as_shapely_geometry().wkb, text(str(SRID))
-                    ),
-                    "address": physical_object.address,
-                    "osm_id": physical_object.osm_id,
-                }
-                for physical_object in physical_objects
-            ]
-        )
-        .returning(projects_object_geometries_data.c.object_geometry_id)
-    )
-    insert_urban_objects_statement = (
-        insert(projects_urban_objects_data)
-        .values(
-            [
-                {
-                    "scenario_id": scenario_id,
-                    "physical_object_id": 1,
-                    "object_geometry_id": 1,
-                }
-            ]
-        )
-        .returning(urban_objects_data.c.urban_object_id)
-    )
-
-    # Act
-    result = await update_physical_objects_by_function_id_to_db(
-        mock_conn, physical_objects, scenario_id, user, physical_object_function_id
-    )
-
-    # Assert
-    assert isinstance(result, list), "Result should be a list."
-    assert all(
-        isinstance(item, ScenarioUrbanObjectDTO) for item in result
-    ), "Each item should be a ScenarioUrbanObjectDTO."
-    assert isinstance(
-        ScenarioUrbanObject.from_dto(result[0]), ScenarioUrbanObject
-    ), "Couldn't create pydantic model from DTO."
-    mock_conn.execute_mock.assert_any_call(str(territories_statement))
-    mock_conn.execute_mock.assert_any_call(str(physical_object_types_statement))
-    mock_conn.execute_mock.assert_any_call(str(insert_public_urban_objects_query))
-    mock_conn.execute_mock.assert_any_call(str(insert_physical_objects_statement))
-    mock_conn.execute_mock.assert_any_call(str(insert_object_geometries_statement))
-    mock_conn.execute_mock.assert_any_call(str(insert_urban_objects_statement))
-    mock_conn.commit_mock.assert_called_once()
-
-
-@pytest.mark.asyncio
 async def test_add_building_to_scenario_physical_object(
     mock_conn: MockConnection, scenario_building_post_req: ScenarioBuildingPost
 ):
@@ -1841,7 +1707,7 @@ async def test_add_building_to_scenario_physical_object(
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=True)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=["ADMIN"], is_superuser=True, azp="test-client")
     scenario_statement_insert = (
         insert(projects_buildings_data)
         .values(**scenario_building_post_req.model_dump(exclude={"is_scenario_object"}))
@@ -1871,7 +1737,7 @@ async def test_put_building_to_db(mock_conn: MockConnection, scenario_building_p
         return True
 
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=True)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=["ADMIN"], is_superuser=True, azp="test-client")
     statement_insert = insert(projects_buildings_data).values(
         **scenario_building_put_req.model_dump(exclude={"is_scenario_object"})
     )
@@ -1907,7 +1773,7 @@ async def test_patch_building_to_db(mock_conn: MockConnection, scenario_building
     building_id = 1
     is_scenario_object = True
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=True)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=["ADMIN"], is_superuser=True, azp="test-client")
 
     statement_update = (
         update(projects_buildings_data)
@@ -1938,7 +1804,7 @@ async def test_delete_scenario_building_from_db(mock_conn: MockConnection):
     building_id = 1
     is_scenario_object = True
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=True)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=["ADMIN"], is_superuser=True, azp="test-client")
     statement_delete = delete(projects_buildings_data).where(projects_buildings_data.c.building_id == building_id)
 
     # Act
@@ -1958,7 +1824,7 @@ async def test_delete_public_building_from_db(mock_conn: MockConnection):
     building_id = 1
     is_scenario_object = False
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=True)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=["ADMIN"], is_superuser=True, azp="test-client")
     insert_scenario_physical_object_statement = (
         insert(projects_physical_objects_data)
         .from_select(

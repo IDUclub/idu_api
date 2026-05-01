@@ -25,6 +25,7 @@ class BufferType(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: BufferTypeDTO) -> "BufferType":
+        """Construct from DTO."""
         return cls(buffer_type_id=dto.buffer_type_id, name=dto.name, description=dto.description)
 
 
@@ -45,6 +46,7 @@ class DefaultBufferValue(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: DefaultBufferValueDTO) -> "DefaultBufferValue":
+        """Construct from DTO."""
         return cls(
             buffer_type=BufferTypeBasic(
                 id=dto.buffer_type_id, name=dto.buffer_type_name, description=dto.buffer_type_description
@@ -79,6 +81,7 @@ class DefaultBufferValuePost(BaseModel):
 
     @model_validator(mode="after")
     def validate_service_type_or_urban_function(self):
+        """Validate if service type and physical object type identifiers are set correctly."""
         if self.service_type_id is None and self.physical_object_type_id is None:
             raise ValueError("service_type_id and physical_object_type_id cannot both be unset")
         if self.service_type_id is not None and self.physical_object_type_id is not None:
@@ -96,6 +99,7 @@ class DefaultBufferValuePut(BaseModel):
 
     @model_validator(mode="after")
     def validate_service_type_or_urban_function(self):
+        """Validate if service type and physical object type identifiers are set correctly."""
         if self.service_type_id is None and self.physical_object_type_id is None:
             raise ValueError("service_type_id and physical_object_type_id cannot both be unset")
         if self.service_type_id is not None and self.physical_object_type_id is not None:
@@ -113,6 +117,7 @@ class Buffer(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: BufferDTO) -> "Buffer":
+        """Construct from DTO."""
         return cls(
             buffer_type=BufferTypeBasic(
                 id=dto.buffer_type_id, name=dto.buffer_type_name, description=dto.buffer_type_description
@@ -153,6 +158,8 @@ class Buffer(BaseModel):
 
 
 class BufferAttributes(BaseModel):
+    """Buffer model without geometry."""
+
     buffer_type: BufferTypeBasic
     urban_object: ShortUrbanObject
     is_custom: bool = Field(..., description="boolean parameter to determine if buffer is custom or default")
@@ -178,6 +185,7 @@ class ScenarioBuffer(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: ScenarioBufferDTO) -> "ScenarioBuffer":
+        """Construct from DTO."""
         return cls(
             buffer_type=BufferTypeBasic(
                 id=dto.buffer_type_id, name=dto.buffer_type_name, description=dto.buffer_type_description

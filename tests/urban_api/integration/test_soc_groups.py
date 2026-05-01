@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 
 from idu_api.urban_api.schemas import (
     OkResponse,
@@ -27,12 +27,11 @@ from tests.urban_api.helpers.utils import assert_response
 
 
 @pytest.mark.asyncio
-async def test_get_social_groups(urban_api_host: str, social_group: dict[str, Any]):
+async def test_get_social_groups(client: AsyncClient, social_group: dict[str, Any]):
     """Test GET /social_groups method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/social_groups")
+    response = await client.get("/api/v1/social_groups")
 
     # Assert
     assert_response(response, 200, SocGroup, result_type="list")
@@ -49,7 +48,7 @@ async def test_get_social_groups(urban_api_host: str, social_group: dict[str, An
     ids=["success", "not_found"],
 )
 async def test_get_social_group_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     social_group: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -61,9 +60,8 @@ async def test_get_social_group_by_id(
     soc_group_id = soc_group_id_param or social_group["soc_group_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/social_groups/{soc_group_id}")
-        result = response.json()
+    response = await client.get(f"/api/v1/social_groups/{soc_group_id}")
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, SocGroupWithServiceTypes, error_message)
@@ -83,7 +81,7 @@ async def test_get_social_group_by_id(
     ids=["success", "conflict"],
 )
 async def test_add_social_group(
-    urban_api_host: str,
+    client: AsyncClient,
     soc_group_post_req: SocGroupPost,
     expected_status: int,
     error_message: str | None,
@@ -95,8 +93,9 @@ async def test_add_social_group(
     new_group["name"] = "new_name"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/social_groups", json=new_group)
+    if expected_status == 409:
+        await client.post("/api/v1/social_groups", json=new_group)
+    response = await client.post("/api/v1/social_groups", json=new_group)
 
     # Assert
     assert_response(response, expected_status, SocGroupWithServiceTypes, error_message)
@@ -113,7 +112,7 @@ async def test_add_social_group(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_service_type_to_social_group(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type_post_req: ServiceTypePost,
     social_group: dict[str, Any],
     service_type: dict[str, Any],
@@ -130,14 +129,12 @@ async def test_add_service_type_to_social_group(
         new_service_type = service_type_post_req.model_dump()
         new_service_type["name"] = "service type for soc group"
         new_service_type["urban_function_id"] = service_type["urban_function"]["id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/service_types", json=new_service_type)
-            service_type_id = response.json()["service_type_id"]
+        response = await client.post(f"/api/v1/service_types", json=new_service_type)
+        service_type_id = response.json()["service_type_id"]
     json_data = {"service_type_id": service_type_id, "infrastructure_type": "basic"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/social_groups/{soc_group_id}/service_types", json=json_data)
+    response = await client.post(f"/api/v1/social_groups/{soc_group_id}/service_types", json=json_data)
 
     # Assert
     assert_response(response, expected_status, SocGroupWithServiceTypes, error_message)
@@ -153,7 +150,7 @@ async def test_add_service_type_to_social_group(
     ids=["success", "not_found"],
 )
 async def test_delete_social_group(
-    urban_api_host: str,
+    client: AsyncClient,
     soc_group_post_req: SocGroupPost,
     expected_status: int,
     error_message: str | None,
@@ -166,25 +163,23 @@ async def test_delete_social_group(
     new_group["name"] = "soc group for deletion"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if soc_group_id_param is None:
-            response = await client.post("/social_groups", json=new_group)
-            soc_group_id = response.json()["soc_group_id"]
-            response = await client.delete(f"/social_groups/{soc_group_id}")
-        else:
-            response = await client.delete(f"/social_groups/{soc_group_id_param}")
+    if soc_group_id_param is None:
+        response = await client.post("/api/v1/social_groups", json=new_group)
+        soc_group_id = response.json()["soc_group_id"]
+        response = await client.delete(f"/api/v1/social_groups/{soc_group_id}")
+    else:
+        response = await client.delete(f"/api/v1/social_groups/{soc_group_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
 
 
 @pytest.mark.asyncio
-async def test_get_social_values(urban_api_host: str, social_value: dict[str, Any]):
+async def test_get_social_values(client: AsyncClient, social_value: dict[str, Any]):
     """Test GET /social_values method."""
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get("/social_values")
+    response = await client.get("/api/v1/social_values")
 
     # Assert
     assert_response(response, 200, SocValue, result_type="list")
@@ -201,7 +196,7 @@ async def test_get_social_values(urban_api_host: str, social_value: dict[str, An
     ids=["success", "not_found"],
 )
 async def test_get_social_value_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     social_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -213,8 +208,7 @@ async def test_get_social_value_by_id(
     soc_value_id = soc_value_id_param or social_value["soc_value_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/social_values/{soc_value_id}")
+    response = await client.get(f"/api/v1/social_values/{soc_value_id}")
 
     # Assert
     assert_response(response, expected_status, SocValue, error_message)
@@ -230,7 +224,7 @@ async def test_get_social_value_by_id(
     ids=["success", "conflict"],
 )
 async def test_add_social_value(
-    urban_api_host: str,
+    client: AsyncClient,
     soc_value_post_req: SocValuePost,
     expected_status: int,
     error_message: str | None,
@@ -242,8 +236,9 @@ async def test_add_social_value(
     new_value["name"] = "new_name"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post("/social_values", json=new_value)
+    if expected_status == 409:
+        await client.post("/api/v1/social_values", json=new_value)
+    response = await client.post("/api/v1/social_values", json=new_value)
 
     # Assert
     assert_response(response, expected_status, SocValue, error_message)
@@ -260,7 +255,7 @@ async def test_add_social_value(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_value_to_social_group(
-    urban_api_host: str,
+    client: AsyncClient,
     social_value: dict[str, Any],
     social_group: dict[str, Any],
     service_type: dict[str, Any],
@@ -275,8 +270,9 @@ async def test_add_value_to_social_group(
     params = {"service_type_id": service_type["service_type_id"], "soc_value_id": social_value["soc_value_id"]}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/social_groups/{soc_group_id}/values", params=params)
+    if expected_status == 409:
+        await client.post(f"/api/v1/social_groups/{soc_group_id}/values", params=params)
+    response = await client.post(f"/api/v1/social_groups/{soc_group_id}/values", params=params)
 
     # Assert
     assert_response(response, expected_status, SocValue, error_message)
@@ -292,7 +288,7 @@ async def test_add_value_to_social_group(
     ids=["success", "not_found"],
 )
 async def test_get_service_types_by_social_value_id(
-    urban_api_host: str,
+    client: AsyncClient,
     social_value: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -305,8 +301,7 @@ async def test_get_service_types_by_social_value_id(
     params = {"ordering": "desc"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/social_values/{soc_value_id}/service_types", params=params)
+    response = await client.get(f"/api/v1/social_values/{soc_value_id}/service_types", params=params)
 
     # Assert
     if expected_status == 200:
@@ -326,7 +321,7 @@ async def test_get_service_types_by_social_value_id(
     ids=["success", "conflict", "not_found"],
 )
 async def test_add_service_type_to_social_value(
-    urban_api_host: str,
+    client: AsyncClient,
     service_type_post_req: ServiceTypePost,
     social_value: dict[str, Any],
     service_type: dict[str, Any],
@@ -342,13 +337,11 @@ async def test_add_service_type_to_social_value(
         new_service_type = service_type_post_req.model_dump()
         new_service_type["name"] = "service type for soc value"
         new_service_type["urban_function_id"] = service_type["urban_function"]["id"]
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/service_types", json=new_service_type)
-            service_type_id = response.json()["service_type_id"]
+        response = await client.post(f"/api/v1/service_types", json=new_service_type)
+        service_type_id = response.json()["service_type_id"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/social_values/{soc_value_id}/service_types/{service_type_id}")
+    response = await client.post(f"/api/v1/social_values/{soc_value_id}/service_types/{service_type_id}")
 
     # Assert
     assert_response(response, expected_status, SocValueWithServiceTypes, error_message)
@@ -364,7 +357,7 @@ async def test_add_service_type_to_social_value(
     ids=["success", "not_found"],
 )
 async def test_delete_social_value(
-    urban_api_host: str,
+    client: AsyncClient,
     soc_value_post_req: SocValuePost,
     expected_status: int,
     error_message: str | None,
@@ -377,13 +370,12 @@ async def test_delete_social_value(
     new_value["name"] = "soc value for deletion"
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if soc_value_id_param is None:
-            response = await client.post("/social_values", json=new_value)
-            soc_value_id = response.json()["soc_value_id"]
-            response = await client.delete(f"/social_values/{soc_value_id}")
-        else:
-            response = await client.delete(f"/social_values/{soc_value_id_param}")
+    if soc_value_id_param is None:
+        response = await client.post("/api/v1/social_values", json=new_value)
+        soc_value_id = response.json()["soc_value_id"]
+        response = await client.delete(f"/api/v1/social_values/{soc_value_id}")
+    else:
+        response = await client.delete(f"/api/v1/social_values/{soc_value_id_param}")
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -393,14 +385,14 @@ async def test_delete_social_value(
 @pytest.mark.parametrize(
     "expected_status, error_message, soc_value_id_param",
     [
-        (200, None, 1),
+        (200, None, None),
         (404, "не найден", 1e9),
         (422, "пожалуйста, выберите либо конкретный год, либо last_only", 1e9),
     ],
     ids=["success", "not_found", "unprocessable_entity"],
 )
 async def test_get_social_value_indicator_values(
-    urban_api_host: str,
+    client: AsyncClient,
     social_value_indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -409,7 +401,7 @@ async def test_get_social_value_indicator_values(
     """Test GET /social_values/{soc_group_id}/indicators method."""
 
     # Arrange
-    soc_value_id = soc_value_id_param
+    soc_value_id = soc_value_id_param or social_value_indicator["soc_value"]["id"]
     params = {
         "territory_id": social_value_indicator["territory"]["id"],
         "year": social_value_indicator["year"],
@@ -417,9 +409,8 @@ async def test_get_social_value_indicator_values(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/social_values/{soc_value_id}/indicators", params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/social_values/{soc_value_id}/indicators", params=params)
+    result = response.json()
 
     # Assert
     if expected_status == 200:
@@ -440,7 +431,7 @@ async def test_get_social_value_indicator_values(
     ids=["success", "not_found", "conflict"],
 )
 async def test_add_social_value_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     soc_value_indicator_post_req: SocValueIndicatorValuePost,
     social_value_indicator: dict[str, Any],
     expected_status: int,
@@ -459,8 +450,9 @@ async def test_add_social_value_indicator_value(
     json_data["value"] = social_value_indicator["value"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/social_values/indicators", json=json_data)
+    if expected_status == 409:
+        await client.post(f"/api/v1/social_values/indicators", json=json_data)
+    response = await client.post(f"/api/v1/social_values/indicators", json=json_data)
 
     # Assert
     assert_response(response, expected_status, SocValueIndicatorValue, error_message)
@@ -476,7 +468,7 @@ async def test_add_social_value_indicator_value(
     ids=["success", "not_found"],
 )
 async def test_put_social_value_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     soc_value_indicator_post_req: SocValueIndicatorValuePost,
     social_value_indicator: dict[str, Any],
     soc_value_id_param: int | None,
@@ -493,8 +485,7 @@ async def test_put_social_value_indicator_value(
     json_data["value"] = social_value_indicator["value"]
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put("/social_values/indicators", json=json_data)
+    response = await client.put("/api/v1/social_values/indicators", json=json_data)
 
     # Assert
     assert_response(response, expected_status, SocValueIndicatorValue, error_message)
@@ -504,13 +495,13 @@ async def test_put_social_value_indicator_value(
 @pytest.mark.parametrize(
     "expected_status, error_message, soc_value_id_param",
     [
-        (200, None, 1),
+        (200, None, None),
         (404, "не найден", 1e9),
     ],
     ids=["success", "not_found"],
 )
 async def test_delete_social_value_indicator_values(
-    urban_api_host: str,
+    client: AsyncClient,
     social_value_indicator: dict[str, Any],
     expected_status: int,
     error_message: str | None,
@@ -519,15 +510,14 @@ async def test_delete_social_value_indicator_values(
     """Test DELETE /social_values/{soc_value_id}/indicators method."""
 
     # Arrange
-    soc_value_id = soc_value_id_param
+    soc_value_id = soc_value_id_param or social_value_indicator["soc_value"]["id"]
     params = {
         "territory_id": social_value_indicator["territory"]["id"],
         "year": social_value_indicator["year"],
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/social_values/{soc_value_id}/indicators", params=params)
+    response = await client.delete(f"/api/v1/social_values/{soc_value_id}/indicators", params=params)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)

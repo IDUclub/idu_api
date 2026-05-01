@@ -1,3 +1,5 @@
+"""CLI entrypoint for running the Urban API service with config overrides."""
+
 import os
 import tempfile
 import typing as tp
@@ -96,12 +98,13 @@ def main(
 
 
 def _run_uvicorn(configuration: dict[str, tp.Any]) -> tp.NoReturn:
+    """Start Uvicorn with the given configuration."""
     uvicorn.run(
         "idu_api.urban_api.fastapi_init:app",
         **configuration,
     )
 
 
-if __name__ in ("__main__", "idu_api.urban_api.__main__"):
+if __name__ in {"__main__", "idu_api.urban_api.__main__"}:
     try_load_envfile(os.environ.get("ENVFILE", ".env"))
     main()  # pylint: disable=no-value-for-parameter

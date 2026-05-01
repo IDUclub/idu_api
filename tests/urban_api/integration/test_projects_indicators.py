@@ -3,8 +3,8 @@
 import asyncio
 from typing import Any
 
-import httpx
 import pytest
+from httpx import AsyncClient
 from otteroad import KafkaConsumerService
 from otteroad.models import RegionalScenarioIndicatorsUpdated, ScenarioIndicatorsUpdated
 from pydantic import ValidationError
@@ -37,7 +37,7 @@ from tests.urban_api.helpers.utils import assert_response
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_indicators_values_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_indicator_value: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -56,9 +56,8 @@ async def test_get_indicators_values_by_scenario_id(
     }
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(f"/scenarios/{scenario_id}/indicators_values", headers=headers, params=params)
-        result = response.json()
+    response = await client.get(f"/api/v1/scenarios/{scenario_id}/indicators_values", headers=headers, params=params)
+    result = response.json()
 
     # Assert
     if response.status_code == 200:
@@ -83,7 +82,7 @@ async def test_get_indicators_values_by_scenario_id(
     ids=["success_common", "success_regional", "forbidden", "not_found", "conflict"],
 )
 async def test_add_scenario_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_indicator_value_post_req: ScenarioIndicatorValuePost,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
@@ -115,8 +114,7 @@ async def test_add_scenario_indicator_value(
     # Act
     if expected_status == 201 and not is_regional_param:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.post(f"/scenarios/{scenario_id}/indicators_values", headers=headers, json=new_value)
+    response = await client.post(f"/api/v1/scenarios/{scenario_id}/indicators_values", headers=headers, json=new_value)
     if expected_status == 201 and not is_regional_param:
         await asyncio.sleep(5)
 
@@ -139,7 +137,7 @@ async def test_add_scenario_indicator_value(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_put_scenario_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_indicator_value_put_req: ScenarioIndicatorValuePut,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
@@ -171,8 +169,7 @@ async def test_put_scenario_indicator_value(
     # Act
     if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.put(f"/scenarios/{scenario_id}/indicators_values", headers=headers, json=new_value)
+    response = await client.put(f"/api/v1/scenarios/{scenario_id}/indicators_values", headers=headers, json=new_value)
     if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
 
@@ -195,7 +192,7 @@ async def test_put_scenario_indicator_value(
     ids=["success_common", "success_regional", "forbidden", "not_found"],
 )
 async def test_patch_scenario_indicator_value(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_indicator_value_patch_req: ScenarioIndicatorValuePatch,
     scenario: dict[str, Any],
     regional_scenario: dict[str, Any],
@@ -224,12 +221,11 @@ async def test_patch_scenario_indicator_value(
     # Act
     if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.patch(
-            f"/scenarios/{scenario_id}/indicators_values/{indicator_value_id}",
-            headers=headers,
-            json=new_value,
-        )
+    response = await client.patch(
+        f"/api/v1/scenarios/{scenario_id}/indicators_values/{indicator_value_id}",
+        headers=headers,
+        json=new_value,
+    )
     if expected_status == 200 and not is_regional_param:
         await asyncio.sleep(5)
 
@@ -251,7 +247,7 @@ async def test_patch_scenario_indicator_value(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_delete_indicators_values_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     project: dict[str, Any],
     functional_zone_type: dict[str, Any],
     valid_token: str,
@@ -271,16 +267,14 @@ async def test_delete_indicators_values_by_scenario_id(
             "name": "Test Scenario Name",
             "functional_zone_type_id": functional_zone_type["functional_zone_type_id"],
         }
-        async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-            response = await client.post(f"/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
-            scenario_id = response.json()["scenario_id"]
+        response = await client.post(f"/api/v1/scenarios/{base_scenario_id}", json=new_scenario, headers=headers)
+        scenario_id = response.json()["scenario_id"]
     else:
         scenario_id = scenario_id_param
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.delete(f"/scenarios/{scenario_id}/indicators_values", headers=headers)
+    response = await client.delete(f"/api/v1/scenarios/{scenario_id}/indicators_values", headers=headers)
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -297,7 +291,7 @@ async def test_delete_indicators_values_by_scenario_id(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_delete_scenario_indicator_value_by_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_indicator_value_post_req: ScenarioIndicatorValuePost,
     scenario_indicator_value: dict[str, Any],
     valid_token: str,
@@ -309,27 +303,14 @@ async def test_delete_scenario_indicator_value_by_id(
     """Test DELETE /scenarios/{scenario_id}/indicators_values/{indicator_value_id} method."""
 
     # Arrange
-    scenario_id = scenario_indicator_value["scenario"]["id"]
-    new_value = scenario_indicator_value_post_req.model_dump()
-    new_value["indicator_id"] = scenario_indicator_value["indicator"]["indicator_id"]
-    new_value["territory_id"] = None
-    new_value["hexagon_id"] = None
+    scenario_id = scenario_id_param or scenario_indicator_value["scenario"]["id"]
+    indicator_value_id = scenario_indicator_value["indicator_value_id"]
     headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        if scenario_id_param is None:
-            response = await client.post(
-                f"/scenarios/{scenario_id}/indicators_values",
-                headers={"Authorization": f"Bearer {superuser_token}"},
-                json=new_value,
-            )
-            indicator_value_id = response.json()["indicator_value_id"]
-            response = await client.delete(
-                f"/scenarios/{scenario_id}/indicators_values/{indicator_value_id}", headers=headers
-            )
-        else:
-            response = await client.delete(f"/scenarios/{scenario_id_param}/indicators_values/1", headers=headers)
+    response = await client.delete(
+        f"/api/v1/scenarios/{scenario_id}/indicators_values/{indicator_value_id}", headers=headers
+    )
 
     # Assert
     assert_response(response, expected_status, OkResponse, error_message)
@@ -346,7 +327,7 @@ async def test_delete_scenario_indicator_value_by_id(
     ids=["success", "forbidden", "not_found"],
 )
 async def test_get_hexagons_with_indicators_values_by_scenario_id(
-    urban_api_host: str,
+    client: AsyncClient,
     scenario_hexagon_indicator_value: dict[str, Any],
     valid_token: str,
     superuser_token: str,
@@ -362,13 +343,12 @@ async def test_get_hexagons_with_indicators_values_by_scenario_id(
     params = {"indicator_ids": scenario_hexagon_indicator_value["indicator"]["indicator_id"]}
 
     # Act
-    async with httpx.AsyncClient(base_url=f"{urban_api_host}/api/v1") as client:
-        response = await client.get(
-            f"/scenarios/{scenario_id}/indicators_values/hexagons",
-            headers=headers,
-            params=params,
-        )
-        result = response.json()
+    response = await client.get(
+        f"/api/v1/scenarios/{scenario_id}/indicators_values/hexagons",
+        headers=headers,
+        params=params,
+    )
+    result = response.json()
 
     # Assert
     assert_response(response, expected_status, GeoJSONResponse, error_message)

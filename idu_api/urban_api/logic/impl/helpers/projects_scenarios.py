@@ -19,7 +19,7 @@ from idu_api.common.db.entities import (
 )
 from idu_api.urban_api.dto import ScenarioDTO, UserDTO
 from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
-from idu_api.urban_api.exceptions.logic.projects import InvalidBaseScenario, NotAllowedInRegionalScenario
+from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.logic.impl.helpers.projects_objects import (
     check_project,
@@ -31,7 +31,6 @@ from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_
 from idu_api.urban_api.schemas import (
     ScenarioPatch,
     ScenarioPost,
-    ScenarioPut,
 )
 
 
@@ -237,104 +236,12 @@ async def copy_scenario_to_db(
     return await get_scenario_by_id_from_db(conn, new_scenario_id, user)
 
 
-async def add_new_scenario_to_db(conn: AsyncConnection, scenario: ScenarioPost, user: UserDTO) -> ScenarioDTO:
-    """Create a new scenario from base scenario."""
-
-    project = (
-        (await conn.execute(select(projects_data).where(projects_data.c.project_id == scenario.project_id)))
-        .mappings()
-        .one_or_none()
-    )
-    if project is None:
-        raise EntityNotFoundById(scenario.project_id, "project")
-
-    if project.is_regional:
-        base_scenario_id = (
-            await conn.execute(
-                select(scenarios_data.c.scenario_id)
-                .select_from(
-                    scenarios_data.join(projects_data, projects_data.c.project_id == scenarios_data.c.project_id)
-                )
-                .where(
-                    projects_data.c.is_regional.is_(True),
-                    scenarios_data.c.is_based.is_(True),
-                    projects_data.c.territory_id == project.territory_id,
-                )
-            )
-        ).scalar_one()
-    else:
-        regional_scenarios = scenarios_data.alias("regional_scenarios")
-        base_scenario_id = (
-            await conn.execute(
-                select(scenarios_data.c.scenario_id)
-                .select_from(
-                    scenarios_data.join(
-                        regional_scenarios, regional_scenarios.c.scenario_id == scenarios_data.c.parent_id
-                    )
-                )
-                .where(
-                    scenarios_data.c.project_id == project.project_id,
-                    scenarios_data.c.is_based.is_(True),
-                    regional_scenarios.c.is_based.is_(True),
-                )
-            )
-        ).scalar_one()
-
-    return await copy_scenario_to_db(conn, scenario, base_scenario_id, user)
-
-
-async def put_scenario_to_db(
-    conn: AsyncConnection, scenario: ScenarioPut, scenario_id: int, user: UserDTO
-) -> ScenarioDTO:
-    """Update scenario object - all attributes."""
-
-    requested_scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
-
-    if requested_scenario.is_based and not scenario.is_based:
-        raise InvalidBaseScenario()
-
-    if not requested_scenario.is_based and scenario.is_based:
-        statement = select(scenarios_data.c.scenario_id).where(
-            scenarios_data.c.project_id == requested_scenario.project_id,
-            scenarios_data.c.is_based.is_(True),
-            scenarios_data.c.parent_id == requested_scenario.parent_id,
-        )
-        based_scenario_id = (await conn.execute(statement)).scalar_one_or_none()
-        statement = (
-            update(scenarios_data).where(scenarios_data.c.scenario_id == based_scenario_id).values(is_based=False)
-        )
-        await conn.execute(statement)
-
-    values = extract_values_from_model(scenario, to_update=True)
-    statement = update(scenarios_data).where(scenarios_data.c.scenario_id == scenario_id).values(**values)
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return await get_scenario_by_id_from_db(conn, scenario_id, user)
-
-
 async def patch_scenario_to_db(
     conn: AsyncConnection, scenario: ScenarioPatch, scenario_id: int, user: UserDTO
 ) -> ScenarioDTO:
     """Update scenario object - only given fields."""
 
-    requested_scenario = await check_scenario(conn, scenario_id, user, to_edit=True, return_value=True)
-
-    if scenario.is_based is not None and requested_scenario.is_based and not scenario.is_based:
-        raise InvalidBaseScenario()
-
-    if scenario.is_based is not None and not requested_scenario.is_based and scenario.is_based:
-        statement = select(scenarios_data.c.scenario_id).where(
-            scenarios_data.c.project_id == requested_scenario.project_id,
-            scenarios_data.c.is_based.is_(True),
-            scenarios_data.c.parent_id == requested_scenario.parent_id,
-        )
-        based_scenario_id = (await conn.execute(statement)).scalar_one_or_none()
-        statement = (
-            update(scenarios_data).where(scenarios_data.c.scenario_id == based_scenario_id).values(is_based=False)
-        )
-        await conn.execute(statement)
+    await check_scenario(conn, scenario_id, user, to_edit=True)
 
     values = extract_values_from_model(scenario, exclude_unset=True, to_update=True)
 

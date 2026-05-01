@@ -66,7 +66,7 @@ async def test_get_geometries_by_scenario_id_from_db(mock_conn: MockConnection):
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_id = 1
     service_id = 1
 
@@ -190,7 +190,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     service_type_id = 1
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
@@ -414,7 +414,7 @@ async def test_get_context_geometries_from_db(mock_conn: MockConnection):
 
     # Arrange
     project_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     mock_geom = str(MagicMock(spec=ScalarSelect))
     public_urban_object_ids = (
         select(projects_urban_objects_data.c.public_urban_object_id)
@@ -562,7 +562,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
 
     # Arrange
     scenario_id = 1
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     physical_object_type_id = 1
     service_type_id = 1
     mock_geom = str(MagicMock(spec=ScalarSelect))
@@ -793,16 +793,12 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             physical_object_types_dict.c.physical_object_type_id,
             physical_object_types_dict.c.physical_object_function_id,
             physical_object_types_dict.c.name.label("physical_object_type_name"),
-            coalesce(projects_physical_objects_data.c.name, physical_objects_data.c.name).label(
-                "physical_object_name"
-            ),
+            coalesce(projects_physical_objects_data.c.name, physical_objects_data.c.name).label("physical_object_name"),
             coalesce(projects_physical_objects_data.c.properties, physical_objects_data.c.properties).label(
                 "physical_object_properties"
             ),
             *coalesce_building_columns,
-            coalesce(projects_buildings_data.c.properties, buildings_data.c.properties).label(
-                "building_properties"
-            ),
+            coalesce(projects_buildings_data.c.properties, buildings_data.c.properties).label("building_properties"),
             projects_object_geometries_data.c.object_geometry_id,
             territories_data.c.territory_id,
             territories_data.c.name.label("territory_name"),
@@ -829,8 +825,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
         .select_from(
             projects_urban_objects_data.outerjoin(
                 projects_physical_objects_data,
-                projects_physical_objects_data.c.physical_object_id
-                == projects_urban_objects_data.c.physical_object_id,
+                projects_physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.physical_object_id,
             )
             .join(
                 projects_object_geometries_data,
@@ -843,8 +838,7 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
             )
             .outerjoin(
                 physical_objects_data,
-                physical_objects_data.c.physical_object_id
-                == projects_urban_objects_data.c.public_physical_object_id,
+                physical_objects_data.c.physical_object_id == projects_urban_objects_data.c.public_physical_object_id,
             )
             .join(
                 object_geometries_data,
@@ -897,7 +891,12 @@ async def test_get_context_geometries_with_all_objects_from_db(mock_conn: MockCo
         )
     )
 
-    queries = [public_geoms_query, regional_scenario_geoms_query, project_scenario_geoms_query, scenario_objects_with_public_geoms_query]
+    queries = [
+        public_geoms_query,
+        regional_scenario_geoms_query,
+        project_scenario_geoms_query,
+        scenario_objects_with_public_geoms_query,
+    ]
     union_query = union_all(*queries).cte(name="union_query")
     statement = select(union_query).where(
         union_query.c.physical_object_type_id == physical_object_type_id,
@@ -976,7 +975,7 @@ async def test_put_scenario_object_geometry_to_db(
     scenario_id = 1
     object_geometry_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_object_geometries_data)
         .where(projects_object_geometries_data.c.object_geometry_id == object_geometry_id)
@@ -1025,7 +1024,7 @@ async def test_patch_scenario_object_geometry_to_db(
     scenario_id = 1
     object_geometry_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     update_statement = (
         update(projects_object_geometries_data)
         .where(projects_object_geometries_data.c.object_geometry_id == object_geometry_id)
@@ -1055,7 +1054,7 @@ async def test_delete_public_object_geometry_from_db(mock_conn: MockConnection):
     scenario_id = 1
     object_geometry_id = 1
     is_scenario_object = False
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_urban_objects_data).where(
         projects_urban_objects_data.c.public_object_geometry_id == object_geometry_id
     )
@@ -1113,7 +1112,7 @@ async def test_delete_scenario_object_geometry_from_db(mock_conn: MockConnection
     scenario_id = 1
     object_geometry_id = 1
     is_scenario_object = True
-    user = UserDTO(id="mock_string", is_superuser=False)
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_object_geometries_data).where(
         projects_object_geometries_data.c.object_geometry_id == object_geometry_id
     )

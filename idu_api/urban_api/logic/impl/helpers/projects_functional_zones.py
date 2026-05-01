@@ -25,7 +25,6 @@ from idu_api.urban_api.logic.impl.helpers.utils import (
 from idu_api.urban_api.schemas import (
     ScenarioFunctionalZonePatch,
     ScenarioFunctionalZonePost,
-    ScenarioFunctionalZonePut,
 )
 
 
@@ -271,37 +270,6 @@ async def add_scenario_functional_zones_to_db(
     return await get_functional_zone_by_ids(conn, functional_zone_ids)
 
 
-async def put_scenario_functional_zone_to_db(
-    conn: AsyncConnection,
-    functional_zone: ScenarioFunctionalZonePut,
-    scenario_id: int,
-    functional_zone_id: int,
-    user: UserDTO,
-) -> ScenarioFunctionalZoneDTO:
-    """Update scenario functional zone by all its attributes."""
-
-    await check_scenario(conn, scenario_id, user, to_edit=True, allow_regional=False)
-
-    if not await check_existence(
-        conn,
-        projects_functional_zones,
-        conditions={"functional_zone_id": functional_zone_id},
-    ):
-        raise EntityNotFoundById(functional_zone_id, "scenario functional zone")
-
-    values = extract_values_from_model(functional_zone, to_update=True)
-    statement = (
-        update(projects_functional_zones)
-        .where(projects_functional_zones.c.functional_zone_id == functional_zone_id)
-        .values(**values)
-    )
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return (await get_functional_zone_by_ids(conn, [functional_zone_id]))[0]
-
-
 async def patch_scenario_functional_zone_to_db(
     conn: AsyncConnection,
     functional_zone: ScenarioFunctionalZonePatch,
@@ -320,7 +288,7 @@ async def patch_scenario_functional_zone_to_db(
     ):
         raise EntityNotFoundById(functional_zone_id, "scenario functional zone")
 
-    values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True)
+    values = extract_values_from_model(functional_zone, exclude_unset=True, to_update=True, allow_null_geometry=True)
 
     statement = (
         update(projects_functional_zones)

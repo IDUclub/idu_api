@@ -1,6 +1,6 @@
 """Territory indicators data table is defined here."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import TIMESTAMP, Column, Date, Enum, Float, ForeignKey, Integer, Sequence, String, Table, func
 

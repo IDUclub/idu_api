@@ -1,14 +1,14 @@
 """All fixtures for projects tests are defined here."""
-
+import asyncio
 import io
 from datetime import date
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 from PIL import Image
 
-from idu_api.urban_api.schemas import ProjectPatch, ProjectPhasesPut, ProjectPost, ProjectPut, ProjectTerritoryPost
+from idu_api.urban_api.schemas import ProjectPatch, ProjectPhasesPut, ProjectPost, ProjectTerritoryPost
 from idu_api.urban_api.schemas.geometries import Geometry
 
 __all__ = [
@@ -16,7 +16,6 @@ __all__ = [
     "project_image",
     "project_patch_req",
     "project_post_req",
-    "project_put_req",
     "project_phases_put_req",
     "regional_project",
 ]
@@ -27,8 +26,8 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def regional_project(urban_api_host, region, superuser_token) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def regional_project(client, region, superuser_token) -> dict[str, Any]:
     """Returns created regional project."""
     project_post_req = ProjectPost(
         name="Test Project Name",
@@ -41,16 +40,15 @@ def regional_project(urban_api_host, region, superuser_token) -> dict[str, Any]:
     )
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/projects", json=project_post_req.model_dump(), headers=headers)
+    response = await client.post("/api/v1/projects", json=project_post_req.model_dump(), headers=headers)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}.\n{response.json()}"
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def project(
-    urban_api_host,
+@pytest_asyncio.fixture(scope="function")
+async def project(
+    client,
     region,
     superuser_token,
     base_regional_scenario,
@@ -75,8 +73,8 @@ def project(
     )
     headers = {"Authorization": f"Bearer {superuser_token}"}
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/projects", json=project_post_req.model_dump(), headers=headers, timeout=10000)
+    await asyncio.sleep(5)
+    response = await client.post("/api/v1/projects", json=project_post_req.model_dump(), headers=headers, timeout=10000)
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}.\n{response.json()}"
     return response.json()
@@ -103,18 +101,6 @@ def project_post_req() -> ProjectPost:
                 coordinates=[[[30.22, 59.86], [30.22, 59.85], [30.25, 59.85], [30.25, 59.86], [30.22, 59.86]]],
             ),
         ),
-    )
-
-
-@pytest.fixture
-def project_put_req() -> ProjectPut:
-    """PUT request template for user projects data."""
-
-    return ProjectPut(
-        name="Updated Test Project Name",
-        description="Updated Test Project Description",
-        public=True,
-        properties={},
     )
 
 

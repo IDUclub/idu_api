@@ -1,7 +1,6 @@
 """Cadastres projects-related endpoints are defined here."""
 
-from fastapi import Depends, Path, Request, Security
-from fastapi.security import HTTPBearer
+from fastapi import Depends, Path, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from pydantic import conlist
@@ -52,7 +51,6 @@ async def get_cadastres_by_project_id(
     "/projects/{project_id}/cadastres",
     response_model=OkResponse,
     status_code=status.HTTP_201_CREATED,
-    dependencies=[Security(HTTPBearer())],
 )
 async def put_project_cadastres(
     request: Request,
@@ -90,7 +88,6 @@ async def put_project_cadastres(
     "/projects/{project_id}/cadastres",
     response_model=OkResponse,
     status_code=status.HTTP_200_OK,
-    dependencies=[Security(HTTPBearer())],
 )
 async def delete_cadastres_by_project_id(
     request: Request,

@@ -12,7 +12,6 @@ from idu_api.urban_api.schemas import (
     Territory,
     TerritoryPatch,
     TerritoryPost,
-    TerritoryPut,
     TerritoryTreeWithoutGeometry,
     TerritoryWithoutGeometry,
 )
@@ -77,40 +76,6 @@ async def add_territory(
     territories_service: TerritoriesService = request.state.territories_service
 
     territory_dto = await territories_service.add_territory(territory)
-
-    return Territory.from_dto(territory_dto)
-
-
-@territories_router.put(
-    "/territory/{territory_id}",
-    response_model=Territory,
-    status_code=status.HTTP_200_OK,
-    deprecated=True,
-)
-async def put_territory(
-    request: Request,
-    territory: TerritoryPut,
-    territory_id: int = Path(..., description="territory identifier", gt=0),
-) -> Territory:
-    """
-    ## Update a territory by its identifier (full update).
-
-    **WARNING**: This method has been deprecated since version 0.34.0 and will be removed in version 1.0.
-    Instead, use PATCH method.
-
-    ### Parameters:
-    - **territory_id** (int, Path): Unique identifier of the territory.
-    - **territory** (TerritoryPut, Body): Updated data for the territory.
-
-    ### Returns:
-    - **Territory**: The updated territory.
-
-    ### Errors:
-    - **404 Not Found**: If the territory (or related entity) does not exist.
-    """
-    territories_service: TerritoriesService = request.state.territories_service
-
-    territory_dto = await territories_service.put_territory(territory_id, territory)
 
     return Territory.from_dto(territory_dto)
 

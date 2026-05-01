@@ -9,7 +9,7 @@ from shapely.geometry import shape
 from sqlalchemy import Column, CompoundSelect, Enum, Table
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql import Insert, Select, Update
-from sqlalchemy.sql.elements import BinaryExpression, BindParameter, BooleanClauseList, Label, UnaryExpression
+from sqlalchemy.sql.elements import BinaryExpression, BooleanClauseList, UnaryExpression
 from sqlalchemy.sql.functions import Function
 
 from idu_api.urban_api.schemas.enums import NormativeType

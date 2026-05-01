@@ -2,8 +2,8 @@
 
 from typing import Any
 
-import httpx
 import pytest
+import pytest_asyncio
 
 from idu_api.urban_api.schemas import (
     ServiceType,
@@ -37,8 +37,8 @@ __all__ = [
 ####################################################################################
 
 
-@pytest.fixture(scope="session")
-def urban_function(urban_api_host) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def urban_function(client) -> dict[str, Any]:
     """Returns created urban function."""
     urban_function_post_req = UrbanFunctionPost(
         name="Test Function",
@@ -46,15 +46,14 @@ def urban_function(urban_api_host) -> dict[str, Any]:
         code="1",
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/urban_functions", json=urban_function_post_req.model_dump())
+    response = await client.post("/api/v1/urban_functions", json=urban_function_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
 
 
-@pytest.fixture(scope="session")
-def service_type(urban_api_host, urban_function) -> dict[str, Any]:
+@pytest_asyncio.fixture(scope="function")
+async def service_type(client, urban_function) -> dict[str, Any]:
     """Returns created service type."""
     service_type_post_req = ServiceTypePost(
         name="Test Type",
@@ -64,8 +63,7 @@ def service_type(urban_api_host, urban_function) -> dict[str, Any]:
         infrastructure_type="basic",
     )
 
-    with httpx.Client(base_url=f"{urban_api_host}/api/v1") as client:
-        response = client.post("/service_types", json=service_type_post_req.model_dump())
+    response = await client.post("/api/v1/service_types", json=service_type_post_req.model_dump())
 
     assert response.status_code == 201, f"Invalid status code was returned: {response.status_code}."
     return response.json()
@@ -105,7 +103,7 @@ def service_type_post_req() -> ServiceTypePost:
 
 
 @pytest.fixture
-def service_type_put_req() -> ServiceTypePatch:
+def service_type_put_req() -> ServiceTypePut:
     """PATCH request template for service types data."""
 
     return ServiceTypePut(

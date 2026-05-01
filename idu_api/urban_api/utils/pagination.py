@@ -1,3 +1,5 @@
+"""Custom paginate methods are defined here."""
+
 from collections.abc import Callable, Sequence
 from typing import Any, TypeVar
 

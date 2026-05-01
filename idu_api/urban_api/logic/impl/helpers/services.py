@@ -1,6 +1,6 @@
 """Services internal logic is defined here."""
 
-from typing import Callable
+from collections.abc import Callable
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -18,7 +18,7 @@ from idu_api.urban_api.dto import ServiceDTO, UrbanObjectDTO
 from idu_api.urban_api.exceptions.logic.common import EntityAlreadyExists, EntityNotFoundById, EntityNotFoundByParams
 from idu_api.urban_api.logic.impl.helpers.urban_objects import get_urban_objects_by_ids_from_db
 from idu_api.urban_api.logic.impl.helpers.utils import check_existence, extract_values_from_model
-from idu_api.urban_api.schemas import ServicePatch, ServicePost, ServicePut
+from idu_api.urban_api.schemas import ServicePatch, ServicePost
 
 func: Callable
 
@@ -107,21 +107,6 @@ async def add_service_to_db(conn: AsyncConnection, service: ServicePost) -> Serv
             physical_object_id=service.physical_object_id,
             object_geometry_id=service.object_geometry_id,
         )
-
-    await conn.execute(statement)
-    await conn.commit()
-
-    return await get_service_by_id_from_db(conn, service_id)
-
-
-async def put_service_to_db(conn: AsyncConnection, service: ServicePut, service_id: int) -> ServiceDTO:
-    """Update service object by all its attributes."""
-
-    if not await check_existence(conn, services_data, conditions={"service_id": service_id}):
-        raise EntityNotFoundById(service_id, "service")
-
-    values = extract_values_from_model(service, to_update=True)
-    statement = update(services_data).where(services_data.c.service_id == service_id).values(**values)
 
     await conn.execute(statement)
     await conn.commit()

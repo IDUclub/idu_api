@@ -9,10 +9,12 @@ from . import common, db, projects, users
 
 
 def _get_response(status_code: int, error: str, detail: str) -> JSONResponse:
+    """Create a JSON HTTP error response with a standard structure."""
     return JSONResponse({"error": error, "detail": detail}, status_code=status_code)
 
 
 def register_exceptions(mapper: ExceptionMapper) -> None:
+    """Register domain and database exceptions to HTTP responses in the API."""
     mapper.register_func(
         common.TooManyObjectsError,
         lambda exc: _get_response(
@@ -27,7 +29,7 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         common.EntityNotFoundById,
         lambda exc: _get_response(
             status.HTTP_404_NOT_FOUND,
-            "Entitiy not found by IDs",
+            "Entity not found by ID",
             f"Сущность '{exc.entity}' с (id={exc.requested_id}) не найдена.",
         ),
     )
@@ -43,23 +45,23 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         common.EntityNotFoundByParams,
         lambda exc: _get_response(
             status.HTTP_404_NOT_FOUND,
-            "Entitiy not found by parameters",
-            f"Сущность '{exc.entity}' с такими параметрами ({exc.params}) не найдена.",
+            "Entity not found by parameters",
+            f"Сущность '{exc.entity}' с такими параметрами {exc.params} не найдена.",
         ),
     )
     mapper.register_func(
         common.EntityAlreadyExists,
         lambda exc: _get_response(
             status.HTTP_409_CONFLICT,
-            "Entitiy already exists",
-            f"Сущность '{exc.entity}' с такими параметрами ({exc.params}) уже существует.",
+            "Entity already exists",
+            f"Сущность '{exc.entity}' с такими параметрами {exc.params} уже существует.",
         ),
     )
     mapper.register_func(
         common.EntityAlreadyEdited,
         lambda exc: _get_response(
             status.HTTP_409_CONFLICT,
-            "Entitiy already edited",
+            "Entity already edited",
             f"Сущность '{exc.entity}' уже изменена или удалена для этого сценария (id={exc.scenario_id}).",
         ),
     )
@@ -96,11 +98,6 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         projects.NotAllowedInRegionalProject,
         status.HTTP_400_BAD_REQUEST,
         "Этот метод недоступен в РЕГИОНАЛЬНОМ проекте. Укажите идентификатор ОБЫЧНОГО проекта.",
-    )
-    mapper.register_simple(
-        projects.InvalidBaseScenario,
-        status.HTTP_400_BAD_REQUEST,
-        "Если вы хотите создать новый базовый сценарий, измените тот, который должен стать базовым, а не текущий.",
     )
 
     mapper.register_simple(

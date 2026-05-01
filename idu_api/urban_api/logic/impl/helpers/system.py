@@ -29,6 +29,12 @@ Geom = (
 )
 
 
+async def health_check_database(conn: AsyncConnection) -> bool:
+    """Check database health by SELECT 1."""
+    result = await conn.execute(select(1))
+    return result.scalar() == 1
+
+
 async def fix_geometry_by_postgis(conn: AsyncConnection, geom: Geom, logger: structlog.stdlib.BoundLogger) -> Geom:
     """Fix geometry by PostGIS methods using binary (WKB/EWKB) representation for efficiency."""
 
@@ -59,10 +65,11 @@ async def fix_geojson_by_postgis(
     batches = [
         geoms[i : i + OBJECTS_NUMBER_TO_INSERT_LIMIT] for i in range(0, len(geoms), OBJECTS_NUMBER_TO_INSERT_LIMIT)
     ]
-    iterator = enumerate(batches)
-    if show_progress:
 
-        iterator = tqdm(iterator, total=len(batches), desc="Fixing geometries")
+    if show_progress:
+        iterator = tqdm(enumerate(batches), total=len(batches), desc="Fixing geometries")
+    else:
+        iterator = enumerate(batches)
 
     for batch_idx, batch in iterator:
         try:

@@ -1,15 +1,16 @@
-"""FastAPI authentication client is defined here."""
+"""FastAPI authentication client with Keycloak JWT verification."""
 
-import base64
-import json
-from datetime import datetime, timezone
+import asyncio
+from typing import Any
 
 import aiohttp
-from aiohttp import ClientConnectorError, ClientResponseError
+from aiohttp import ClientConnectorError
 from cachetools import TTLCache
+from jose import JWTError, jwt
 from opentelemetry import trace
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_fixed
 
+from idu_api.urban_api.config import AuthConfig
 from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.exceptions.services.auth import (
     AuthTokenExpiredError,
@@ -22,80 +23,165 @@ _tracer = trace.get_tracer(__name__)
 
 
 class AuthenticationClient:
+    """Authentication client for validating jwt tokens and extract users from payload."""
 
     RETRIES = 3
 
-    def __init__(self, cache_size: int, cache_ttl: int, validate_token: int, auth_url: str):
-        self._validate_token = validate_token
-        self._auth_url = auth_url
-        self._cache = TTLCache(maxsize=cache_size, ttl=cache_ttl)
+    def __init__(self, config: AuthConfig):
+        self.config = config
 
-    @staticmethod
-    def decode_token(token: str) -> dict:
-        """Decode the JWT token without verification to extract payload."""
-        try:
-            payload_base64 = token.split(".")[1]
-            padded_payload = payload_base64 + "=" * (-len(payload_base64) % 4)
-            decoded_payload = base64.urlsafe_b64decode(padded_payload)
-            return json.loads(decoded_payload)
+        self._jwks_cache = TTLCache(maxsize=1, ttl=config.jwks_cache_ttl)
+        self._user_cache = TTLCache(
+            maxsize=config.user_cache_size,
+            ttl=config.user_cache_ttl,
+        )
+
+        self._lock = asyncio.Lock()
+
+    # ------------------------
+    # CONFIG UPDATE
+    # ------------------------
+
+    def update(self, config: AuthConfig) -> None:
+        """Hot-reload configuration."""
+        self.config = config
+        self.config.jwks_url = f"{config.server_url}/protocol/openid-connect/certs"
+
+        self._jwks_cache = TTLCache(maxsize=1, ttl=config.jwks_cache_ttl)
+        self._user_cache = TTLCache(
+            maxsize=config.user_cache_size,
+            ttl=config.user_cache_ttl,
+        )
+
+    # ------------------------
+    # JWKS FETCHING
+    # ------------------------
+
+    @retry(
+        stop=stop_after_attempt(RETRIES),
+        wait=wait_fixed(1),
+        retry=retry_if_exception_type(ClientConnectorError),
+    )
+    async def _fetch_jwks(self) -> dict[str, Any]:
+        """Fetch JWKS (public keys) from Keycloak."""
+        with _tracer.start_span("auth.fetch_jwks"):
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    self.config.jwks_url,
+                    headers=get_tracing_headers(),
+                    timeout=self.config.timeout,
+                ) as resp:
+                    resp.raise_for_status()
+                    return await resp.json()
+
+    async def get_jwks(self) -> dict[str, Any]:
+        """Get JWKS with caching and concurrency protection."""
+        if "jwks" in self._jwks_cache:
+            return self._jwks_cache["jwks"]
+
+        async with self._lock:
+            if "jwks" in self._jwks_cache:
+                return self._jwks_cache["jwks"]
+
+            jwks = await self._fetch_jwks()
+            self._jwks_cache["jwks"] = jwks
+            return jwks
+
+    # ------------------------
+    # JWT PROCESSING
+    # ------------------------
+
+    async def _verify_jwt(self, token: str) -> dict[str, Any]:
+        """Full JWT verification (signature + claims)."""
+        try:  # pylint: disable=too-many-try-statements
+            jwks = await self.get_jwks()
+
+            header = jwt.get_unverified_header(token)
+            kid = header.get("kid")
+            if not kid:
+                raise InvalidTokenSignature()
+
+            key = next((k for k in jwks["keys"] if k["kid"] == kid), None)
+            if not key:
+                raise InvalidTokenSignature()
+
+            payload = jwt.decode(
+                token,
+                key,
+                algorithms=["RS256"],
+                issuer=self.config.server_url,
+                options={"verify_aud": False},
+            )
+
+            if self.config.verify_aud:
+                audiences = payload.get("aud", [])
+                if isinstance(audiences, str):
+                    audiences = [audiences]
+                elif audiences is None:
+                    audiences = []
+                if not any(aud in self.config.valid_audiences for aud in audiences):
+                    raise ValueError("Invalid audience")
+
+            return payload
+
+        except JWTError as exc:
+            if "expired" in str(exc).lower():
+                raise AuthTokenExpiredError() from exc
+            raise InvalidTokenSignature() from exc
         except Exception as exc:
             raise JWTDecodeError() from exc
 
-    @staticmethod
-    def is_token_expired(payload: dict) -> bool:
-        """Check if the JWT token is expired."""
-        if "exp" in payload:
-            expiration = datetime.fromtimestamp(payload["exp"], timezone.utc)
-            return expiration < datetime.now(timezone.utc)
-        return True
-
-    def update(
-        self,
-        cache_size: int | None = None,
-        cache_ttl: int | None = None,
-        validate_token: int | None = None,
-        auth_url: str | None = None,
-    ) -> None:
-        self._validate_token = validate_token or self._validate_token
-        self._auth_url = auth_url or self._auth_url
-        self._cache = (
-            TTLCache(maxsize=cache_size, ttl=cache_ttl)
-            if cache_size is not None and cache_ttl is not None
-            else self._cache
-        )
-
-    @retry(stop=stop_after_attempt(RETRIES), wait=wait_fixed(1), retry=retry_if_exception_type(ClientConnectorError))
-    async def validate_token_online(self, token: str) -> None:
-        """Validate token by calling an external service if needed."""
+    async def process_token(self, token: str) -> dict[str, Any]:
+        """Process token depending on verify flag."""
+        if self.config.verify:
+            return await self._verify_jwt(token)
         try:
-            with _tracer.start_span("authentication"):
-                async with aiohttp.ClientSession() as session:
-                    response = await session.post(
-                        self._auth_url,
-                        headers={"Authorization": f"Bearer {token}"} | get_tracing_headers(),
-                        data={"token": token, "token_type_hint": "access_token"},
-                    )
-                response.raise_for_status()
-        except ClientResponseError as exc:
-            raise InvalidTokenSignature() from exc
+            return jwt.get_unverified_claims(token)
+        except Exception as exc:
+            raise JWTDecodeError() from exc
+
+    # ------------------------
+    # ROLES EXTRACTION
+    # ------------------------
+
+    @staticmethod
+    def extract_roles(payload: dict[str, Any]) -> list[str]:
+        """Extract roles from Keycloak token."""
+        roles: list[str] = []
+
+        # realm roles
+        roles.extend(payload.get("realm_access", {}).get("roles", []))
+
+        # client roles
+        resource_access = payload.get("resource_access", {})
+        client_roles = resource_access.get("urban-api", {}).get("roles", [])
+        roles.extend(client_roles)
+
+        return roles
+
+    # ------------------------
+    # MAIN METHOD
+    # ------------------------
 
     async def get_user_from_token(self, token: str) -> UserDTO:
-        """Main method that processes the token and returns UserDTO."""
+        """Validate token and return UserDTO."""
 
-        cached_user = self._cache.get(token)
+        cached_user = self._user_cache.get(token)
         if cached_user:
             return cached_user
 
-        payload = self.decode_token(token)
+        payload = await self.process_token(token)
 
-        # Optionally validate the token online
-        if self._validate_token:
-            if self.is_token_expired(payload):
-                raise AuthTokenExpiredError()
-            await self.validate_token_online(token)
+        roles = self.extract_roles(payload)
 
-        user_dto = UserDTO(id=payload.get("sub"), is_superuser=payload.get("is_superuser", False))
+        user = UserDTO(
+            id=payload.get("sub"),
+            username=payload.get("preferred_username"),
+            roles=roles,
+            is_superuser="ADMIN" in roles,
+            azp=payload.get("azp"),
+        )
 
-        self._cache[token] = user_dto
+        self._user_cache[token] = user
 
-        return user_dto
+        return user

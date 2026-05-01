@@ -10,6 +10,8 @@ from shapely.wkb import loads as wkb_loads
 
 @dataclass(frozen=True)
 class FunctionalZoneTypeDTO:
+    """DTO describing a functional zone type."""
+
     functional_zone_type_id: int
     name: str
     zone_nickname: str | None
@@ -18,6 +20,8 @@ class FunctionalZoneTypeDTO:
 
 @dataclass
 class FunctionalZoneDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a functional zone with geometry and metadata."""
+
     functional_zone_id: int
     territory_id: int
     territory_name: str
@@ -34,10 +38,12 @@ class FunctionalZoneDTO:  # pylint: disable=too-many-instance-attributes
     updated_at: datetime
 
     def __post_init__(self) -> None:
+        """Convert geometry from WKB bytes to shapely object if needed."""
         if isinstance(self.geometry, bytes):
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         zone = asdict(self)
         zone["territory"] = {"id": zone.pop("territory_id"), "name": zone.pop("territory_name")}
         zone["functional_zone_type"] = {
@@ -51,6 +57,8 @@ class FunctionalZoneDTO:  # pylint: disable=too-many-instance-attributes
 
 @dataclass
 class ScenarioFunctionalZoneDTO:  # pylint: disable=too-many-instance-attributes
+    """DTO representing a functional zone within a scenario context."""
+
     functional_zone_id: int
     scenario_id: int
     scenario_name: str
@@ -67,10 +75,12 @@ class ScenarioFunctionalZoneDTO:  # pylint: disable=too-many-instance-attributes
     updated_at: datetime
 
     def __post_init__(self) -> None:
+        """Convert geometry from WKB bytes to shapely object if needed."""
         if isinstance(self.geometry, bytes):
             self.geometry = wkb_loads(self.geometry)
 
     def to_geojson_dict(self) -> dict:
+        """Serialize DTO to a GeoJSON-like dictionary."""
         profile = asdict(self)
         profile["functional_zone_type"] = {
             "id": profile.pop("functional_zone_type_id"),
@@ -83,5 +93,7 @@ class ScenarioFunctionalZoneDTO:  # pylint: disable=too-many-instance-attributes
 
 @dataclass(frozen=True)
 class FunctionalZoneSourceDTO:
+    """DTO describing the source and year of functional zone data."""
+
     year: int
     source: str

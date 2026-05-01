@@ -9,7 +9,6 @@ from idu_api.common.db.connection.manager import PostgresConnectionManager
 from idu_api.urban_api.dto import (
     BinnedIndicatorValueDTO,
     BufferDTO,
-    BuildingWithGeometryDTO,
     FunctionalZoneDTO,
     FunctionalZoneSourceDTO,
     HexagonDTO,
@@ -35,9 +34,6 @@ from idu_api.urban_api.dto import (
     TerritoryWithoutGeometryDTO,
 )
 from idu_api.urban_api.logic.impl.helpers.territories_buffers import get_buffers_by_territory_id_from_db
-from idu_api.urban_api.logic.impl.helpers.territories_buildings import (
-    get_buildings_with_geometry_by_territory_id_from_db,
-)
 from idu_api.urban_api.logic.impl.helpers.territories_functional_zones import (
     delete_all_functional_zones_for_territory_from_db,
     get_functional_zones_by_territory_id_from_db,
@@ -71,7 +67,6 @@ from idu_api.urban_api.logic.impl.helpers.territories_objects import (
     get_territories_without_geometry_by_parent_id_from_db,
     get_territory_by_id,
     patch_territory_to_db,
-    put_territory_to_db,
 )
 from idu_api.urban_api.logic.impl.helpers.territories_physical_objects import (
     get_physical_object_types_by_territory_id_from_db,
@@ -100,7 +95,6 @@ from idu_api.urban_api.schemas import (
     TargetCityTypePost,
     TerritoryPatch,
     TerritoryPost,
-    TerritoryPut,
     TerritoryTypePost,
 )
 
@@ -144,10 +138,6 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
     async def add_territory(self, territory: TerritoryPost) -> TerritoryDTO:
         async with self._connection_manager.get_connection() as conn:
             return await add_territory_to_db(conn, territory)
-
-    async def put_territory(self, territory_id: int, territory: TerritoryPut) -> TerritoryDTO:
-        async with self._connection_manager.get_connection() as conn:
-            return await put_territory_to_db(conn, territory_id, territory)
 
     async def patch_territory(self, territory_id: int, territory: TerritoryPatch) -> TerritoryDTO:
         async with self._connection_manager.get_connection() as conn:
@@ -414,17 +404,6 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
-            )
-
-    async def get_buildings_with_geometry_by_territory_id(
-        self,
-        territory_id: int,
-        include_child_territories: bool,
-        cities_only: bool,
-    ) -> PageDTO[BuildingWithGeometryDTO]:
-        async with self._connection_manager.get_ro_connection() as conn:
-            return await get_buildings_with_geometry_by_territory_id_from_db(
-                conn, territory_id, include_child_territories, cities_only
             )
 
     async def get_functional_zones_sources_by_territory_id(

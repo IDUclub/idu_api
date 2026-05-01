@@ -2,8 +2,8 @@
 
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 import psutil
 from opentelemetry import metrics
@@ -15,6 +15,8 @@ from idu_api.urban_api.version import VERSION
 
 @dataclass
 class HTTPMetrics:
+    """HTTP-related OpenTelemetry metrics."""
+
     request_processing_duration: Histogram
     """Processing time histogram in seconds by `["method", "path"]`."""
     requests_started: Counter
@@ -29,10 +31,13 @@ class HTTPMetrics:
 
 @dataclass
 class Metrics:
+    """Application metrics container."""
+
     http: HTTPMetrics
 
 
 def setup_metrics() -> Metrics:
+    """Initialize application metrics and register observability callbacks."""
     meter = metrics.get_meter("urban_api")
 
     _setup_callback_metrics(meter)
@@ -71,6 +76,8 @@ def setup_metrics() -> Metrics:
 
 
 def _setup_callback_metrics(meter: metrics.Meter) -> None:
+    """Register observable system and application metrics."""
+
     # Create observable gauge
     meter.create_observable_gauge(
         name="system_resource_usage",
@@ -87,6 +94,8 @@ def _setup_callback_metrics(meter: metrics.Meter) -> None:
 
 
 def _get_system_metrics_callback() -> Callable[[CallbackOptions], None]:
+    """Create callback for collecting system-level metrics."""
+
     def system_metrics_callback(options: CallbackOptions):  # pylint: disable=unused-argument
         """Callback function to collect system metrics"""
 
@@ -99,6 +108,7 @@ def _get_system_metrics_callback() -> Callable[[CallbackOptions], None]:
 
 
 def _get_application_metrics_callback() -> Callable[[CallbackOptions], None]:
+    """Create callback for collecting application-level metrics."""
     startup_time = time.time()
 
     def application_metrics_callback(options: CallbackOptions):  # pylint: disable=unused-argument

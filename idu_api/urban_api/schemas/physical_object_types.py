@@ -68,9 +68,7 @@ class PhysicalObjectFunction(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: PhysicalObjectFunctionDTO) -> "PhysicalObjectFunction":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             physical_object_function_id=dto.physical_object_function_id,
             parent_physical_object_function=(
@@ -110,6 +108,8 @@ class PhysicalObjectFunctionPatch(BaseModel):
 
 
 class PhysicalObjectsTypesHierarchy(BaseModel):
+    """Hierarchical physical object types model including list of children."""
+
     physical_object_function_id: int = Field(..., examples=[1])
     parent_id: int | None = Field(
         ..., description="parent physical object function identifier (null if it is top-level function)", examples=[1]
@@ -122,9 +122,7 @@ class PhysicalObjectsTypesHierarchy(BaseModel):
 
     @classmethod
     def from_dto(cls, dto: PhysicalObjectTypesHierarchyDTO) -> "PhysicalObjectsTypesHierarchy":
-        """
-        Construct from DTO.
-        """
+        """Construct from DTO."""
         return cls(
             physical_object_function_id=dto.physical_object_function_id,
             parent_id=dto.parent_id,

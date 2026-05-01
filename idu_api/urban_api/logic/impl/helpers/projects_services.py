@@ -241,7 +241,7 @@ async def get_context_service_types_from_db(
     return [ServiceTypeDTO(**s) for s in service_types]
 
 
-async def get_services_by_scenario_id_from_db(
+async def get_services_by_scenario_id_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -670,7 +670,7 @@ async def get_services_with_geometry_by_scenario_id_from_db(
     return [ScenarioServiceWithGeometryDTO(**row) for row in result]
 
 
-async def get_context_services_from_db(
+async def get_context_services_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -858,7 +858,7 @@ async def get_context_services_from_db(
     return [ScenarioServiceDTO(**row) for row in grouped_data.values()]
 
 
-async def get_context_services_with_geometry_from_db(
+async def get_context_services_with_geometry_from_db(  # pylint: disable=too-many-locals
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
