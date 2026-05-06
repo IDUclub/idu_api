@@ -5,6 +5,7 @@ from datetime import date
 from typing import Literal
 
 import shapely.geometry as geom
+from fastapi_pagination.bases import AbstractParams
 from geoalchemy2.functions import ST_AsEWKB, ST_GeomFromWKB
 from sqlalchemy import func, insert, select, text, update
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -132,6 +133,7 @@ async def get_territories_by_parent_id_from_db(  # pylint: disable=too-many-argu
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None,
     paginate: bool,
+    params: AbstractParams | None = None,
 ) -> list[TerritoryDTO] | PageDTO[TerritoryDTO]:
     """Get a territory or list of territories by parent,
     ordering and filters can be specified in parameters."""
@@ -212,7 +214,9 @@ async def get_territories_by_parent_id_from_db(  # pylint: disable=too-many-argu
     statement = statement.order_by(order_column)
 
     if paginate:
-        return await paginate_dto(conn, statement, transformer=lambda x: [TerritoryDTO(**item) for item in x])
+        return await paginate_dto(
+            conn, statement, transformer=lambda x: [TerritoryDTO(**item) for item in x], params=params
+        )
 
     result = (await conn.execute(statement)).mappings().all()
 
@@ -230,6 +234,7 @@ async def get_territories_without_geometry_by_parent_id_from_db(  # pylint: disa
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None,
     paginate: bool,
+    params: AbstractParams | None = None,
 ) -> list[TerritoryWithoutGeometryDTO] | PageDTO[TerritoryWithoutGeometryDTO]:
     """Get a territory or list of territories without geometry by parent,
     ordering and filters can be specified in parameters.
@@ -310,7 +315,7 @@ async def get_territories_without_geometry_by_parent_id_from_db(  # pylint: disa
 
     if paginate:
         return await paginate_dto(
-            conn, statement, transformer=lambda x: [TerritoryWithoutGeometryDTO(**item) for item in x]
+            conn, statement, transformer=lambda x: [TerritoryWithoutGeometryDTO(**item) for item in x], params=params
         )
 
     result = (await conn.execute(statement)).mappings().all()

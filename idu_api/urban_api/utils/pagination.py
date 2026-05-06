@@ -50,7 +50,7 @@ async def paginate_dto(
     params: AbstractParams | None = None,
     transformer: ItemsTransformer | None = None,
 ) -> PageDTO[DTO]:
-    """This function returns total count of items and list of results by given params."""
+    """This function returns a total count of items and list of results by given params."""
 
     count_query = select(func.count()).select_from(stmt.alias("subquery"))
     total = (await conn.execute(count_query)).scalar()

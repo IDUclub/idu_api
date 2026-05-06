@@ -1,6 +1,6 @@
 [project]
 name = "idu-api"
-version = "2.0.0a2"
+version = "2.1.0a3"
 description = "This is a Digital Territories Platform API in two versions to access and manipulate basic territories data."
 authors = [
     {name = "Babayev Ruslan",email = "rus.babaef@yandex.ru"}
@@ -36,11 +36,12 @@ dependencies = [
     "opentelemetry-exporter-prometheus (>=0.60b0,<0.61)",
     "opentelemetry-semantic-conventions (>=0.60b0,<0.61)",
     "opentelemetry-instrumentation-logging (>=0.60b0,<0.61)",
-    "setuptools (>=82.0.1,<83.0.0)",
     "jinja2 (>=3.1.6,<4.0.0)",
     "python-jose[cryptography] (>=3.5.0,<4.0.0)",
     "aiohttp (>=3.13.5,<4.0.0)",
     "cachetools (>=7.0.5,<8.0.0)",
+    "fastmcp (>=3.2.4,<4.0.0)",
+    "psutil (>=7.2.2,<8.0.0)",
 ]
 
 [dependency-groups]
@@ -50,11 +51,9 @@ dev = [
     "pylint (>=4.0.2,<5.0.0)",
     "pytest[asyncio,coverage] (>=8.4.2,<9.0.0)",
     "tqdm[asyncio] (>=4.67.1,<5.0.0)",
-    "aioresponses (>=0.7.8,<0.8.0)",
-    "psutil (>=7.1.3,<8.0.0)",
     "pytest-asyncio (>=1.3.0,<2.0.0)",
     "asgi-lifespan (>=2.1.0,<3.0.0)",
-    "testcontainers[postgres,keycloak,minio] (>=4.14.2,<5.0.0)"
+    "testcontainers[postgres,keycloak,minio] (>=4.14.2,<5.0.0)",
 ]
 
 
@@ -65,6 +64,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 launch_urban_api = "idu_api.urban_api.__main__:main"
+launch_urban_mcp = "idu_api.urban_mcp.__main__:main"
 # launch_city_api = "idu_api.city_api.__main__:main" # TODO: add launch option here
 
 

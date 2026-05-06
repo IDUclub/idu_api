@@ -10,7 +10,6 @@ from idu_api.urban_api.dto.users import UserDTO
 from idu_api.urban_api.handlers.v1.projects.routers import projects_router
 from idu_api.urban_api.logic.projects import UserProjectService
 from idu_api.urban_api.schemas import (
-    BufferAttributes,
     OkResponse,
     ScenarioBuffer,
     ScenarioBufferAttributes,
@@ -82,7 +81,7 @@ async def get_context_buffers(
     physical_object_type_id: int | None = Query(None, description="physical object type identifier", gt=0),
     service_type_id: int | None = Query(None, description="service type identifier", gt=0),
     user: UserDTO = Depends(auth_dep.from_request_optional),
-) -> GeoJSONResponse[Feature[Geometry, BufferAttributes]]:
+) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
     """
     ## Get buffers for the context of a project territory in GeoJSON format.
 

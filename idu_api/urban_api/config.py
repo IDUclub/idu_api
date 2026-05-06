@@ -72,7 +72,7 @@ class AuthConfig:
         """Ensure server URL has a valid scheme."""
         if self.verify and (not self.server_url or not self.client_id):
             raise ValueError("Server URL and Client ID are required, if verify is set to True.")
-        elif self.verify and not self.server_url.startswith("http"):
+        if self.verify and not self.server_url.startswith("http"):
             self.server_url = "http://" + self.server_url
 
     @property

@@ -1,4 +1,5 @@
 """All fixtures for projects tests are defined here."""
+
 import asyncio
 import io
 from datetime import date

@@ -1,0 +1,421 @@
+"""MCP tools for buffers are defined here."""
+
+from typing import Annotated, Optional
+
+from fastmcp import Context
+from fastmcp.dependencies import CurrentRequest, Depends
+from fastmcp.server.dependencies import CurrentContext
+from geojson_pydantic import Feature
+from geojson_pydantic.geometries import Geometry
+from mcp import ErrorData, McpError
+from starlette.requests import Request
+
+from idu_api.urban_api.dto import UserDTO
+from idu_api.urban_api.logic.buffers import BufferService
+from idu_api.urban_api.logic.projects import UserProjectService
+from idu_api.urban_api.logic.territories import TerritoriesService
+from idu_api.urban_api.schemas import BufferAttributes, BufferType, DefaultBufferValue, ScenarioBufferAttributes
+from idu_api.urban_api.schemas.geojson import GeoJSONResponse
+from idu_api.urban_mcp.dependencies import auth_dep
+
+from .routers import buffers_mcp
+
+
+@buffers_mcp.tool(
+    name="GetBufferTypes",
+    title="Получить типы буферов",
+    description="""Возвращает справочник типов буферных зон, которые используются для построения санитарных, охранных и иных буферов вокруг городских объектов.
+    Входные параметры:
+    отсутствуют
+    
+    Выходные данные:
+    list[BufferType] | Список доступных типов буферов.
+    
+    Поля модели:
+    BufferType:
+    Поле | Тип | Описание
+    buffer_type_id | int | Идентификатор типа буфера.
+    name | str | Название типа буфера.
+    description | str | None | Описание назначения и правил применения типа буфера.
+    
+    Пример вызова:
+    {
+      "tool": "GetBufferTypes",
+      "arguments": {}
+    }
+    
+    Пример результата:
+    [
+      {
+        "buffer_type_id": 1,
+        "name": "Санитарно-защитная зона",
+        "description": "Буферная зона вокруг объектов с нормативными ограничениями."
+      }
+    ]
+    
+    Ошибки:
+    - -32001 Not found: справочник типов буферов недоступен или не найден.
+    """,
+    tags=["buffers"],
+    annotations={"title": "GetBufferTypes", "readOnlyHint": True},
+)
+async def get_buffer_types(request: Request = CurrentRequest()) -> list[BufferType]:
+    """Get a list of all buffer types."""
+    buffers_service: BufferService = request.state.buffers_service
+    buffer_types = await buffers_service.get_buffer_types()
+    return [BufferType.from_dto(zone_type) for zone_type in buffer_types]
+
+
+@buffers_mcp.tool(
+    name="GetDefaultBufferValues",
+    title="Получить значения буферов по умолчанию",
+    description="""Возвращает нормативные радиусы буферов по умолчанию для сочетаний типа буфера с типом физического объекта или типом сервиса.
+    Входные параметры:
+    отсутствуют
+    
+    Выходные данные:
+    list[DefaultBufferValue] | Список значений радиусов буферов по умолчанию.
+    
+    Поля модели:
+    DefaultBufferValue:
+    Поле | Тип | Описание
+    buffer_type | BufferTypeBasic | Тип буфера, для которого задан радиус.
+    physical_object_type | PhysicalObjectTypeBasic | None | Тип физического объекта; заполняется, если радиус относится к физическим объектам.
+    service_type | ServiceTypeBasic | None | Тип сервиса; заполняется, если радиус относится к сервисам.
+    buffer_value | float | Радиус буфера по умолчанию в метрах.
+    
+    Пример вызова:
+    {
+      "tool": "GetDefaultBufferValues",
+      "arguments": {}
+    }
+    
+    Пример результата:
+    [
+      {
+        "buffer_type": {"id": 1, "name": "Санитарно-защитная зона"},
+        "physical_object_type": {"id": 12, "name": "Промышленный объект"},
+        "service_type": null,
+        "buffer_value": 300.0
+      }
+    ]
+    
+    Ошибки:
+    - -32001 Not found: справочник значений буферов по умолчанию недоступен или не найден.
+    """,
+    tags=["buffers"],
+    annotations={"title": "GetDefaultBufferValues", "readOnlyHint": True},
+)
+async def get_default_buffer_values(request: Request = CurrentRequest()) -> list[DefaultBufferValue]:
+    """Get default buffer values for all buffer types."""
+    buffers_service: BufferService = request.state.buffers_service
+    values = await buffers_service.get_all_default_buffer_values()
+    return [DefaultBufferValue.from_dto(value) for value in values]
+
+
+@buffers_mcp.tool(
+    name="GetTerritoryBuffersGeoJSON",
+    title="Получить буферы объектов территории в формате GeoJSON",
+    description="""Возвращает буферные зоны городских объектов на указанной территории в формате GeoJSON с возможностью фильтрации по типу буфера, типу физического объекта или типу сервиса.
+    Входные параметры:
+    Параметр | Тип | Обязателен | Описание
+    territory_id | int | да | Идентификатор территории, для которой нужно построить буферы.
+    buffer_type_id | Optional[int] | нет | Фильтр по типу буфера.
+    physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
+    service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
+    include_child_territories | bool | нет | Если true, в выборку включаются объекты дочерних территорий.
+    cities_only | bool | нет | Если true, учитываются только дочерние территории-городa; допустимо только при include_child_territories=true.
+    
+    Выходные данные:
+    GeoJSONResponse[Feature[Geometry, BufferAttributes]] | GeoJSON FeatureCollection с геометрией буферов и атрибутами связанных объектов.
+    
+    Поля модели:
+    GeoJSONResponse:
+    Поле | Тип | Описание
+    type | str | Тип GeoJSON-коллекции.
+    features | list | Список объектов Feature; каждый содержит geometry и properties.
+    BufferAttributes:
+    Поле | Тип | Описание
+    buffer_type | BufferTypeBasic | Тип буфера, которым построена зона.
+    urban_object | ShortUrbanObject | Городской объект, вокруг которого построен буфер.
+    is_custom | bool | Признак пользовательского значения радиуса вместо значения по умолчанию.
+    
+    Пример вызова:
+    {
+      "tool": "GetTerritoryBuffersGeoJSON",
+      "arguments": {
+        "territory_id": 1,
+        "buffer_type_id": 2,
+        "physical_object_type_id": 12,
+        "include_child_territories": true
+      }
+    }
+    
+    Пример результата:
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {"type": "Point", "coordinates": [30.0, 60.0]},
+          "properties": {
+            "buffer_type": {"id": 2, "name": "Санитарно-защитная зона"},
+            "urban_object": {"id": 10, "name": "Промышленный объект"},
+            "is_custom": false
+          }
+        }
+      ]
+    }
+    
+    Ошибки:
+    - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
+    - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
+    - -32001 Not found: территория, тип буфера, тип физического объекта или тип сервиса не найдены.
+    """,
+    tags=["buffers", "territories"],
+    annotations={"title": "GetTerritoryBuffersGeoJSON", "readOnlyHint": True},
+)
+async def get_buffers_geojson_by_territory_id(
+    territory_id: Annotated[int, "Идентификатор территории"],
+    buffer_type_id: Annotated[Optional[int], "Фильтр по типу буфера"] = None,
+    physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
+    service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
+    include_child_territories: Annotated[bool, "Включать дочерние территории"] = True,
+    cities_only: Annotated[bool, "Только города"] = False,
+    request: Request = CurrentRequest(),
+) -> GeoJSONResponse[Feature[Geometry, BufferAttributes]]:
+    """Get buffers for a territory in GeoJSON format."""
+    territories_service: TerritoriesService = request.state.territories_service
+
+    if not include_child_territories and cities_only:
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="Параметр cities_only можно использовать только при include_child_territories=true.",
+            )
+        )
+
+    if physical_object_type_id is not None and service_type_id is not None:
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
+            )
+        )
+
+    buffers = await territories_service.get_buffers_by_territory_id(
+        territory_id,
+        include_child_territories,
+        cities_only,
+        buffer_type_id,
+        physical_object_type_id,
+        service_type_id,
+    )
+
+    return await GeoJSONResponse.from_list((buffer.to_geojson_dict() for buffer in buffers))
+
+
+@buffers_mcp.tool(
+    name="GetScenarioBuffers",
+    title="Получить буферы объектов сценария",
+    description="""Возвращает буферные зоны объектов проектной территории текущего сценария в формате GeoJSON.
+    Входные параметры:
+    Параметр | Тип | Обязателен | Описание
+    buffer_type_id | Optional[int] | нет | Фильтр по типу буфера.
+    physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
+    service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
+    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    
+    Выходные данные:
+    GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с буферами объектов сценария.
+    
+    Поля модели:
+    GeoJSONResponse:
+    Поле | Тип | Описание
+    type | str | Тип GeoJSON-коллекции.
+    features | list | Список объектов Feature; каждый содержит geometry и properties.
+    ScenarioBufferAttributes:
+    Поле | Тип | Описание
+    buffer_type | BufferTypeBasic | Тип буфера, которым построена зона.
+    urban_object | ShortUrbanObject | Объект сценария или базовый городской объект, вокруг которого построен буфер.
+    is_custom | bool | Признак пользовательского значения радиуса.
+    is_scenario_object | bool | Признак того, что объект создан или изменен в сценарии.
+    is_locked | bool | Признак блокировки объекта для изменений.
+    
+    Пример вызова:
+    {
+      "tool": "GetScenarioBuffers",
+      "arguments": {
+        "buffer_type_id": 2,
+        "service_type_id": 5
+      }
+    }
+    
+    Пример результата:
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {"type": "Point", "coordinates": [30.0, 60.0]},
+          "properties": {
+            "buffer_type": {"id": 2, "name": "Санитарно-защитная зона"},
+            "urban_object": {"id": 20, "name": "Детский сад"},
+            "is_custom": false,
+            "is_scenario_object": true,
+            "is_locked": false
+          }
+        }
+      ]
+    }
+    
+    Ошибки:
+    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
+    - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
+    - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
+    - -32001 Not found: сценарий, тип буфера, тип физического объекта или тип сервиса не найдены.
+    """,
+    tags=["buffers", "scenarios"],
+    annotations={"title": "GetScenarioBuffers", "readOnlyHint": True},
+)
+async def get_buffers_by_scenario_id(
+    buffer_type_id: Annotated[Optional[int], "Фильтр по типу буфера"] = None,
+    physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
+    service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
+    request: Request = CurrentRequest(),
+    context: Context = CurrentContext(),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
+) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
+    """Get buffers for a scenario in GeoJSON format."""
+    user_project_service: UserProjectService = request.state.user_project_service
+
+    if physical_object_type_id is not None and service_type_id is not None:
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
+            )
+        )
+
+    try:
+        scenario_id = int(context.request_context.meta.scenario_id)
+    except Exception as exc:
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
+            )
+        ) from exc
+
+    buffers = await user_project_service.get_buffers_by_scenario_id(
+        scenario_id,
+        buffer_type_id,
+        physical_object_type_id,
+        service_type_id,
+        user,
+    )
+
+    return await GeoJSONResponse.from_list([buffer.to_geojson_dict() for buffer in buffers])
+
+
+@buffers_mcp.tool(
+    name="GetContextBuffers",
+    title="Получить буферы объектов на территории контекста",
+    description="""Возвращает буферные зоны объектов контекста проектной территории текущего сценария в формате GeoJSON.
+    Входные параметры:
+    Параметр | Тип | Обязателен | Описание
+    buffer_type_id | Optional[int] | нет | Фильтр по типу буфера.
+    physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
+    service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
+    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    
+    Выходные данные:
+    GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с буферами объектов контекста сценария.
+    
+    Поля модели:
+    GeoJSONResponse:
+    Поле | Тип | Описание
+    type | str | Тип GeoJSON-коллекции.
+    features | list | Список объектов Feature; каждый содержит geometry и properties.
+    ScenarioBufferAttributes:
+    Поле | Тип | Описание
+    buffer_type | BufferTypeBasic | Тип буфера, которым построена зона.
+    urban_object | ShortUrbanObject | Контекстный городской объект, вокруг которого построен буфер.
+    is_custom | bool | Признак пользовательского значения радиуса.
+    is_scenario_object | bool | Признак того, что объект относится к сценарию.
+    is_locked | bool | Признак блокировки объекта для изменений.
+    
+    Пример вызова:
+    {
+      "tool": "GetContextBuffers",
+      "arguments": {
+        "buffer_type_id": 2,
+        "physical_object_type_id": 12
+      }
+    }
+    
+    Пример результата:
+    {
+      "type": "FeatureCollection",
+      "features": [
+        {
+          "type": "Feature",
+          "geometry": {"type": "Point", "coordinates": [30.0, 60.0]},
+          "properties": {
+            "buffer_type": {"id": 2, "name": "Санитарно-защитная зона"},
+            "urban_object": {"id": 30, "name": "Промышленный объект"},
+            "is_custom": false,
+            "is_scenario_object": false,
+            "is_locked": false
+          }
+        }
+      ]
+    }
+    
+    Ошибки:
+    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
+    - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
+    - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
+    - -32001 Not found: сценарий, тип буфера, тип физического объекта или тип сервиса не найдены.
+    """,
+    tags=["buffers", "scenarios", "context"],
+    annotations={"title": "GetContextBuffers", "readOnlyHint": True},
+)
+async def get_context_buffers(
+    buffer_type_id: Annotated[Optional[int], "Фильтр по типу буфера"] = None,
+    physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
+    service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
+    request: Request = CurrentRequest(),
+    context: Context = CurrentContext(),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
+) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
+    """Get context buffers for a scenario in GeoJSON format."""
+    user_project_service: UserProjectService = request.state.user_project_service
+
+    if physical_object_type_id is not None and service_type_id is not None:
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
+            )
+        )
+
+    try:
+        scenario_id = int(context.request_context.meta.scenario_id)
+    except Exception as exc:
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
+            )
+        ) from exc
+
+    buffers = await user_project_service.get_context_buffers(
+        scenario_id,
+        buffer_type_id,
+        physical_object_type_id,
+        service_type_id,
+        user,
+    )
+
+    return await GeoJSONResponse.from_list([buffer.to_geojson_dict() for buffer in buffers])

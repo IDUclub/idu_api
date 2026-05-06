@@ -200,7 +200,9 @@ async def test_get_context_functional_zones(
     params = {"year": functional_zone["year"], "source": functional_zone["source"]}
 
     # Act
-    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/functional_zones", headers=headers, params=params)
+    response = await client.get(
+        f"/api/v1/scenarios/{scenario_id}/context/functional_zones", headers=headers, params=params
+    )
     result = response.json()
 
     # Assert

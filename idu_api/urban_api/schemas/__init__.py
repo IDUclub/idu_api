@@ -71,7 +71,7 @@ from .object_geometries import (
     ScenarioGeometryAttributes,
     ScenarioObjectGeometry,
 )
-from .pages import Page
+from .pages import CursorPage, Page
 from .physical_object_types import (
     PhysicalObjectFunction,
     PhysicalObjectFunctionPatch,
@@ -309,4 +309,5 @@ __all__ = [
     "ProjectCadastreAttributes",
     "ProjectCadastrePut",
     "TerritoryTreeWithoutGeometry",
+    "CursorPage",
 ]

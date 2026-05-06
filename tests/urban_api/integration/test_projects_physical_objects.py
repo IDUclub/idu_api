@@ -7,6 +7,7 @@ from httpx import AsyncClient
 from pydantic import ValidationError
 
 from idu_api.urban_api.schemas import (
+    BuildingPut,
     OkResponse,
     PhysicalObject,
     PhysicalObjectPut,
@@ -16,7 +17,7 @@ from idu_api.urban_api.schemas import (
     ScenarioBuildingPut,
     ScenarioPhysicalObject,
     ScenarioPhysicalObjectWithGeometryAttributes,
-    ScenarioUrbanObject, BuildingPut,
+    ScenarioUrbanObject,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from tests.urban_api.helpers.utils import assert_response
@@ -207,7 +208,9 @@ async def test_get_context_physical_objects(
         params["physical_object_function_id"] = physical_object_function["id"]
 
     # Act
-    response = await client.get(f"/api/v1/scenarios/{scenario_id}/context/physical_objects", headers=headers, params=params)
+    response = await client.get(
+        f"/api/v1/scenarios/{scenario_id}/context/physical_objects", headers=headers, params=params
+    )
     result = response.json()
 
     # Assert
