@@ -53,13 +53,13 @@ async def _from_request(request: Request, required: bool = True) -> UserDTO | No
             request.state.auth_user_missing_reason = "Ошибка декодирования JWT."
 
         except RetryError:
-            logger = await logger_dep.from_request(request)
+            logger = logger_dep.from_request(request)
             await logger.aerror("authentication service unavailable")
             request.state.auth_user_dep = None
             request.state.auth_user_missing_reason = "Сервер аутентификации недоступен."
 
         except Exception:  # pylint: disable=broad-except
-            logger = await logger_dep.from_request(request)
+            logger = logger_dep.from_request(request)
             await logger.aexception("unexpected authentication error")
             request.state.auth_user_dep = None
             request.state.auth_user_missing_reason = "Ошибка обработки токена."

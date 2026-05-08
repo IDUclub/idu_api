@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Callable, Sequence
 from typing import Any, Literal
 
+from fastapi_pagination.bases import AbstractParams
 from geoalchemy2.functions import ST_AsEWKB
 from sqlalchemy import RowMapping, func, select
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -78,6 +79,7 @@ async def get_services_by_territory_id_from_db(  # pylint: disable=too-many-argu
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None = "asc",
     paginate: bool = False,
+    params: AbstractParams | None = None,
 ) -> list[ServiceDTO] | PageDTO[ServiceDTO]:
     """Get list of services by territory id."""
 
@@ -160,7 +162,7 @@ async def get_services_by_territory_id_from_db(  # pylint: disable=too-many-argu
         return [ServiceDTO(**service) for service in grouped_data.values()]
 
     if paginate:
-        return await paginate_dto(conn, statement, transformer=group_objects)
+        return await paginate_dto(conn, statement, transformer=group_objects, params=params)
 
     result = (await conn.execute(statement)).mappings().all()
 
@@ -178,6 +180,7 @@ async def get_services_with_geometry_by_territory_id_from_db(  # pylint: disable
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None = "asc",
     paginate: bool = False,
+    params: AbstractParams | None = None,
 ) -> list[ServiceWithGeometryDTO] | PageDTO[ServiceWithGeometryDTO]:
     """Get list of services with objects geometries by territory id."""
 
@@ -249,7 +252,9 @@ async def get_services_with_geometry_by_territory_id_from_db(  # pylint: disable
     statement = statement.order_by(order_column)
 
     if paginate:
-        return await paginate_dto(conn, statement, transformer=lambda x: [ServiceWithGeometryDTO(**item) for item in x])
+        return await paginate_dto(
+            conn, statement, transformer=lambda x: [ServiceWithGeometryDTO(**item) for item in x], params=params
+        )
 
     result = (await conn.execute(statement)).mappings().all()
 

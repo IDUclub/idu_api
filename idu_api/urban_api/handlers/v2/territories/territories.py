@@ -7,11 +7,11 @@ from starlette import status
 
 from idu_api.urban_api.logic.territories import TerritoriesService
 from idu_api.urban_api.schemas import (
+    CursorPage,
     Territory,
     TerritoryWithoutGeometry,
 )
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering
-from idu_api.urban_api.schemas.pages import CursorPage
 from idu_api.urban_api.utils.pagination import paginate
 
 from .routers import territories_router

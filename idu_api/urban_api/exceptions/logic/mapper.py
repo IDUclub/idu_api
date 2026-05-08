@@ -38,7 +38,7 @@ def register_exceptions(mapper: ExceptionMapper) -> None:
         lambda exc: _get_response(
             status.HTTP_404_NOT_FOUND,
             "Entities not found by IDs",
-            f"По крайней мере один (id={exc.entity}) из переданных id не найден в БД.",
+            f"По крайней мере один {exc.entity} из переданных id не найден в БД.",
         ),
     )
     mapper.register_func(

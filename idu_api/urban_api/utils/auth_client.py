@@ -45,7 +45,6 @@ class AuthenticationClient:
     def update(self, config: AuthConfig) -> None:
         """Hot-reload configuration."""
         self.config = config
-        self.config.jwks_url = f"{config.server_url}/protocol/openid-connect/certs"
 
         self._jwks_cache = TTLCache(maxsize=1, ttl=config.jwks_cache_ttl)
         self._user_cache = TTLCache(

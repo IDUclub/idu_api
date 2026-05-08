@@ -1,0 +1,66 @@
+name: urban-api
+
+services:
+  database:
+    container_name: ${POSTGRES_CONTAINER_NAME:-urban_db}
+    build:
+      context: .
+      dockerfile: postgis.Dockerfile
+    restart: on-failure
+    env_file:
+      - ./db.env
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: pg_isready -d postgres
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"
+
+  migrator:
+    container_name: migrator
+    build:
+      context: ..
+      dockerfile: migrations.Dockerfile
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+    volumes:
+      - ${REAL_CONFIG_PATH}:/app/config.yaml
+    depends_on:
+      database:
+        condition: service_healthy
+
+  api:
+    container_name: urban_api
+    build:
+      context: ..
+      dockerfile: urban_api/Dockerfile
+    restart: on-failure
+    ports:
+      - ${EXPORT_API_PORT:-8000}:${PORT:-8000}
+    environment:
+      - CONFIG_PATH=/app/config.yaml
+    volumes:
+      - ./logs:/app/logs
+      - ${REAL_CONFIG_PATH}:/app/config.yaml
+    depends_on:
+      fileserver:
+        condition: service_healthy
+      migrator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: curl -f http://localhost:8000/health_check/ping
+      interval: 10s
+      timeout: 5s
+      start_period: 5s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "200k"
+        max-file: "10"

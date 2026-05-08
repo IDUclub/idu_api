@@ -4,6 +4,7 @@ import abc
 from datetime import date
 from typing import Literal, Protocol
 
+from fastapi_pagination.bases import AbstractParams
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from idu_api.urban_api.dto import (
@@ -100,6 +101,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[ServiceDTO] | PageDTO[ServiceDTO]:
         """Get service objects by territory id."""
 
@@ -115,6 +117,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[ServiceWithGeometryDTO] | PageDTO[ServiceWithGeometryDTO]:
         """Get service objects with geometry by territory id."""
 
@@ -238,6 +241,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[PhysicalObjectDTO] | PageDTO[PhysicalObjectDTO]:
         """Get physical objects by territory id, optional physical object type, function and for cities only."""
 
@@ -253,6 +257,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[PhysicalObjectWithGeometryDTO] | PageDTO[PhysicalObjectWithGeometryDTO]:
         """Get physical objects with geometry by territory id,
         optional physical object type and physical object function and for cities only."""
@@ -293,6 +298,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool,
+        params: AbstractParams | None = None,
     ) -> list[TerritoryDTO] | PageDTO[TerritoryDTO]:
         """Get a territory or list of territories by parent, territory type could be specified in parameters."""
 
@@ -308,6 +314,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool,
+        params: AbstractParams | None = None,
     ) -> list[TerritoryWithoutGeometryDTO] | PageDTO[TerritoryWithoutGeometryDTO]:
         """Get a territory or list of territories without geometry by parent,
         ordering and filters can be specified in parameters."""
@@ -318,7 +325,7 @@ class TerritoriesService(Protocol):  # pylint: disable=too-many-public-methods,
         parent_id: int | None,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
-    ) -> TerritoryTreeWithoutGeometryDTO:
+    ) -> list[TerritoryTreeWithoutGeometryDTO]:
         """Returns List of TerritoryTreeWithoutGeometryDTO objects with nested children, representing the hierarchy:
         where each root node contains its child territories recursively (parent isn't included)"""
 

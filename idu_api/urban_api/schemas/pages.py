@@ -126,3 +126,56 @@ class CursorPage(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public
             results=items,
             **kwargs,
         )
+
+
+class MCPCursorParams(CursorParams):
+    """Cursor-based pagination parameters for MCP CursorPage."""
+
+    cursor: str | None = Query(None, description="Cursor for the next page")
+    size: int = Query(10, ge=1, description="Page size", alias="page_size")
+
+    str_cursor: ClassVar[bool] = True
+
+    def to_raw_params(self) -> CursorRawParams:
+        """Convert cursor parameters into raw cursor-based pagination format."""
+        return CursorRawParams(
+            cursor=decode_cursor(self.cursor, to_str=self.str_cursor),
+            size=self.size,
+        )
+
+
+class MCPCursorPage(AbstractPage[T], Generic[T]):  # pylint: disable=too-few-public-methods
+    """Cursor-based pagination response for MCP app."""
+
+    count: int
+    page_size: int
+    prevCursor: str | None = None
+    nextCursor: str | None = None
+    results: Sequence[T]
+
+    __params_type__ = MCPCursorParams
+
+    @classmethod
+    def create(
+        cls,
+        items: Sequence[T],
+        params: AbstractParams,
+        *,
+        total: int | None = None,
+        previous: Cursor | None = None,
+        next_: Cursor | None = None,
+        **kwargs: Any,
+    ) -> "MCPCursorPage":
+        """Create a cursor-based paginated response."""
+
+        assert isinstance(params, MCPCursorParams)
+        assert total is not None
+
+        return cls(
+            count=total,
+            page_size=params.size,
+            prevCursor=encode_cursor(previous) if previous is not None else None,
+            nextCursor=encode_cursor(next_) if next_ is not None else None,
+            results=items,
+            **kwargs,
+        )

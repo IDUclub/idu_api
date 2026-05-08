@@ -1,0 +1,25 @@
+app:
+  debug: true
+  uvicorn: # only used when server is started via command
+    host: 0.0.0.0
+    port: 8001
+    reload: true
+    forwarded_allow_ips:
+      - 127.0.0.1
+db:
+  master:
+    host: localhost
+    port: 5432
+    database: urban_db
+    user: postgres
+    password: postgres
+    pool_size: 10
+    debug: true
+  replicas: []
+auth:
+  verify: false
+  server_url: https://localhost:3000/realms/myrealm
+  client_id: urban-mcp
+  verify_aud: false
+  valid_audiences:
+    - urban-mcp

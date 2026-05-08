@@ -1,4 +1,4 @@
-"""Functional zones endpoints are defined here."""
+"""Buffers endpoints are defined here."""
 
 from fastapi import Query, Request
 from starlette import status

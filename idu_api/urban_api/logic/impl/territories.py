@@ -3,6 +3,7 @@
 from datetime import date
 from typing import Literal
 
+from fastapi_pagination.bases import AbstractParams
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Point, Polygon
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
@@ -103,7 +104,7 @@ Geom = Point | Polygon | MultiPolygon | LineString | MultiLineString
 
 # pylint: disable=too-many-arguments
 class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-public-methods
-    """Service to manipulate territories entities.
+    """Service to manipulate territories' entities.
 
     Based on async `PostgresConnectionManager`.
     """
@@ -162,6 +163,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[ServiceDTO] | PageDTO[ServiceDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_services_by_territory_id_from_db(
@@ -175,6 +177,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
+                params=params,
             )
 
     async def get_services_with_geometry_by_territory_id(
@@ -188,6 +191,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[ServiceWithGeometryDTO] | PageDTO[ServiceWithGeometryDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_services_with_geometry_by_territory_id_from_db(
@@ -201,6 +205,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
+                params=params,
             )
 
     async def get_services_capacity_by_territory_id(
@@ -365,6 +370,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[PhysicalObjectDTO] | PageDTO[PhysicalObjectDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_physical_objects_by_territory_id_from_db(
@@ -378,6 +384,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
+                params=params,
             )
 
     async def get_physical_objects_with_geometry_by_territory_id(
@@ -391,6 +398,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"],
         paginate: bool = False,
+        params: AbstractParams | None = None,
     ) -> list[PhysicalObjectWithGeometryDTO] | PageDTO[PhysicalObjectWithGeometryDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_physical_objects_with_geometry_by_territory_id_from_db(
@@ -404,6 +412,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
+                params=params,
             )
 
     async def get_functional_zones_sources_by_territory_id(
@@ -453,6 +462,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"] | None,
         paginate: bool,
+        params: AbstractParams | None = None,
     ) -> list[TerritoryDTO] | PageDTO[TerritoryDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_territories_by_parent_id_from_db(
@@ -466,6 +476,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
+                params=params,
             )
 
     async def get_territories_without_geometry_by_parent_id(
@@ -479,6 +490,7 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"] | None,
         paginate: bool,
+        params: AbstractParams | None = None,
     ) -> list[TerritoryWithoutGeometryDTO] | PageDTO[TerritoryWithoutGeometryDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_territories_without_geometry_by_parent_id_from_db(
@@ -492,13 +504,14 @@ class TerritoriesServiceImpl(TerritoriesService):  # pylint: disable=too-many-pu
                 order_by,
                 ordering,
                 paginate,
+                params=params,
             )
 
     async def get_territories_trees_without_geometry_by_parent_id(
         self,
         parent_id: int | None,
         order_by: Literal["created_at", "updated_at"] | None,
-        ordering: Literal["asc", "desc"] | None,
+        ordering: Literal["asc", "desc"],
     ) -> list[TerritoryTreeWithoutGeometryDTO]:
         """Returns List of TerritoryTreeWithoutGeometryDTO objects with nested children, representing the hierarchy:
         where each root node contains its child territories recursively (parent isn't included)"""

@@ -1,4 +1,5 @@
 """All fixtures for functional zones tests are defined here."""
+
 import asyncio
 from datetime import date
 from typing import Any

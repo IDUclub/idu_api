@@ -4,6 +4,7 @@ from collections import defaultdict
 from collections.abc import Sequence
 from typing import Literal
 
+from fastapi_pagination.bases import AbstractParams
 from geoalchemy2.functions import ST_AsEWKB
 from sqlalchemy import RowMapping, select
 from sqlalchemy.ext.asyncio import AsyncConnection
@@ -83,6 +84,7 @@ async def get_physical_objects_by_territory_id_from_db(  # pylint: disable=too-m
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None = "asc",
     paginate: bool = False,
+    params: AbstractParams | None = None,
 ) -> list[PhysicalObjectDTO] | PageDTO[PhysicalObjectDTO]:
     """Get physical objects by territory id, optional physical object type, is_city and physical object function."""
 
@@ -180,7 +182,7 @@ async def get_physical_objects_by_territory_id_from_db(  # pylint: disable=too-m
         return [PhysicalObjectDTO(**phys_obj) for phys_obj in grouped_data.values()]
 
     if paginate:
-        return await paginate_dto(conn, statement, transformer=group_objects)
+        return await paginate_dto(conn, statement, transformer=group_objects, params=params)
 
     result = (await conn.execute(statement)).mappings().all()
 
@@ -198,6 +200,7 @@ async def get_physical_objects_with_geometry_by_territory_id_from_db(  # pylint:
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None = "asc",
     paginate: bool = False,
+    params: AbstractParams | None = None,
 ) -> list[PhysicalObjectWithGeometryDTO] | PageDTO[PhysicalObjectWithGeometryDTO]:
     """Get physical objects with geometry by territory id,
     optional physical object type and physical_object_function_id."""
@@ -283,7 +286,7 @@ async def get_physical_objects_with_geometry_by_territory_id_from_db(  # pylint:
 
     if paginate:
         return await paginate_dto(
-            conn, statement, transformer=lambda x: [PhysicalObjectWithGeometryDTO(**item) for item in x]
+            conn, statement, transformer=lambda x: [PhysicalObjectWithGeometryDTO(**item) for item in x], params=params
         )
 
     result = (await conn.execute(statement)).mappings().all()
