@@ -23,6 +23,6 @@ COPY idu_api /app/idu_api
 RUN pip install .
 
 COPY logrotate.conf /etc/logrotate.d/app
-COPY urban_api/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY urban_mcp/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 CMD ["supervisord", "-n"]

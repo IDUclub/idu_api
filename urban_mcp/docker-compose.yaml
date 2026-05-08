@@ -1,4 +1,4 @@
-name: urban-api
+name: urban-mcp
 
 services:
   database:
@@ -36,26 +36,24 @@ services:
       database:
         condition: service_healthy
 
-  api:
-    container_name: urban_api
+  mcp:
+    container_name: urban_mcp
     build:
       context: ..
-      dockerfile: urban_api/Dockerfile
+      dockerfile: urban_mcp/Dockerfile
     restart: on-failure
     ports:
-      - ${EXPORT_API_PORT:-8000}:${PORT:-8000}
+      - ${EXPORT_MCP_PORT:-8001}:${PORT:-8001}
     environment:
-      - CONFIG_PATH=/app/config.yaml
+      - MCP_CONFIG_PATH=/app/config.yaml
     volumes:
       - ./logs:/app/logs
-      - ${REAL_CONFIG_PATH}:/app/config.yaml
+      - ${REAL_MCP_CONFIG_PATH}:/app/config.yaml
     depends_on:
-      fileserver:
-        condition: service_healthy
       migrator:
         condition: service_completed_successfully
     healthcheck:
-      test: curl -f http://localhost:8000/health_check/ping
+      test: curl -f http://localhost:8001/health_check/ping
       interval: 10s
       timeout: 5s
       start_period: 5s
