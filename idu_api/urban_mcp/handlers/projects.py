@@ -6,6 +6,7 @@ from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
+from otteroad import KafkaProducerClient
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
@@ -14,13 +15,15 @@ from idu_api.urban_api.schemas import (
     Project,
     ProjectCadastreAttributes,
     ProjectPhases,
+    ProjectPost,
     ProjectTerritory,
     Scenario,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
-from idu_api.urban_mcp.dependencies import auth_dep
+from idu_api.urban_mcp.dependencies import auth_dep, kafka_producer_dep, project_storage_dep
 
-from .routers import projects_scenarios_mcp as projects_mcp
+from ...urban_api.minio.services import ProjectStorageManager
+from .routers import projects_mcp
 
 
 def _get_project_id(context: Context) -> int:
@@ -117,9 +120,131 @@ async def get_project_by_id(
 
 
 @projects_mcp.tool(
+    name="CreateProject",
+    title="Создать проект",
+    description="""Создаёт новый проект, связанную с ним территорию и базовый сценарий. Для нерегиональных проектов необходимо передать геометрию проектной территории, для региональных проектов геометрия не передаётся.
+
+    Входные параметры:
+    Параметр | Тип | Обязателен | Описание
+    project | ProjectPost | да | Данные создаваемого проекта, включая геометрию проектной территории для нерегиональных проектов.
+
+    Поля модели:
+    ProjectPost:
+    Поле | Тип | Обязателен | Описание
+    name | str | да | Название проекта.
+    territory_id | int | да | Идентификатор связанной территории.
+    is_city | bool | нет | Признак городского проекта.
+    description | str | нет | Описание проекта.
+    public | bool | да | Признак публичного доступа к проекту.
+    properties | dict | нет | Дополнительные свойства проекта.
+    is_regional | bool | нет | Признак регионального проекта.
+    territory | ProjectTerritoryPost | нет | Геометрия проектной территории. Обязательна для нерегионального проекта и не должна передаваться для регионального проекта.
+
+    ProjectTerritoryPost:
+    Поле | Тип | Обязателен | Описание
+    geometry | GeoJSON | да | Геометрия проектной территории в формате GeoJSON.
+    centre_point | GeoJSON | нет | Центральная точка проектной территории в формате GeoJSON.
+
+    Выходные данные:
+    Project | Созданный проект с базовым сценарием и краткой информацией о территории.
+
+    Поля модели:
+    Project:
+    Поле | Тип | Описание
+    project_id | int | Идентификатор проекта.
+    user_id | str | Идентификатор пользователя, создавшего проект.
+    name | str | Название проекта.
+    territory | ShortTerritory | Территория или регион проекта.
+    base_scenario | ShortScenario | None | Базовый сценарий проекта, созданный вместе с проектом.
+    description | str | None | Описание проекта.
+    public | bool | Признак публичного доступа к проекту.
+    is_regional | bool | Признак регионального проекта.
+    is_city | bool | Признак городского проекта.
+    properties | dict | Дополнительные свойства проекта.
+    created_at | datetime | Дата и время создания проекта.
+    updated_at | datetime | Дата и время последнего обновления проекта.
+
+    Пример вызова:
+    {
+      "tool": "CreateProject",
+      "arguments": {
+        "project": {
+          "name": "Редевелопмент промзоны",
+          "territory_id": 10,
+          "is_city": true,
+          "description": "Проект комплексного развития территории",
+          "public": false,
+          "properties": {},
+          "is_regional": false,
+          "territory": {
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [30.3000, 59.9000],
+                  [30.3100, 59.9000],
+                  [30.3100, 59.9100],
+                  [30.3000, 59.9100],
+                  [30.3000, 59.9000]
+                ]
+              ]
+            },
+            "centre_point": {
+              "type": "Point",
+              "coordinates": [30.3050, 59.9050]
+            }
+          }
+        }
+      }
+    }
+
+    Пример результата:
+    {
+      "project_id": 1,
+      "user_id": "planner@example.com",
+      "name": "Редевелопмент промзоны",
+      "territory": {"id": 10, "name": "Пермь"},
+      "base_scenario": {"id": 5, "name": "Базовый сценарий"},
+      "description": "Проект комплексного развития территории",
+      "public": false,
+      "is_regional": false,
+      "is_city": true,
+      "properties": {},
+      "created_at": "2024-01-15T10:00:00Z",
+      "updated_at": "2024-01-15T10:00:00Z"
+    }
+
+    Ошибки:
+    - -32000 Permission denied: пользователь не авторизован или не имеет прав на создание проекта.
+    - -32001 Not found: связанная территория или другая необходимая сущность не найдена.
+    - -32602 Invalid params: параметры project отсутствуют, имеют неверный формат или не проходят валидацию ProjectPost.
+    """,
+    tags=["projects"],
+    annotations={
+        "title": "CreateProject",
+        "readOnlyHint": False,
+        "destructiveHint": False,
+        "idempotentHint": False,
+        "openWorldHint": True,
+    },
+)
+async def add_project(
+    project: ProjectPost,
+    request: Request = CurrentRequest(),
+    user: UserDTO = Depends(auth_dep.from_request),
+    kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
+    project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
+) -> Project:
+    """Create a new project."""
+    user_project_service: UserProjectService = request.state.user_project_service
+    project_dto = await user_project_service.add_project(project, user, kafka_producer, project_storage_manager)
+    return Project.from_dto(project_dto)
+
+
+@projects_mcp.tool(
     name="GetProjectTerritoryByProjectId",
     title="Получить территорию проекта",
-    description="""Возвращает проектную территорию указанного проекта с геометрией, центром и свойствами.
+    description="""Возвращает территорию указанного проекта с геометрией, центром и свойствами.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     metadata.project_id | int | да | Идентификатор проекта в metadata MCP-запроса.

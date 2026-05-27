@@ -23,6 +23,14 @@ auth:
   verify_aud: false
   valid_audiences:
     - urban-mcp
+fileserver: # optional, required for tools that create/delete projects or manage project files
+  url: http://localhost:9000
+  projects_bucket: projects.images
+  access_key: ''
+  secret_key: ''
+  region_name: us-west-rack-2
+  connect_timeout: 1
+  read_timeout: 20
 observability:
   logging:
     root_logger_level: INFO # optional, default INFO
@@ -39,3 +47,9 @@ observability:
     port: 9090
   jaeger: # optional
     endpoint: http://localhost:4318/v1/traces
+broker: # optional, required for tools that publish project/scenario update events
+  client_id: urban-mcp
+  bootstrap_servers: localhost:9092,localhost:9093,localhost:9094
+  schema_registry_url: http://localhost:8080
+  enable_idempotence: true
+  max_in_flight: 5

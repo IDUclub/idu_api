@@ -10,7 +10,7 @@ import yaml
 
 from idu_api.common.db.config import DBConfig, MultipleDBsConfig
 from idu_api.common.utils.secrets import SecretStr, representSecretStrYAML
-from idu_api.urban_api.config import AuthConfig, UvicornConfig
+from idu_api.urban_api.config import AuthConfig, BrokerConfig, FileServerConfig, UvicornConfig
 from idu_api.urban_api.observability.config import (
     ExporterConfig,
     FileLogger,
@@ -34,7 +34,9 @@ class UrbanMCPConfig:
     app: AppConfig
     db: MultipleDBsConfig
     auth: AuthConfig
+    fileserver: FileServerConfig
     observability: ObservabilityConfig
+    broker: BrokerConfig
 
     def to_order_dict(self) -> OrderedDict:
         """OrderDict transformer."""
@@ -111,6 +113,15 @@ class UrbanMCPConfig:
                 verify_aud=True,
                 valid_audiences=["urban-mcp"],
             ),
+            fileserver=FileServerConfig(
+                url="http://localhost:9000",
+                projects_bucket="projects.images",
+                access_key="",
+                secret_key="",
+                region_name="us-west-rack-2",
+                connect_timeout=5,
+                read_timeout=20,
+            ),
             observability=ObservabilityConfig(
                 logging=LoggingConfig(
                     stderr_level="INFO",
@@ -119,6 +130,13 @@ class UrbanMCPConfig:
                 ),
                 prometheus=PrometheusConfig(host="0.0.0.0", port=9090),
                 jaeger=JaegerConfig(endpoint="http://127.0.0.1:4318/v1/traces"),
+            ),
+            broker=BrokerConfig(
+                client_id="urban-mcp",
+                bootstrap_servers="localhost:9092",
+                schema_registry_url="http://localhost:8100",
+                enable_idempotence=False,
+                max_in_flight=5,
             ),
         )
 

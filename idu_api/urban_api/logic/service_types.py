@@ -4,6 +4,7 @@ import abc
 from typing import Protocol
 
 from idu_api.urban_api.dto import (
+    PhysicalObjectTypeDTO,
     ServiceTypeDTO,
     ServiceTypesHierarchyDTO,
     SocGroupWithServiceTypesDTO,
@@ -79,7 +80,9 @@ class ServiceTypesService(Protocol):
         """
 
     @abc.abstractmethod
-    async def get_physical_object_types_by_service_type(self, service_type_id: int | None) -> list[ServiceTypeDTO]:
+    async def get_physical_object_types_by_service_type(
+        self, service_type_id: int | None
+    ) -> list[PhysicalObjectTypeDTO]:
         """Get available physical object types for given service type."""
 
     @abc.abstractmethod

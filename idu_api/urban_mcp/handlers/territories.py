@@ -23,7 +23,7 @@ from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.schemas.normatives import Normative
 from idu_api.urban_api.schemas.pages import MCPCursorPage, MCPCursorParams
 
-from .routers import territories_mcp
+from .routers import dictionaries_mcp, territories_mcp
 
 
 def _parse_ids(ids: str) -> list[int]:
@@ -255,7 +255,7 @@ async def get_all_territories_by_parent_id(
     - -32602 Invalid params: cities_only=true передан при get_all_levels=false.
     - -32001 Not found: parent_id или territory_type_id не найден.
     """,
-    tags=["territories"],
+    tags=["territories", "without_geometry"],
     annotations={"title": "GetAllTerritoriesWithoutGeometry", "readOnlyHint": True},
 )
 async def get_all_territories_without_geometry_by_parent_id(
@@ -347,7 +347,7 @@ async def get_all_territories_without_geometry_by_parent_id(
     Ошибки:
     - -32001 Not found: parent_id не найден.
     """,
-    tags=["territories"],
+    tags=["territories", "without_geometry"],
     annotations={"title": "GetTerritoriesWithoutGeometryHierarchy", "readOnlyHint": True},
 )
 async def get_all_territories_without_geometry_hierarchy(
@@ -449,7 +449,7 @@ async def get_territories_by_ids(
     return await GeoJSONResponse.from_list([t.to_geojson_dict() for t in territories], centers_only=centers_only)
 
 
-@territories_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetTerritoryTypes",
     title="Получить типы территорий",
     description="""Возвращает справочник типов территорий, используемых для классификации территориальных единиц в иерархии.
@@ -492,7 +492,7 @@ async def get_territory_types(request: Request = CurrentRequest()) -> list[Terri
     return [TerritoryType.from_dto(territory_type) for territory_type in territory_types]
 
 
-@territories_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetTargetCityTypes",
     title="Получить типы целевых городов",
     description="""Возвращает справочник целевых типов городов, используемых для указания статуса города в территориальной структуре.
@@ -592,7 +592,7 @@ async def get_target_city_types(request: Request = CurrentRequest()) -> list[Tar
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32001 Not found: territory_id не найден.
     """,
-    tags=["territories", "normatives"],
+    tags=["normatives"],
     annotations={"title": "GetTerritoryNormatives", "readOnlyHint": True},
 )
 async def get_territory_normatives(
@@ -668,7 +668,7 @@ async def get_territory_normatives(
     - -32602 Invalid params: year и last_only=true переданы одновременно.
     - -32001 Not found: parent_id не найден.
     """,
-    tags=["territories", "normatives"],
+    tags=["normatives"],
     annotations={"title": "GetNormativesValuesGeoJSON", "readOnlyHint": True},
 )
 async def get_normatives_values_by_parent_id(
@@ -689,8 +689,8 @@ async def get_normatives_values_by_parent_id(
 
 @territories_mcp.tool(
     name="GetTerritories",
-    title="Получить страницу территорий (курсорная пагинация)",
-    description="""Возвращает страницу территорий с курсорной пагинацией, поддержкой фильтрации и сортировки.
+    title="Получить страницу территорий",
+    description="""Возвращает страницу территорий c поддержкой фильтрации и сортировки.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     parent_id | Optional[int] | нет | Идентификатор родительской территории. Если не указан, возвращаются территории верхнего уровня.
@@ -807,8 +807,8 @@ async def get_territory_by_parent_id(
 
 @territories_mcp.tool(
     name="GetTerritoriesWithoutGeometry",
-    title="Получить страницу территорий без геометрии (курсорная пагинация)",
-    description="""Возвращает страницу территорий без геометрии с курсорной пагинацией, поддержкой фильтрации и сортировки.
+    title="Получить страницу территорий без геометрии",
+    description="""Возвращает страницу территорий без геометрии, поддержкой фильтрации и сортировки.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     parent_id | Optional[int] | нет | Идентификатор родительской территории. Если не указан, возвращаются территории верхнего уровня.
@@ -881,7 +881,7 @@ async def get_territory_by_parent_id(
     - -32602 Invalid params: cities_only=true передан при get_all_levels=false.
     - -32001 Not found: parent_id или territory_type_id не найден.
     """,
-    tags=["territories"],
+    tags=["territories", "without_geometry"],
     annotations={"title": "GetTerritoriesWithoutGeometry", "readOnlyHint": True},
 )
 async def get_territory_without_geometry_by_parent_id(

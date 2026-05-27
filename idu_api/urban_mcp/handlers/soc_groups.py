@@ -44,7 +44,7 @@ from .routers import soc_groups_mcp
     Ошибки:
     - -32001 Not found: справочник социальных групп недоступен или не найден.
     """,
-    tags=["soc_groups"],
+    tags=["groups"],
     annotations={"title": "GetSocialGroups", "readOnlyHint": True},
 )
 async def get_social_groups(request: Request = CurrentRequest()) -> list[SocGroup]:
@@ -98,7 +98,7 @@ async def get_social_groups(request: Request = CurrentRequest()) -> list[SocGrou
     Ошибки:
     - -32001 Not found: социальная группа с указанным soc_group_id не найдена.
     """,
-    tags=["soc_groups"],
+    tags=["groups"],
     annotations={"title": "GetSocialGroupById", "readOnlyHint": True},
 )
 async def get_social_group_by_id(
@@ -150,7 +150,7 @@ async def get_social_group_by_id(
     Ошибки:
     - -32001 Not found: справочник социальных ценностей недоступен или не найден.
     """,
-    tags=["soc_groups"],
+    tags=["values"],
     annotations={"title": "GetSocialValues", "readOnlyHint": True},
 )
 async def get_social_values(request: Request = CurrentRequest()) -> list[SocValue]:
@@ -200,7 +200,7 @@ async def get_social_values(request: Request = CurrentRequest()) -> list[SocValu
     Ошибки:
     - -32001 Not found: социальная ценность с указанным soc_value_id не найдена.
     """,
-    tags=["soc_groups"],
+    tags=["values"],
     annotations={"title": "GetSocialValueById", "readOnlyHint": True},
 )
 async def get_social_value_by_id(
@@ -261,7 +261,7 @@ async def get_social_value_by_id(
     Ошибки:
     - -32001 Not found: социальная ценность с указанным soc_value_id не найдена или для нее нет связанных типов сервисов.
     """,
-    tags=["soc_groups", "services"],
+    tags=["values", "services"],
     annotations={"title": "GetServiceTypesBySocialValueId", "readOnlyHint": True},
 )
 async def get_service_types_by_soc_value_id(
@@ -335,7 +335,7 @@ async def get_service_types_by_soc_value_id(
     - -32602 Invalid params: параметр year передан одновременно с last_only=true.
     - -32001 Not found: социальная ценность, территория или значения индикатора по указанным фильтрам не найдены.
     """,
-    tags=["soc_groups", "indicators"],
+    tags=["values", "indicators"],
     annotations={"title": "GetSocialValueIndicatorValues", "readOnlyHint": True},
 )
 async def get_social_value_indicator_values(

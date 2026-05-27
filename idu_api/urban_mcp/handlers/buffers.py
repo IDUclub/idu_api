@@ -18,25 +18,25 @@ from idu_api.urban_api.schemas import BufferAttributes, BufferType, DefaultBuffe
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_mcp.dependencies import auth_dep
 
-from .routers import buffers_mcp
+from .routers import dictionaries_mcp, projects_mcp, territories_mcp
 
 
-@buffers_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetBufferTypes",
-    title="Получить типы буферов",
-    description="""Возвращает справочник типов буферных зон, которые используются для построения санитарных, охранных и иных буферов вокруг городских объектов.
+    title="Получить типы зон ограничений",
+    description="""Возвращает справочник типов зон ограничений, которые используются для построения санитарных, охранных и иных буферов вокруг городских объектов.
     Входные параметры:
     отсутствуют
     
     Выходные данные:
-    list[BufferType] | Список доступных типов буферов.
+    list[BufferType] | Список доступных типов зон ограничений.
     
     Поля модели:
     BufferType:
     Поле | Тип | Описание
-    buffer_type_id | int | Идентификатор типа буфера.
-    name | str | Название типа буфера.
-    description | str | None | Описание назначения и правил применения типа буфера.
+    buffer_type_id | int | Идентификатор типа зоны ограничений.
+    name | str | Название типа зоны ограничений.
+    description | str | None | Описание назначения и правил применения типа зоны ограничений.
     
     Пример вызова:
     {
@@ -52,9 +52,6 @@ from .routers import buffers_mcp
         "description": "Буферная зона вокруг объектов с нормативными ограничениями."
       }
     ]
-    
-    Ошибки:
-    - -32001 Not found: справочник типов буферов недоступен или не найден.
     """,
     tags=["buffers"],
     annotations={"title": "GetBufferTypes", "readOnlyHint": True},
@@ -66,23 +63,23 @@ async def get_buffer_types(request: Request = CurrentRequest()) -> list[BufferTy
     return [BufferType.from_dto(zone_type) for zone_type in buffer_types]
 
 
-@buffers_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetDefaultBufferValues",
-    title="Получить значения буферов по умолчанию",
-    description="""Возвращает нормативные радиусы буферов по умолчанию для сочетаний типа буфера с типом физического объекта или типом сервиса.
+    title="Получить нормативные значения радиусов зон ограничений",
+    description="""Возвращает нормативные радиусы зон ограничений для сочетаний типа зоны ограничений с типом физического объекта или типом сервиса.
     Входные параметры:
     отсутствуют
     
     Выходные данные:
-    list[DefaultBufferValue] | Список значений радиусов буферов по умолчанию.
+    list[DefaultBufferValue] | Список нормативных значений радиусов зон ограничений.
     
     Поля модели:
     DefaultBufferValue:
     Поле | Тип | Описание
-    buffer_type | BufferTypeBasic | Тип буфера, для которого задан радиус.
+    buffer_type | BufferTypeBasic | Тип зоны ограничений, для которого задан радиус.
     physical_object_type | PhysicalObjectTypeBasic | None | Тип физического объекта; заполняется, если радиус относится к физическим объектам.
     service_type | ServiceTypeBasic | None | Тип сервиса; заполняется, если радиус относится к сервисам.
-    buffer_value | float | Радиус буфера по умолчанию в метрах.
+    buffer_value | float | Нормативный радиус зоны ограничений в метрах.
     
     Пример вызова:
     {
@@ -99,9 +96,6 @@ async def get_buffer_types(request: Request = CurrentRequest()) -> list[BufferTy
         "buffer_value": 300.0
       }
     ]
-    
-    Ошибки:
-    - -32001 Not found: справочник значений буферов по умолчанию недоступен или не найден.
     """,
     tags=["buffers"],
     annotations={"title": "GetDefaultBufferValues", "readOnlyHint": True},
@@ -113,21 +107,21 @@ async def get_default_buffer_values(request: Request = CurrentRequest()) -> list
     return [DefaultBufferValue.from_dto(value) for value in values]
 
 
-@buffers_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryBuffersGeoJSON",
-    title="Получить буферы объектов территории в формате GeoJSON",
-    description="""Возвращает буферные зоны городских объектов на указанной территории в формате GeoJSON с возможностью фильтрации по типу буфера, типу физического объекта или типу сервиса.
+    title="Получить зоны ограничений объектов территории в формате GeoJSON",
+    description="""Возвращает зоны ограничений городских объектов на указанной территории в формате GeoJSON с возможностью фильтрации по типу зоны ограничения, типу физического объекта или типу сервиса.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    territory_id | int | да | Идентификатор территории, для которой нужно построить буферы.
-    buffer_type_id | Optional[int] | нет | Фильтр по типу буфера.
+    territory_id | int | да | Идентификатор территории, для которой нужно получить зоны ограничений.
+    buffer_type_id | Optional[int] | нет | Фильтр по типу зоны ограничений.
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
     include_child_territories | bool | нет | Если true, в выборку включаются объекты дочерних территорий.
     cities_only | bool | нет | Если true, учитываются только дочерние территории-городa; допустимо только при include_child_territories=true.
     
     Выходные данные:
-    GeoJSONResponse[Feature[Geometry, BufferAttributes]] | GeoJSON FeatureCollection с геометрией буферов и атрибутами связанных объектов.
+    GeoJSONResponse[Feature[Geometry, BufferAttributes]] | GeoJSON FeatureCollection с геометрией зон ограничений и атрибутами связанных объектов.
     
     Поля модели:
     GeoJSONResponse:
@@ -136,8 +130,8 @@ async def get_default_buffer_values(request: Request = CurrentRequest()) -> list
     features | list | Список объектов Feature; каждый содержит geometry и properties.
     BufferAttributes:
     Поле | Тип | Описание
-    buffer_type | BufferTypeBasic | Тип буфера, которым построена зона.
-    urban_object | ShortUrbanObject | Городской объект, вокруг которого построен буфер.
+    buffer_type | BufferTypeBasic | Тип зоны ограничений, которым построена зона.
+    urban_object | ShortUrbanObject | Городской объект, вокруг которого построена зона ограничений.
     is_custom | bool | Признак пользовательского значения радиуса вместо значения по умолчанию.
     
     Пример вызова:
@@ -170,14 +164,14 @@ async def get_default_buffer_values(request: Request = CurrentRequest()) -> list
     Ошибки:
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
-    - -32001 Not found: территория, тип буфера, тип физического объекта или тип сервиса не найдены.
+    - -32001 Not found: территория, тип зоны ограничений, тип физического объекта или тип сервиса не найдены.
     """,
-    tags=["buffers", "territories"],
+    tags=["buffers"],
     annotations={"title": "GetTerritoryBuffersGeoJSON", "readOnlyHint": True},
 )
 async def get_buffers_geojson_by_territory_id(
     territory_id: Annotated[int, "Идентификатор территории"],
-    buffer_type_id: Annotated[Optional[int], "Фильтр по типу буфера"] = None,
+    buffer_type_id: Annotated[Optional[int], "Фильтр по типу зоны ограничений"] = None,
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
     include_child_territories: Annotated[bool, "Включать дочерние территории"] = True,
@@ -215,19 +209,19 @@ async def get_buffers_geojson_by_territory_id(
     return await GeoJSONResponse.from_list((buffer.to_geojson_dict() for buffer in buffers))
 
 
-@buffers_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioBuffers",
-    title="Получить буферы объектов сценария",
-    description="""Возвращает буферные зоны объектов проектной территории текущего сценария в формате GeoJSON.
+    title="Получить зоны ограничений объектов сценария",
+    description="""Возвращает зоны ограничений объектов проектной территории текущего сценария в формате GeoJSON.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    buffer_type_id | Optional[int] | нет | Фильтр по типу буфера.
+    buffer_type_id | Optional[int] | нет | Фильтр по типу зоны ограничений.
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
     metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
     
     Выходные данные:
-    GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с буферами объектов сценария.
+    GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с зонами ограничений объектов сценария.
     
     Поля модели:
     GeoJSONResponse:
@@ -236,8 +230,8 @@ async def get_buffers_geojson_by_territory_id(
     features | list | Список объектов Feature; каждый содержит geometry и properties.
     ScenarioBufferAttributes:
     Поле | Тип | Описание
-    buffer_type | BufferTypeBasic | Тип буфера, которым построена зона.
-    urban_object | ShortUrbanObject | Объект сценария или базовый городской объект, вокруг которого построен буфер.
+    buffer_type | BufferTypeBasic | Тип зоны ограничений, которым построена зона.
+    urban_object | ShortUrbanObject | Объект сценария или базовый городской объект, вокруг которого построена зона ограничений.
     is_custom | bool | Признак пользовательского значения радиуса.
     is_scenario_object | bool | Признак того, что объект создан или изменен в сценарии.
     is_locked | bool | Признак блокировки объекта для изменений.
@@ -273,13 +267,13 @@ async def get_buffers_geojson_by_territory_id(
     - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
-    - -32001 Not found: сценарий, тип буфера, тип физического объекта или тип сервиса не найдены.
+    - -32001 Not found: сценарий, тип зоны ограничений, тип физического объекта или тип сервиса не найдены.
     """,
-    tags=["buffers", "scenarios"],
+    tags=["buffers"],
     annotations={"title": "GetScenarioBuffers", "readOnlyHint": True},
 )
 async def get_buffers_by_scenario_id(
-    buffer_type_id: Annotated[Optional[int], "Фильтр по типу буфера"] = None,
+    buffer_type_id: Annotated[Optional[int], "Фильтр по типу зоны ограничений"] = None,
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
     request: Request = CurrentRequest(),
@@ -318,19 +312,19 @@ async def get_buffers_by_scenario_id(
     return await GeoJSONResponse.from_list([buffer.to_geojson_dict() for buffer in buffers])
 
 
-@buffers_mcp.tool(
+@projects_mcp.tool(
     name="GetContextBuffers",
-    title="Получить буферы объектов на территории контекста",
-    description="""Возвращает буферные зоны объектов контекста проектной территории текущего сценария в формате GeoJSON.
+    title="Получить зоны ограничений объектов на территории контекста",
+    description="""Возвращает зоны ограничений объектов контекста проектной территории текущего сценария в формате GeoJSON.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    buffer_type_id | Optional[int] | нет | Фильтр по типу буфера.
+    buffer_type_id | Optional[int] | нет | Фильтр по типу зоны ограничений.
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
     metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
     
     Выходные данные:
-    GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с буферами объектов контекста сценария.
+    GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с зонами ограничений объектов контекста сценария.
     
     Поля модели:
     GeoJSONResponse:
@@ -339,8 +333,8 @@ async def get_buffers_by_scenario_id(
     features | list | Список объектов Feature; каждый содержит geometry и properties.
     ScenarioBufferAttributes:
     Поле | Тип | Описание
-    buffer_type | BufferTypeBasic | Тип буфера, которым построена зона.
-    urban_object | ShortUrbanObject | Контекстный городской объект, вокруг которого построен буфер.
+    buffer_type | BufferTypeBasic | Тип зоны ограничений, которым построена зона.
+    urban_object | ShortUrbanObject | Контекстный городской объект, вокруг которого построена зона ограничений.
     is_custom | bool | Признак пользовательского значения радиуса.
     is_scenario_object | bool | Признак того, что объект относится к сценарию.
     is_locked | bool | Признак блокировки объекта для изменений.
@@ -376,13 +370,13 @@ async def get_buffers_by_scenario_id(
     - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
-    - -32001 Not found: сценарий, тип буфера, тип физического объекта или тип сервиса не найдены.
+    - -32001 Not found: сценарий, тип зоны ограничений, тип физического объекта или тип сервиса не найдены.
     """,
-    tags=["buffers", "scenarios", "context"],
+    tags=["buffers", "context"],
     annotations={"title": "GetContextBuffers", "readOnlyHint": True},
 )
 async def get_context_buffers(
-    buffer_type_id: Annotated[Optional[int], "Фильтр по типу буфера"] = None,
+    buffer_type_id: Annotated[Optional[int], "Фильтр по типу зоны ограничений"] = None,
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
     request: Request = CurrentRequest(),

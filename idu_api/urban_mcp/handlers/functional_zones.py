@@ -14,23 +14,23 @@ from idu_api.urban_api.dto import UserDTO
 from idu_api.urban_api.logic.projects import UserProjectService
 from idu_api.urban_api.logic.territories import TerritoriesService
 from idu_api.urban_api.schemas import (
-    FunctionalZone,
     FunctionalZoneSource,
     FunctionalZoneWithoutGeometry,
     ScenarioFunctionalZoneWithoutGeometry,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_mcp.dependencies import auth_dep
-from idu_api.urban_mcp.handlers.routers import functional_zones_mcp
+
+from .routers import dictionaries_mcp, projects_mcp, territories_mcp
 
 
-@functional_zones_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetFunctionalZoneSources",
     title="Получить источники функциональных зон",
     description="""Возвращает доступные пары года и источника данных функциональных зон для указанной территории.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    territory_id | int | да | Идентификатор территории, для которой нужно найти доступные наборы функционального зонирования.
+    territory_id | int | да | Идентификатор территории, для которой нужно найти доступные источники функционального зонирования.
     include_child_territories | bool | нет | Если true, источники собираются также по дочерним территориям.
     cities_only | bool | нет | Если true, среди дочерних территорий учитываются только города; допустимо только при include_child_territories=true.
     
@@ -62,7 +62,7 @@ from idu_api.urban_mcp.handlers.routers import functional_zones_mcp
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32001 Not found: территория не найдена или для нее нет доступных источников функциональных зон.
     """,
-    tags=["territories", "functional_zones"],
+    tags=["functional_zones", "territories"],
     annotations={"title": "GetFunctionalZoneSources", "readOnlyHint": True},
 )
 async def get_functional_zone_sources(
@@ -91,105 +91,7 @@ async def get_functional_zone_sources(
     return [FunctionalZoneSource.from_dto(source) for source in sources]
 
 
-@functional_zones_mcp.tool(
-    name="GetFunctionalZones",
-    title="Получить функциональные зоны",
-    description="""Возвращает функциональные зоны указанной территории за выбранный год и источник в виде списка объектов с геометрией.
-    Входные параметры:
-    Параметр | Тип | Обязателен | Описание
-    territory_id | int | да | Идентификатор территории, по которой нужно получить функциональные зоны.
-    year | int | да | Год набора функционального зонирования.
-    source | str | да | Источник данных функционального зонирования.
-    functional_zone_type_id | Optional[int] | нет | Фильтр по идентификатору типа функциональной зоны.
-    include_child_territories | bool | нет | Если true, в выдачу включаются зоны дочерних территорий.
-    cities_only | bool | нет | Если true, среди дочерних территорий учитываются только города; допустимо только при include_child_territories=true.
-    
-    Выходные данные:
-    list[FunctionalZone] | Список функциональных зон с геометрией и атрибутами.
-    
-    Поля модели:
-    FunctionalZone:
-    Поле | Тип | Описание
-    functional_zone_id | int | Идентификатор функциональной зоны.
-    territory | ShortTerritory | Краткое описание территории, к которой относится зона.
-    functional_zone_type | FunctionalZoneTypeBasic | Тип функциональной зоны.
-    name | str | None | Название зоны, если оно задано в источнике.
-    geometry | Geometry | Геометрия зоны.
-    year | int | Год набора функционального зонирования.
-    source | str | Источник данных функционального зонирования.
-    properties | dict | Дополнительные свойства зоны из источника данных.
-    created_at | datetime | Дата и время создания записи.
-    updated_at | datetime | Дата и время последнего обновления записи.
-    
-    Пример вызова:
-    {
-      "tool": "GetFunctionalZones",
-      "arguments": {
-        "territory_id": 1,
-        "year": 2024,
-        "source": "Генеральный план",
-        "functional_zone_type_id": 3,
-        "include_child_territories": true,
-        "cities_only": false
-      }
-    }
-    
-    Пример результата:
-    [
-      {
-        "functional_zone_id": 10,
-        "territory": {"id": 1, "name": "Пермь"},
-        "functional_zone_type": {"id": 3, "name": "Жилая зона"},
-        "name": "Зона Ж-1",
-        "geometry": {"type": "Polygon", "coordinates": [[[56.2, 58.0], [56.3, 58.0], [56.3, 58.1], [56.2, 58.0]]]},
-        "year": 2024,
-        "source": "Генеральный план",
-        "properties": {"zone_code": "Ж-1"},
-        "created_at": "2024-01-15T10:00:00Z",
-        "updated_at": "2024-01-15T10:00:00Z"
-      }
-    ]
-    
-    Ошибки:
-    - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
-    - -32001 Not found: территория, тип функциональной зоны или набор данных с указанными year/source не найдены.
-    """,
-    tags=["territories", "functional_zones"],
-    annotations={"title": "GetFunctionalZones", "readOnlyHint": True},
-)
-async def get_functional_zones(
-    territory_id: Annotated[int, "Идентификатор территории"],
-    year: Annotated[int, "Год загрузки функциональных зон"],
-    source: Annotated[str, "Источник функциональных зон"],
-    functional_zone_type_id: Annotated[Optional[int], "Фильтр по типу функциональной зоны"] = None,
-    include_child_territories: Annotated[bool, "Включать дочерние территории"] = True,
-    cities_only: Annotated[bool, "Только города"] = False,
-    request: Request = CurrentRequest(),
-) -> list[FunctionalZone]:
-    """Get functional zones for a given territory."""
-    territories_service: TerritoriesService = request.state.territories_service
-
-    if not include_child_territories and cities_only:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
-        )
-
-    zones = await territories_service.get_functional_zones_by_territory_id(
-        territory_id,
-        year,
-        source,
-        functional_zone_type_id,
-        include_child_territories,
-        cities_only,
-    )
-
-    return [FunctionalZone.from_dto(zone) for zone in zones]
-
-
-@functional_zones_mcp.tool(
+@territories_mcp.tool(
     name="GetFunctionalZonesGeoJSON",
     title="Получить функциональные зоны в формате GeoJSON",
     description="""Возвращает функциональные зоны указанной территории за выбранный год и источник в формате GeoJSON FeatureCollection.
@@ -257,7 +159,7 @@ async def get_functional_zones(
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32001 Not found: территория, тип функциональной зоны или набор данных с указанными year/source не найдены.
     """,
-    tags=["territories", "functional_zones"],
+    tags=["functional_zones"],
     annotations={"title": "GetFunctionalZonesGeoJSON", "readOnlyHint": True},
 )
 async def get_functional_zones_geojson(
@@ -292,7 +194,7 @@ async def get_functional_zones_geojson(
     return await GeoJSONResponse.from_list([zone.to_geojson_dict() for zone in zones])
 
 
-@functional_zones_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetScenarioFunctionalZoneSources",
     title="Получить источники функциональных зон сценария",
     description="""Возвращает доступные пары года и источника данных функциональных зон для текущего сценария.
@@ -350,7 +252,7 @@ async def get_functional_zone_sources_by_scenario_id(
     return [FunctionalZoneSource.from_dto(source) for source in sources]
 
 
-@functional_zones_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioFunctionalZones",
     title="Получить функциональные зоны сценария",
     description="""Возвращает функциональные зоны проектной территории текущего сценария в формате GeoJSON FeatureCollection.
@@ -414,7 +316,7 @@ async def get_functional_zone_sources_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий, тип функциональной зоны или набор данных с указанными year/source не найдены.
     """,
-    tags=["functional_zones", "scenarios"],
+    tags=["functional_zones"],
     annotations={"title": "GetScenarioFunctionalZones", "readOnlyHint": True},
 )
 async def get_functional_zones_by_scenario_id(
@@ -445,7 +347,7 @@ async def get_functional_zones_by_scenario_id(
     return await GeoJSONResponse.from_list([zone.to_geojson_dict() for zone in functional_zones])
 
 
-@functional_zones_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetContextFunctionalZoneSources",
     title="Получить источники функциональных зон контекста",
     description="""Возвращает доступные пары года и источника данных функциональных зон контекста текущего сценария.
@@ -477,7 +379,7 @@ async def get_functional_zones_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий не найден или для его контекста нет доступных источников функциональных зон.
     """,
-    tags=["functional_zones", "scenarios", "context"],
+    tags=["functional_zones", "context"],
     annotations={"title": "GetContextFunctionalZoneSources", "readOnlyHint": True},
 )
 async def get_context_functional_zone_sources(
@@ -503,7 +405,7 @@ async def get_context_functional_zone_sources(
     return [FunctionalZoneSource.from_dto(source) for source in sources]
 
 
-@functional_zones_mcp.tool(
+@projects_mcp.tool(
     name="GetContextFunctionalZones",
     title="Получить функциональные зоны контекста",
     description="""Возвращает функциональные зоны контекста текущего сценария в формате GeoJSON FeatureCollection.
@@ -569,7 +471,7 @@ async def get_context_functional_zone_sources(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий, тип функциональной зоны или контекстный набор данных с указанными year/source не найдены.
     """,
-    tags=["functional_zones", "scenarios", "context"],
+    tags=["functional_zones", "context"],
     annotations={"title": "GetContextFunctionalZones", "readOnlyHint": True},
 )
 async def get_context_functional_zones(

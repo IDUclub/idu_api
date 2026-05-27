@@ -33,7 +33,7 @@ from idu_api.urban_api.schemas.pages import MCPCursorPage, MCPCursorParams
 from idu_api.urban_api.schemas.physical_objects import PhysicalObjectWithGeometry
 from idu_api.urban_mcp.dependencies import auth_dep
 
-from .routers import physical_objects_mcp
+from .routers import dictionaries_mcp, physical_objects_mcp, projects_mcp, territories_mcp
 
 
 def _get_scenario_id(context: Context) -> int:
@@ -82,7 +82,7 @@ def _validate_type_or_function(physical_object_type_id: int | None, physical_obj
         )
 
 
-@physical_objects_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetPhysicalObjectTypes",
     title="Получить типы физических объектов",
     description="""Возвращает типы физических объектов с фильтрами по функции физического объекта и названию.
@@ -124,7 +124,7 @@ async def get_physical_object_types(
     return [PhysicalObjectType.from_dto(object_type) for object_type in types]
 
 
-@physical_objects_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetPhysicalObjectFunctionsByParent",
     title="Получить функции физических объектов по родителю",
     description="""Возвращает функции физических объектов из иерархии по родительской функции и фильтру названия.
@@ -173,7 +173,7 @@ async def get_physical_object_functions_by_parent_id(
     return [PhysicalObjectFunction.from_dto(item) for item in functions]
 
 
-@physical_objects_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetPhysicalObjectTypesHierarchy",
     title="Получить иерархию типов физических объектов",
     description="""Возвращает иерархию функций физических объектов с вложенными типами физических объектов.
@@ -219,7 +219,7 @@ async def get_physical_object_types_hierarchy(
     return [PhysicalObjectsTypesHierarchy.from_dto(node) for node in hierarchy]
 
 
-@physical_objects_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetServiceTypesByPhysicalObjectType",
     title="Получить типы сервисов по типу физического объекта",
     description="""Возвращает типы сервисов, которые могут быть размещены в указанном типе физического объекта.
@@ -250,7 +250,7 @@ async def get_physical_object_types_hierarchy(
     Ошибки:
     - -32001 Not found: тип физического объекта не найден.
     """,
-    tags=["physical_objects", "services"],
+    tags=["services", "physical_objects"],
     annotations={"title": "GetServiceTypesByPhysicalObjectType", "readOnlyHint": True},
 )
 async def get_service_types(
@@ -272,10 +272,10 @@ async def get_service_types(
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_id | int | да | Идентификатор физического объекта.
-    
+
     Выходные данные:
     PhysicalObject | Карточка физического объекта.
-    
+
     Поля модели:
     PhysicalObject:
     Поле | Тип | Описание
@@ -287,13 +287,13 @@ async def get_service_types(
     territories | list[ShortTerritory] | None | Территории, к которым относится объект.
     created_at | datetime | Дата и время создания объекта.
     updated_at | datetime | Дата и время последнего обновления объекта.
-    
+
     Пример вызова:
     {"tool": "GetPhysicalObjectById", "arguments": {"physical_object_id": 25}}
-    
+
     Пример результата:
     {"physical_object_id": 25, "physical_object_type": {"physical_object_type_id": 4, "name": "Школа"}, "name": "Школа N 1", "properties": {}, "building": null, "territories": [{"id": 10, "name": "Пермь"}], "created_at": "2024-01-15T10:00:00Z", "updated_at": "2024-01-15T10:00:00Z"}
-    
+
     Ошибки:
     - -32001 Not found: физический объект с указанным physical_object_id не найден.
     """,
@@ -304,7 +304,7 @@ async def get_physical_object_by_id(
     physical_object_id: Annotated[int, "Идентификатор физического объекта"],
     request: Request = CurrentRequest(),
 ) -> PhysicalObject:
-    """Get physical object by identifier."""
+    """Get a physical object by identifier."""
     physical_objects_service: PhysicalObjectsService = request.state.physical_objects_service
     physical_object = await physical_objects_service.get_physical_object_by_id(physical_object_id)
     return PhysicalObject.from_dto(physical_object)
@@ -313,7 +313,7 @@ async def get_physical_object_by_id(
 @physical_objects_mcp.tool(
     name="GetServicesByPhysicalObjectId",
     title="Получить сервисы по физическому объекту",
-    description="""Возвращает сервисы, связанные с указанным физическим объектом, с фильтрами по типу сервиса и типу территории.
+    description="""Возвращает сервисы, расположенные в указанном физическом объекте, с фильтрами по типу сервиса и типу территории.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_id | int | да | Идентификатор физического объекта.
@@ -346,7 +346,7 @@ async def get_physical_object_by_id(
     Ошибки:
     - -32001 Not found: физический объект, тип сервиса или тип территории не найдены.
     """,
-    tags=["physical_objects", "services"],
+    tags=["services"],
     annotations={"title": "GetServicesByPhysicalObjectId", "readOnlyHint": True},
 )
 async def get_services_by_physical_object_id(
@@ -366,7 +366,7 @@ async def get_services_by_physical_object_id(
 @physical_objects_mcp.tool(
     name="GetServicesWithGeometryByPhysicalObjectId",
     title="Получить сервисы с геометрией по физическому объекту",
-    description="""Возвращает сервисы указанного физического объекта вместе с геометрией размещения.
+    description="""Возвращает сервисы, расположенные в указанном физическом объекте, вместе с геометрией размещения.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_id | int | да | Идентификатор физического объекта.
@@ -402,7 +402,7 @@ async def get_services_by_physical_object_id(
     Ошибки:
     - -32001 Not found: физический объект, тип сервиса, тип территории или геометрия не найдены.
     """,
-    tags=["physical_objects", "services"],
+    tags=["services"],
     annotations={"title": "GetServicesWithGeometryByPhysicalObjectId", "readOnlyHint": True},
 )
 async def get_services_with_geometry_by_physical_object_id(
@@ -451,7 +451,7 @@ async def get_services_with_geometry_by_physical_object_id(
     Ошибки:
     - -32001 Not found: физический объект не найден или у него нет геометрий.
     """,
-    tags=["physical_objects", "object_geometries"],
+    tags=["object_geometries"],
     annotations={"title": "GetPhysicalObjectGeometries", "readOnlyHint": True},
 )
 async def get_physical_object_geometries(
@@ -464,9 +464,9 @@ async def get_physical_object_geometries(
     return [ObjectGeometry.from_dto(geometry) for geometry in geometries]
 
 
-@physical_objects_mcp.tool(
+@territories_mcp.tool(
     name="GetPhysicalObjectTypesByTerritoryId",
-    title="Получить типы физических объектов территории",
+    title="Получить типы физических объектов на территории",
     description="""Возвращает типы физических объектов, представленные на указанной территории.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
@@ -494,7 +494,7 @@ async def get_physical_object_geometries(
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32001 Not found: территория не найдена.
     """,
-    tags=["physical_objects", "territories"],
+    tags=["physical_objects"],
     annotations={"title": "GetPhysicalObjectTypesByTerritoryId", "readOnlyHint": True},
 )
 async def get_physical_object_types_by_territory_id(
@@ -512,9 +512,9 @@ async def get_physical_object_types_by_territory_id(
     return [PhysicalObjectType.from_dto(service_type) for service_type in physical_object_types]
 
 
-@physical_objects_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryPhysicalObjectsGeoJSON",
-    title="Получить физические объекты территории в GeoJSON",
+    title="Получить физические объекты на территории",
     description="""Возвращает физические объекты территории в формате GeoJSON с возможностью вернуть центры вместо геометрии.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
@@ -561,7 +561,7 @@ async def get_physical_object_types_by_territory_id(
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32001 Not found: территория, тип, функция или геометрия объекта не найдены.
     """,
-    tags=["physical_objects", "territories"],
+    tags=["physical_objects"],
     annotations={"title": "GetTerritoryPhysicalObjectsGeoJSON", "readOnlyHint": True},
 )
 async def get_physical_objects_geojson_by_territory_id(
@@ -576,8 +576,10 @@ async def get_physical_objects_geojson_by_territory_id(
 ) -> GeoJSONResponse[Feature[Geometry, PhysicalObject]]:
     """Get territory physical objects in GeoJSON format."""
     territories_service: TerritoriesService = request.state.territories_service
+
     _validate_child_territories(include_child_territories, cities_only)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
+
     physical_objects = await territories_service.get_physical_objects_with_geometry_by_territory_id(
         territory_id,
         physical_object_type_id,
@@ -589,10 +591,11 @@ async def get_physical_objects_geojson_by_territory_id(
         "asc",
         paginate=False,
     )
+
     return await GeoJSONResponse.from_list((obj.to_geojson_dict() for obj in physical_objects), centers_only)
 
 
-@physical_objects_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioPhysicalObjectTypes",
     title="Получить типы физических объектов сценария",
     description="""Возвращает типы физических объектов, присутствующие в текущем сценарии.
@@ -620,7 +623,7 @@ async def get_physical_objects_geojson_by_territory_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий не найден.
     """,
-    tags=["physical_objects", "scenarios"],
+    tags=["physical_objects"],
     annotations={"title": "GetScenarioPhysicalObjectTypes", "readOnlyHint": True},
 )
 async def get_physical_object_types_by_scenario_id(
@@ -636,10 +639,10 @@ async def get_physical_object_types_by_scenario_id(
     return [PhysicalObjectType.from_dto(phys_type) for phys_type in types]
 
 
-@physical_objects_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioPhysicalObjects",
     title="Получить физические объекты сценария",
-    description="""Возвращает физические объекты текущего сценария с фильтрами по типу или функции.
+    description="""Возвращает список физических объектов текущего сценария с фильтрами по типу или функции.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
@@ -675,7 +678,7 @@ async def get_physical_object_types_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип или функция физического объекта не найдены.
     """,
-    tags=["physical_objects", "scenarios"],
+    tags=["physical_objects"],
     annotations={"title": "GetScenarioPhysicalObjects", "readOnlyHint": True},
 )
 async def get_physical_objects_by_scenario_id(
@@ -687,18 +690,21 @@ async def get_physical_objects_by_scenario_id(
 ) -> list[ScenarioPhysicalObject]:
     """Get physical objects for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
+
     scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
+
     physical_objects = await user_project_service.get_physical_objects_by_scenario_id(
         scenario_id, user, physical_object_type_id, physical_object_function_id
     )
+
     return [ScenarioPhysicalObject.from_dto(phys_obj) for phys_obj in physical_objects]
 
 
-@physical_objects_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioPhysicalObjectsWithGeometry",
     title="Получить физические объекты сценария с геометрией",
-    description="""Возвращает физические объекты текущего сценария в формате GeoJSON вместе с геометрией.
+    description="""Возвращает физические объекты текущего сценария в формате GeoJSON.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
@@ -743,7 +749,7 @@ async def get_physical_objects_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип, функция или геометрия объекта не найдены.
     """,
-    tags=["physical_objects", "scenarios"],
+    tags=["physical_objects"],
     annotations={"title": "GetScenarioPhysicalObjectsWithGeometry", "readOnlyHint": True},
 )
 async def get_physical_objects_with_geometry_by_scenario_id(
@@ -756,18 +762,21 @@ async def get_physical_objects_with_geometry_by_scenario_id(
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """Get physical objects with geometry for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
+
     scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
+
     physical_objects = await user_project_service.get_physical_objects_with_geometry_by_scenario_id(
         scenario_id, user, physical_object_type_id, physical_object_function_id
     )
+
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in physical_objects], centers_only)
 
 
-@physical_objects_mcp.tool(
+@projects_mcp.tool(
     name="GetContextPhysicalObjects",
     title="Получить физические объекты контекста",
-    description="""Возвращает физические объекты контекста текущего сценария с фильтрами по типу или функции.
+    description="""Возвращает список физических объектов контекста текущего сценария с фильтрами по типу или функции.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
@@ -803,7 +812,7 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип или функция физического объекта не найдены.
     """,
-    tags=["physical_objects", "scenarios", "context"],
+    tags=["physical_objects", "context"],
     annotations={"title": "GetContextPhysicalObjects", "readOnlyHint": True},
 )
 async def get_context_physical_objects(
@@ -815,18 +824,21 @@ async def get_context_physical_objects(
 ) -> list[ScenarioPhysicalObject]:
     """Get context physical objects for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
+
     scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
+
     physical_objects = await user_project_service.get_context_physical_objects(
         scenario_id, user, physical_object_type_id, physical_object_function_id
     )
+
     return [ScenarioPhysicalObject.from_dto(phys_obj) for phys_obj in physical_objects]
 
 
-@physical_objects_mcp.tool(
+@projects_mcp.tool(
     name="GetContextPhysicalObjectsWithGeometry",
     title="Получить физические объекты контекста с геометрией",
-    description="""Возвращает физические объекты контекста текущего сценария в GeoJSON вместе с геометрией.
+    description="""Возвращает физические объекты контекста текущего сценария в GeoJSON.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
@@ -872,7 +884,7 @@ async def get_context_physical_objects(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип, функция или геометрия объекта не найдены.
     """,
-    tags=["physical_objects", "scenarios", "context"],
+    tags=["physical_objects", "context"],
     annotations={"title": "GetContextPhysicalObjectsWithGeometry", "readOnlyHint": True},
 )
 async def get_context_physical_objects_with_geometry(
@@ -886,18 +898,21 @@ async def get_context_physical_objects_with_geometry(
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """Get context physical objects with geometry for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
+
     scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
+
     physical_objects = await user_project_service.get_context_physical_objects_with_geometry(
         scenario_id, user, physical_object_type_id, physical_object_function_id, include_scenario_objects
     )
+
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in physical_objects], centers_only)
 
 
-@physical_objects_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryPhysicalObjects",
-    title="Получить физические объекты территории ",
-    description="""Возвращает физические объекты территории с курсорной пагинацией.
+    title="Получить страницу физических объектов на территории",
+    description="""Постранично возвращает физические объекты территории.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     territory_id | int | да | Идентификатор территории.
@@ -945,7 +960,7 @@ async def get_context_physical_objects_with_geometry(
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32001 Not found: территория, тип или функция физического объекта не найдены.
     """,
-    tags=["physical_objects", "territories", ""],
+    tags=["physical_objects"],
     annotations={"title": "GetTerritoryPhysicalObjects", "readOnlyHint": True},
 )
 async def get_physical_objects_by_territory_id(
@@ -963,10 +978,12 @@ async def get_physical_objects_by_territory_id(
 ) -> MCPCursorPage[PhysicalObject]:
     """Get physical objects for territory with cursor pagination."""
     territories_service: TerritoriesService = request.state.territories_service
+
     _validate_child_territories(include_child_territories, cities_only)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
     order_by_value = order_by.value if order_by is not None else None
     params = MCPCursorParams(cursor=cursor, size=page_size)
+
     physical_objects = await territories_service.get_physical_objects_by_territory_id(
         territory_id,
         physical_object_type_id,
@@ -979,6 +996,7 @@ async def get_physical_objects_by_territory_id(
         paginate=True,
         params=params,
     )
+
     return MCPCursorPage.create(
         [PhysicalObject.from_dto(item) for item in physical_objects.items],
         params=params,
@@ -987,10 +1005,10 @@ async def get_physical_objects_by_territory_id(
     )
 
 
-@physical_objects_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryPhysicalObjectsWithGeometry",
-    title="Получить физические объекты территории с геометрией ",
-    description="""Возвращает физические объекты территории с геометрией и курсорной пагинацией.
+    title="Получить страницу физических объектов на территории с геометрией",
+    description="""Постранично возвращает физические объекты территории с их геометрией.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     territory_id | int | да | Идентификатор территории.
@@ -1043,7 +1061,7 @@ async def get_physical_objects_by_territory_id(
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32001 Not found: территория, тип, функция или геометрия объекта не найдены.
     """,
-    tags=["physical_objects", "territories", ""],
+    tags=["physical_objects"],
     annotations={"title": "GetTerritoryPhysicalObjectsWithGeometry", "readOnlyHint": True},
 )
 async def get_physical_objects_with_geometry_by_territory_id(
@@ -1061,10 +1079,12 @@ async def get_physical_objects_with_geometry_by_territory_id(
 ) -> MCPCursorPage[PhysicalObjectWithGeometry]:
     """Get physical objects with geometry for territory with cursor pagination."""
     territories_service: TerritoriesService = request.state.territories_service
+
     _validate_child_territories(include_child_territories, cities_only)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
     order_by_value = order_by.value if order_by is not None else None
     params = MCPCursorParams(cursor=cursor, size=page_size)
+
     physical_objects = await territories_service.get_physical_objects_with_geometry_by_territory_id(
         territory_id,
         physical_object_type_id,
@@ -1077,6 +1097,7 @@ async def get_physical_objects_with_geometry_by_territory_id(
         paginate=True,
         params=params,
     )
+
     return MCPCursorPage.create(
         [PhysicalObjectWithGeometry.from_dto(item) for item in physical_objects.items],
         params=params,

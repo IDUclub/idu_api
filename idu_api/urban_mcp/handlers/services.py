@@ -32,7 +32,7 @@ from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.schemas.pages import MCPCursorPage, MCPCursorParams
 from idu_api.urban_mcp.dependencies import auth_dep
 
-from .routers import services_mcp
+from .routers import dictionaries_mcp, projects_mcp, soc_groups_mcp, territories_mcp
 
 
 def _get_scenario_id(context: Context) -> int:
@@ -78,7 +78,7 @@ def _validate_service_type_or_function(service_type_id: int | None, urban_functi
         )
 
 
-@services_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetServiceTypes",
     title="Получить типы сервисов",
     description="""Возвращает типы сервисов с фильтрами по городской функции и названию.
@@ -124,7 +124,7 @@ async def get_service_types(
     return [ServiceType.from_dto(service_type) for service_type in service_types]
 
 
-@services_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetUrbanFunctionsByParent",
     title="Получить городские функции по родителю",
     description="""Возвращает городские функции из иерархии по родительской функции и фильтру названия.
@@ -171,7 +171,7 @@ async def get_urban_functions_by_parent_id(
     return [UrbanFunction.from_dto(urban_function) for urban_function in urban_functions]
 
 
-@services_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetServiceTypesHierarchy",
     title="Получить иерархию типов сервисов",
     description="""Возвращает иерархию городских функций с вложенными типами сервисов.
@@ -216,7 +216,7 @@ async def get_service_types_hierarchy(
     return [ServiceTypesHierarchy.from_dto(node) for node in hierarchy]
 
 
-@services_mcp.tool(
+@dictionaries_mcp.tool(
     name="GetPhysicalObjectTypesByServiceType",
     title="Получить типы физических объектов по типу сервиса",
     description="""Возвращает типы физических объектов, совместимые с указанным типом сервиса.
@@ -256,7 +256,7 @@ async def get_physical_object_types(
     return [PhysicalObjectType.from_dto(object_type) for object_type in types]
 
 
-@services_mcp.tool(
+@soc_groups_mcp.tool(
     name="GetSocialValuesByServiceType",
     title="Получить социальные ценности по типу сервиса",
     description="""Возвращает социальные ценности, связанные с указанным типом сервиса.
@@ -285,7 +285,7 @@ async def get_physical_object_types(
     Ошибки:
     - -32001 Not found: тип сервиса не найден.
     """,
-    tags=["services", "soc_groups"],
+    tags=["services"],
     annotations={"title": "GetSocialValuesByServiceType", "readOnlyHint": True},
 )
 async def get_social_values(
@@ -298,7 +298,7 @@ async def get_social_values(
     return [SocValue.from_dto(value) for value in soc_values]
 
 
-@services_mcp.tool(
+@soc_groups_mcp.tool(
     name="GetSocialGroupsByServiceType",
     title="Получить социальные группы по типу сервиса",
     description="""Возвращает социальные группы, для которых релевантен указанный тип сервиса.
@@ -325,7 +325,7 @@ async def get_social_values(
     Ошибки:
     - -32001 Not found: тип сервиса не найден.
     """,
-    tags=["services", "soc_groups"],
+    tags=["services"],
     annotations={"title": "GetSocialGroupsByServiceType", "readOnlyHint": True},
 )
 async def get_social_groups(
@@ -338,9 +338,9 @@ async def get_social_groups(
     return [SocGroupWithServiceTypes.from_dto(group) for group in soc_groups]
 
 
-@services_mcp.tool(
+@territories_mcp.tool(
     name="GetServiceTypesByTerritoryId",
-    title="Получить типы сервисов территории",
+    title="Получить типы сервисов на территории",
     description="""Возвращает типы сервисов, представленные на указанной территории.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
@@ -372,7 +372,7 @@ async def get_social_groups(
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32001 Not found: территория не найдена.
     """,
-    tags=["services", "territories"],
+    tags=["services"],
     annotations={"title": "GetServiceTypesByTerritoryId", "readOnlyHint": True},
 )
 async def get_service_types_by_territory_id(
@@ -390,9 +390,9 @@ async def get_service_types_by_territory_id(
     return [ServiceType.from_dto(service_type) for service_type in service_types]
 
 
-@services_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryServicesGeoJSON",
-    title="Получить сервисы территории в GeoJSON",
+    title="Получить сервисы на территории в GeoJSON",
     description="""Возвращает сервисы территории в формате GeoJSON с возможностью вернуть центры вместо геометрии.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
@@ -472,10 +472,10 @@ async def get_services_geojson_by_territory_id(
     return await GeoJSONResponse.from_list([service.to_geojson_dict() for service in services], centers_only)
 
 
-@services_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryServicesCapacity",
-    title="Получить количество и мощность сервисов территории",
-    description="""Возвращает агрегированное количество и суммарную мощность сервисов на уровне дочерних территорий.
+    title="Получить количество и вместимость сервисов территории",
+    description="""Возвращает агрегированное количество и суммарную вместимость сервисов на уровне дочерних территорий.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     territory_id | int | да | Идентификатор родительской территории.
@@ -516,7 +516,7 @@ async def get_total_services_capacity_by_territory_id(
     return [ServicesCountCapacity.from_dto(s) for s in services]
 
 
-@services_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioServiceTypes",
     title="Получить типы сервисов сценария",
     description="""Возвращает типы сервисов текущего сценария или его контекста.
@@ -550,7 +550,7 @@ async def get_total_services_capacity_by_territory_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий не найден.
     """,
-    tags=["services", "scenarios"],
+    tags=["services"],
     annotations={"title": "GetScenarioServiceTypes", "readOnlyHint": True},
 )
 async def get_service_types_by_scenario_id(
@@ -567,10 +567,10 @@ async def get_service_types_by_scenario_id(
     return [ServiceType.from_dto(service_type) for service_type in types]
 
 
-@services_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioServices",
     title="Получить сервисы сценария",
-    description="""Возвращает сервисы текущего сценария с фильтрами по типу сервиса или городской функции.
+    description="""Возвращает список сервисов текущего сценария с фильтрами по типу сервиса или городской функции.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
@@ -608,7 +608,7 @@ async def get_service_types_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
     """,
-    tags=["services", "scenarios"],
+    tags=["services"],
     annotations={"title": "GetScenarioServices", "readOnlyHint": True},
 )
 async def get_services_by_scenario_id(
@@ -627,10 +627,10 @@ async def get_services_by_scenario_id(
     return [ScenarioService.from_dto(service) for service in services]
 
 
-@services_mcp.tool(
+@projects_mcp.tool(
     name="GetScenarioServicesWithGeometry",
     title="Получить сервисы сценария с геометрией",
-    description="""Возвращает сервисы текущего сценария в формате GeoJSON вместе с геометрией.
+    description="""Возвращает сервисы текущего сценария в формате GeoJSON.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
@@ -677,7 +677,7 @@ async def get_services_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
     """,
-    tags=["services", "scenarios"],
+    tags=["services"],
     annotations={"title": "GetScenarioServicesWithGeometry", "readOnlyHint": True},
 )
 async def get_services_with_geometry_by_scenario_id(
@@ -697,10 +697,10 @@ async def get_services_with_geometry_by_scenario_id(
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in services], centers_only)
 
 
-@services_mcp.tool(
+@projects_mcp.tool(
     name="GetContextServices",
     title="Получить сервисы контекста",
-    description="""Возвращает сервисы контекста текущего сценария с фильтрами по типу сервиса или городской функции.
+    description="""Возвращает список сервисов контекста текущего сценария с фильтрами по типу сервиса или городской функции.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
@@ -738,7 +738,7 @@ async def get_services_with_geometry_by_scenario_id(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
     """,
-    tags=["services", "scenarios", "context"],
+    tags=["services", "context"],
     annotations={"title": "GetContextServices", "readOnlyHint": True},
 )
 async def get_context_services(
@@ -757,7 +757,7 @@ async def get_context_services(
     return [ScenarioService.from_dto(service) for service in services]
 
 
-@services_mcp.tool(
+@projects_mcp.tool(
     name="GetContextServicesWithGeometry",
     title="Получить сервисы контекста с геометрией",
     description="""Возвращает сервисы контекста текущего сценария в GeoJSON вместе с геометрией.
@@ -808,7 +808,7 @@ async def get_context_services(
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
     """,
-    tags=["services", "scenarios", "context"],
+    tags=["services", "context"],
     annotations={"title": "GetContextServicesWithGeometry", "readOnlyHint": True},
 )
 async def get_context_services_with_geometry(
@@ -829,10 +829,10 @@ async def get_context_services_with_geometry(
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in services], centers_only)
 
 
-@services_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryServices",
-    title="Получить сервисы территории ",
-    description="""Возвращает сервисы территории с курсорной пагинацией.
+    title="Получить страницу сервисов на территории",
+    description="""Постранично возвращает сервисы на территории.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     territory_id | int | да | Идентификатор территории.
@@ -923,7 +923,7 @@ async def get_services_by_territory_id(
     )
 
 
-@services_mcp.tool(
+@territories_mcp.tool(
     name="GetTerritoryServicesWithGeometry",
     title="Получить сервисы территории с геометрией ",
     description="""Возвращает сервисы территории с геометрией и курсорной пагинацией.
