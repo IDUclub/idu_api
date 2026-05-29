@@ -2,9 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastmcp import Context
 from fastmcp.dependencies import CurrentRequest, Depends
-from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
@@ -199,7 +197,7 @@ async def get_functional_zones_geojson(
     title="Получить источники функциональных зон сценария",
     description="""Возвращает доступные пары года и источника данных функциональных зон для текущего сценария.
     Входные параметры:
-    отсутствуют; идентификатор сценария берется из metadata.scenario_id MCP-запроса.
+    scenario_id | int | yes | Идентификатор сценария.
     
     Выходные данные:
     list[FunctionalZoneSource] | Список доступных источников функциональных зон сценария с годами данных.
@@ -222,7 +220,6 @@ async def get_functional_zones_geojson(
     ]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий не найден или для него нет доступных источников функциональных зон.
     """,
@@ -230,22 +227,12 @@ async def get_functional_zones_geojson(
     annotations={"title": "GetScenarioFunctionalZoneSources", "readOnlyHint": True},
 )
 async def get_functional_zone_sources_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[FunctionalZoneSource]:
     """Get functional zone sources for the current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
-
-    try:
-        scenario_id = int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
     sources = await user_project_service.get_functional_zones_sources_by_scenario_id(scenario_id, user)
 
@@ -261,7 +248,7 @@ async def get_functional_zone_sources_by_scenario_id(
     year | int | да | Год набора функционального зонирования сценария.
     source | str | да | Источник данных функционального зонирования сценария.
     functional_zone_type_id | Optional[int] | нет | Фильтр по идентификатору типа функциональной зоны.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария в arguments MCP-запроса.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, ScenarioFunctionalZoneWithoutGeometry]] | GeoJSON FeatureCollection с геометрией функциональных зон сценария и атрибутами в properties.
@@ -312,7 +299,6 @@ async def get_functional_zone_sources_by_scenario_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий, тип функциональной зоны или набор данных с указанными year/source не найдены.
     """,
@@ -320,25 +306,15 @@ async def get_functional_zone_sources_by_scenario_id(
     annotations={"title": "GetScenarioFunctionalZones", "readOnlyHint": True},
 )
 async def get_functional_zones_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     year: Annotated[int, "Год загрузки функциональных зон"],
     source: Annotated[str, "Источник функциональных зон"],
     functional_zone_type_id: Annotated[Optional[int], "Фильтр по типу функциональной зоны"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioFunctionalZoneWithoutGeometry]]:
     """Get functional zones for the current scenario in GeoJSON format."""
     user_project_service: UserProjectService = request.state.user_project_service
-
-    try:
-        scenario_id = int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
     functional_zones = await user_project_service.get_functional_zones_by_scenario_id(
         scenario_id, year, source, functional_zone_type_id, user
@@ -352,7 +328,7 @@ async def get_functional_zones_by_scenario_id(
     title="Получить источники функциональных зон контекста",
     description="""Возвращает доступные пары года и источника данных функциональных зон контекста текущего сценария.
     Входные параметры:
-    отсутствуют; идентификатор сценария берется из metadata.scenario_id MCP-запроса.
+    scenario_id | int | yes | Идентификатор сценария.
     
     Выходные данные:
     list[FunctionalZoneSource] | Список доступных источников контекстных функциональных зон с годами данных.
@@ -375,7 +351,6 @@ async def get_functional_zones_by_scenario_id(
     ]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий не найден или для его контекста нет доступных источников функциональных зон.
     """,
@@ -383,22 +358,12 @@ async def get_functional_zones_by_scenario_id(
     annotations={"title": "GetContextFunctionalZoneSources", "readOnlyHint": True},
 )
 async def get_context_functional_zone_sources(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[FunctionalZoneSource]:
     """Get context functional zone sources for the current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
-
-    try:
-        scenario_id = int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
     sources = await user_project_service.get_context_functional_zones_sources(scenario_id, user)
 
@@ -414,7 +379,7 @@ async def get_context_functional_zone_sources(
     year | int | да | Год набора контекстного функционального зонирования.
     source | str | да | Источник данных контекстного функционального зонирования.
     functional_zone_type_id | Optional[int] | нет | Фильтр по идентификатору типа функциональной зоны.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, FunctionalZoneWithoutGeometry]] | GeoJSON FeatureCollection с геометрией контекстных функциональных зон и атрибутами в properties.
@@ -467,7 +432,6 @@ async def get_context_functional_zone_sources(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий, тип функциональной зоны или контекстный набор данных с указанными year/source не найдены.
     """,
@@ -475,25 +439,15 @@ async def get_context_functional_zone_sources(
     annotations={"title": "GetContextFunctionalZones", "readOnlyHint": True},
 )
 async def get_context_functional_zones(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     year: Annotated[int, "Год загрузки функциональных зон"],
     source: Annotated[str, "Источник функциональных зон"],
     functional_zone_type_id: Annotated[Optional[int], "Фильтр по типу функциональной зоны"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, FunctionalZoneWithoutGeometry]]:
     """Get context functional zones for the current scenario in GeoJSON format."""
     user_project_service: UserProjectService = request.state.user_project_service
-
-    try:
-        scenario_id = int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
     functional_zones = await user_project_service.get_context_functional_zones(
         scenario_id, year, source, functional_zone_type_id, user

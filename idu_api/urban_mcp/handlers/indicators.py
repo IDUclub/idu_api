@@ -3,9 +3,7 @@
 from datetime import date
 from typing import Annotated, Optional
 
-from fastmcp import Context
 from fastmcp.dependencies import CurrentRequest, Depends
-from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
@@ -44,18 +42,6 @@ def _parse_indicator_ids(indicator_ids: str | None) -> set[int] | None:
             ErrorData(
                 code=-32602,
                 message="Параметр indicator_ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
-            )
-        ) from exc
-
-
-def _get_scenario_id(context: Context) -> int:
-    try:
-        return int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
             )
         ) from exc
 
@@ -728,7 +714,7 @@ async def get_indicator_values_by_parent_id(
     indicators_group_id | Optional[int] | нет | Фильтр по группе показателей.
     territory_id | Optional[int] | нет | Фильтр по территории сценария.
     hexagon_id | Optional[int] | нет | Фильтр по гексагону сценария.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     list[ScenarioIndicatorValue] | Список значений показателей текущего сценария.
@@ -776,7 +762,6 @@ async def get_indicator_values_by_parent_id(
     ]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: indicator_ids содержит нецелочисленное значение.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий, территория, гексагон, группа показателей или один из показателей не найдены.
@@ -785,17 +770,16 @@ async def get_indicator_values_by_parent_id(
     annotations={"title": "GetScenarioIndicatorsValues", "readOnlyHint": True},
 )
 async def get_indicators_values_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     indicator_ids: Annotated[Optional[str], "Список идентификаторов показателей через запятую"] = None,
     indicators_group_id: Annotated[Optional[int], "Фильтр по группе показателей"] = None,
     territory_id: Annotated[Optional[int], "Фильтр по территории"] = None,
     hexagon_id: Annotated[Optional[int], "Фильтр по гексагону"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioIndicatorValue]:
     """Get indicator values for the current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
-    scenario_id = _get_scenario_id(context)
     parsed_indicator_ids = _parse_indicator_ids(indicator_ids)
 
     indicators = await user_project_service.get_scenario_indicators_values(
@@ -814,7 +798,7 @@ async def get_indicators_values_by_scenario_id(
     indicator_ids | Optional[str] | нет | Список идентификаторов показателей через запятую, например "1,2,3".
     indicators_group_id | Optional[int] | нет | Фильтр по группе показателей.
     centers_only | bool | нет | Если true, вместо геометрии гексагонов возвращаются их центры.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, HexagonWithIndicators]] | GeoJSON FeatureCollection с гексагонами и значениями показателей в properties.
@@ -857,7 +841,6 @@ async def get_indicators_values_by_scenario_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: indicator_ids содержит нецелочисленное значение.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий, группа показателей или один из показателей не найдены.
@@ -866,16 +849,15 @@ async def get_indicators_values_by_scenario_id(
     annotations={"title": "GetScenarioHexagonsWithIndicatorsValues", "readOnlyHint": True},
 )
 async def get_hexagons_with_indicators_values_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     indicator_ids: Annotated[Optional[str], "Список идентификаторов показателей через запятую"] = None,
     indicators_group_id: Annotated[Optional[int], "Фильтр по группе показателей"] = None,
     centers_only: Annotated[bool, "Возвращать только центры гексагонов"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, HexagonWithIndicators]]:
     """Get hexagons with indicator values for the current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
-    scenario_id = _get_scenario_id(context)
     parsed_indicator_ids = _parse_indicator_ids(indicator_ids)
 
     hexagons = await user_project_service.get_hexagons_with_indicators_by_scenario_id(

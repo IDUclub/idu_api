@@ -2,9 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastmcp import Context
 from fastmcp.dependencies import CurrentRequest, Depends
-from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
@@ -218,7 +216,7 @@ async def get_buffers_geojson_by_territory_id(
     buffer_type_id | Optional[int] | нет | Фильтр по типу зоны ограничений.
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария в arguments MCP-запроса.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с зонами ограничений объектов сценария.
@@ -264,7 +262,6 @@ async def get_buffers_geojson_by_territory_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип зоны ограничений, тип физического объекта или тип сервиса не найдены.
@@ -273,11 +270,11 @@ async def get_buffers_geojson_by_territory_id(
     annotations={"title": "GetScenarioBuffers", "readOnlyHint": True},
 )
 async def get_buffers_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     buffer_type_id: Annotated[Optional[int], "Фильтр по типу зоны ограничений"] = None,
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
     """Get buffers for a scenario in GeoJSON format."""
@@ -290,16 +287,6 @@ async def get_buffers_by_scenario_id(
                 message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
             )
         )
-
-    try:
-        scenario_id = int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
     buffers = await user_project_service.get_buffers_by_scenario_id(
         scenario_id,
@@ -321,7 +308,7 @@ async def get_buffers_by_scenario_id(
     buffer_type_id | Optional[int] | нет | Фильтр по типу зоны ограничений.
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта. Нельзя использовать одновременно с service_type_id.
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса. Нельзя использовать одновременно с physical_object_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария в arguments MCP-запроса.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]] | GeoJSON FeatureCollection с зонами ограничений объектов контекста сценария.
@@ -367,7 +354,7 @@ async def get_buffers_by_scenario_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
+    - -32602 Invalid params: scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и service_type_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип зоны ограничений, тип физического объекта или тип сервиса не найдены.
@@ -376,11 +363,11 @@ async def get_buffers_by_scenario_id(
     annotations={"title": "GetContextBuffers", "readOnlyHint": True},
 )
 async def get_context_buffers(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     buffer_type_id: Annotated[Optional[int], "Фильтр по типу зоны ограничений"] = None,
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     service_type_id: Annotated[Optional[int], "Фильтр по типу сервиса"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioBufferAttributes]]:
     """Get context buffers for a scenario in GeoJSON format."""
@@ -393,16 +380,6 @@ async def get_context_buffers(
                 message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
             )
         )
-
-    try:
-        scenario_id = int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
     buffers = await user_project_service.get_context_buffers(
         scenario_id,

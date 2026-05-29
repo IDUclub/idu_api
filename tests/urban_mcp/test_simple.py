@@ -5,15 +5,15 @@ from typing import Any
 
 from fastmcp import Client
 
-MCP_URL = "http://localhost:8002/mcp"
-TOKEN = "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJadlA1TzV5R1NzVGwtN3FZXzlGUU5vam5CWkx5bWUwcG5WMGF5UzZHU2MwIn0.eyJleHAiOjE3Nzk4ODg3MzQsImlhdCI6MTc3OTg4ODQzNCwiYXV0aF90aW1lIjoxNzc5ODg4NDIyLCJqdGkiOiJvbnJ0YWM6NmJkOTY1NTktZmVmMi02MjJjLWVhY2EtNGYwYTI4NDlhNzNiIiwiaXNzIjoiaHR0cHM6Ly9rZXljbG9hay5pZHUuYWN0Y29nbml0aXZlLm9yZy9yZWFsbXMvSURVIiwiYXVkIjpbInVyYmFuLWFwaSIsImFjY291bnQiXSwic3ViIjoiMzk1MWE0ZTgtZGU3ZS00Zjc0LTljNzItNmZhNTE5ZGNmYmJmIiwidHlwIjoiQmVhcmVyIiwiYXpwIjoidXJiYW4tYXBpLXN3YWdnZXIiLCJzaWQiOiJnNTUtRDNPUDNMTFYybmdRQlhhOTRUYVoiLCJhY3IiOiIwIiwiYWxsb3dlZC1vcmlnaW5zIjpbImh0dHA6Ly8xMC4zMi4xLjQ3OjUzMDAiLCIqIiwiaHR0cHM6Ly91cmJhbi1hcGkuaWR1bGFiLnJ1IiwiaHR0cHM6Ly91cmJhbi1hcGkudGVzdGluZy5pZHVsYWIucnUiLCJodHRwOi8vMTAuMzIuMS42NTo1MzAwIl0sInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLWlkdSIsIm9mZmxpbmVfYWNjZXNzIiwiU1RBRkYiLCJBRE1JTiIsInVtYV9hdXRob3JpemF0aW9uIl19LCJyZXNvdXJjZV9hY2Nlc3MiOnsidXJiYW4tYXBpIjp7InJvbGVzIjpbImxvYWRlci5pbmRpY2F0b3JzIiwibG9hZGVyLnRlcnJpdG9yaWVzIiwibG9hZGVyLm5vcm1hdGl2ZXMiLCJsb2FkZXIuc2VydmljZXMiXX0sImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoib3BlbmlkIHByb2ZpbGUgZW1haWwiLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsIm5hbWUiOiJBZG1pbiBUZXN0IiwicHJlZmVycmVkX3VzZXJuYW1lIjoiYWRtaW5AdGVzdC5ydSIsImdpdmVuX25hbWUiOiJBZG1pbiIsImZhbWlseV9uYW1lIjoiVGVzdCIsImVtYWlsIjoiYWRtaW5AdGVzdC5ydSJ9.PzYP4QI1y1-ipl7B8Z-jIJ-EgQxEf1mDzjDJ-AefkIZkI3iWAjuHOHyt7yCsnOTRwVwBw6gqf7kM0pfDPdsD042Df78ZTnFkICgQsKQb1QU43FvfitBw7EKzcul4DLqZxHrpDxIti00ozZ_cHkoV5mv9kHHOgFo5oyrUkeD2hiXYKki-NoCRgonHirl7vxkZO2-g-U3BUVjzARSMAtr9nbpzZNznUFEj34Yf9N6T58UIdFhPMeyrBFjmDBqvzevV7QK1P0B69sbeYe3yH1gnuAc_ayJStouv5c9zDm6GwJU97nc1tfDaH9tVXKOZ6cq9gYrnCG08Yj2rAMq-14KuQg"
+MCP_URL = "http://localhost:8000"
+TOKEN = "access token"
 GROUP_PATHS: dict[str, str] = {
-    "projects": "/projects",
-    "territories": "/territories",
-    "physical_objects": "/physical_objects",
-    "dictionaries": "/dictionaries",
-    "indicators": "/indicators",
-    "soc_groups": "/soc_groups",
+    "projects": "/mcp/projects",
+    "territories": "/mcp/territories",
+    "physical_objects": "/mcp/physical_objects",
+    "dictionaries": "/mcp/dictionaries",
+    "indicators": "/mcp/indicators",
+    "soc_groups": "/mcp/soc_groups",
 }
 
 
@@ -50,14 +50,16 @@ TEST_CASES: list[ToolCase] = [
     ToolCase(
         "dictionaries",
         "GetScenarioFunctionalZoneSources",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "dictionaries",
         "GetContextFunctionalZoneSources",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase("dictionaries", "GetMeasurementUnits"),
     ToolCase("dictionaries", "GetIndicatorsGroups"),
@@ -348,16 +350,17 @@ TEST_CASES: list[ToolCase] = [
     ToolCase(
         "indicators",
         "GetScenarioIndicatorsValues",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "indicators",
         "GetScenarioHexagonsWithIndicatorsValues",
         arguments={
+            "scenario_id": 124,
             "centers_only": True,
         },
-        meta={"scenario_id": "124"},
     ),
     # --- physical objects ---
     ToolCase(
@@ -392,75 +395,80 @@ TEST_CASES: list[ToolCase] = [
     ToolCase(
         "projects",
         "GetScenarioBuffers",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetContextBuffers",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetScenarioFunctionalZones",
         arguments={
+            "scenario_id": 124,
             "year": 2024,
             "source": "OSM",
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetContextFunctionalZones",
         arguments={
+            "scenario_id": 124,
             "year": 2024,
             "source": "OSM",
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetScenarioPhysicalObjectTypes",
         arguments={
+            "scenario_id": 124,
             "for_context": False,
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetScenarioPhysicalObjects",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetScenarioPhysicalObjectsWithGeometry",
         arguments={
+            "scenario_id": 124,
             "centers_only": True,
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetContextPhysicalObjects",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetContextPhysicalObjectsWithGeometry",
         arguments={
+            "scenario_id": 124,
             "include_scenario_objects": False,
             "centers_only": True,
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetProjectById",
-        arguments={},
-        meta={"project_id": "1"},
+        arguments={
+            "project_id": 1,
+        },
     ),
     ToolCase(
         "projects",
@@ -481,63 +489,69 @@ TEST_CASES: list[ToolCase] = [
     ToolCase(
         "projects",
         "GetProjectTerritoryByProjectId",
-        arguments={},
-        meta={"project_id": "1"},
+        arguments={
+            "project_id": 1,
+        },
     ),
     ToolCase(
         "projects",
         "GetProjectPhasesByProjectId",
-        arguments={},
-        meta={"project_id": "1"},
+        arguments={
+            "project_id": 1,
+        },
     ),
     ToolCase(
         "projects",
         "GetProjectCadastresByProjectId",
-        arguments={},
-        meta={"project_id": "1"},
+        arguments={
+            "project_id": 1,
+        },
     ),
     ToolCase(
         "projects",
         "GetScenarioById",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetScenarioServiceTypes",
         arguments={
+            "scenario_id": 124,
             "for_context": False,
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetScenarioServices",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetScenarioServicesWithGeometry",
         arguments={
+            "scenario_id": 124,
             "centers_only": True,
         },
-        meta={"scenario_id": "124"},
     ),
     ToolCase(
         "projects",
         "GetContextServices",
-        arguments={},
-        meta={"scenario_id": "124"},
+        arguments={
+            "scenario_id": 124,
+        },
     ),
     ToolCase(
         "projects",
         "GetContextServicesWithGeometry",
         arguments={
+            "scenario_id": 124,
             "include_scenario_objects": False,
             "centers_only": True,
         },
-        meta={"scenario_id": "124"},
     ),
     # --- social groups / social values ---
     ToolCase(

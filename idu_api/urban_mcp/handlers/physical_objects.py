@@ -2,9 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastmcp import Context
 from fastmcp.dependencies import CurrentRequest, Depends
-from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
@@ -34,18 +32,6 @@ from idu_api.urban_api.schemas.physical_objects import PhysicalObjectWithGeometr
 from idu_api.urban_mcp.dependencies import auth_dep
 
 from .routers import dictionaries_mcp, physical_objects_mcp, projects_mcp, territories_mcp
-
-
-def _get_scenario_id(context: Context) -> int:
-    try:
-        return int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
 
 def _parse_ids(ids: str | None) -> set[int] | None:
@@ -600,7 +586,7 @@ async def get_physical_objects_geojson_by_territory_id(
     title="Получить типы физических объектов сценария",
     description="""Возвращает типы физических объектов, присутствующие в текущем сценарии.
     Входные параметры:
-    отсутствуют; идентификатор сценария берется из metadata.scenario_id MCP-запроса.
+    scenario_id | int | yes | Идентификатор сценария.
     
     Выходные данные:
     list[PhysicalObjectType] | Список типов физических объектов сценария.
@@ -619,7 +605,7 @@ async def get_physical_objects_geojson_by_territory_id(
     [{"physical_object_type_id": 4, "name": "Школа", "physical_object_function": {"id": 2, "name": "Образование"}}]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
+    - -32602 Invalid params: scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий не найден.
     """,
@@ -627,14 +613,13 @@ async def get_physical_objects_geojson_by_territory_id(
     annotations={"title": "GetScenarioPhysicalObjectTypes", "readOnlyHint": True},
 )
 async def get_physical_object_types_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     for_context: Annotated[bool, "Вернуть типы для контекста"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[PhysicalObjectType]:
     """Get physical object types for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
-    scenario_id = _get_scenario_id(context)
     types = await user_project_service.get_physical_object_types_by_scenario_id_from_db(scenario_id, user, for_context)
     return [PhysicalObjectType.from_dto(phys_type) for phys_type in types]
 
@@ -647,7 +632,7 @@ async def get_physical_object_types_by_scenario_id(
     Параметр | Тип | Обязателен | Описание
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
     physical_object_function_id | Optional[int] | нет | Фильтр по функции физического объекта; нельзя сочетать с physical_object_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     list[ScenarioPhysicalObject] | Список физических объектов сценария.
@@ -673,7 +658,7 @@ async def get_physical_object_types_by_scenario_id(
     [{"physical_object_id": 25, "name": "Школа N 1", "is_scenario_object": true, "is_locked": false}]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
+    - -32602 Invalid params: scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип или функция физического объекта не найдены.
@@ -682,16 +667,15 @@ async def get_physical_object_types_by_scenario_id(
     annotations={"title": "GetScenarioPhysicalObjects", "readOnlyHint": True},
 )
 async def get_physical_objects_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     physical_object_function_id: Annotated[Optional[int], "Фильтр по функции физического объекта"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioPhysicalObject]:
     """Get physical objects for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
 
-    scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
 
     physical_objects = await user_project_service.get_physical_objects_by_scenario_id(
@@ -710,7 +694,7 @@ async def get_physical_objects_by_scenario_id(
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
     physical_object_function_id | Optional[int] | нет | Фильтр по функции физического объекта; нельзя сочетать с physical_object_type_id.
     centers_only | bool | нет | Если true, возвращаются центры геометрий.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]] | GeoJSON FeatureCollection с объектами сценария.
@@ -744,7 +728,6 @@ async def get_physical_objects_by_scenario_id(
     {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [56.25, 58.01]}, "properties": {"physical_object_id": 25, "object_geometry_id": 100, "is_scenario_physical_object": true, "is_locked": false}}]}
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип, функция или геометрия объекта не найдены.
@@ -753,17 +736,16 @@ async def get_physical_objects_by_scenario_id(
     annotations={"title": "GetScenarioPhysicalObjectsWithGeometry", "readOnlyHint": True},
 )
 async def get_physical_objects_with_geometry_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     physical_object_function_id: Annotated[Optional[int], "Фильтр по функции физического объекта"] = None,
     centers_only: Annotated[bool, "Возвращать только центры геометрий"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """Get physical objects with geometry for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
 
-    scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
 
     physical_objects = await user_project_service.get_physical_objects_with_geometry_by_scenario_id(
@@ -781,7 +763,7 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     Параметр | Тип | Обязателен | Описание
     physical_object_type_id | Optional[int] | нет | Фильтр по типу физического объекта; нельзя сочетать с physical_object_function_id.
     physical_object_function_id | Optional[int] | нет | Фильтр по функции физического объекта; нельзя сочетать с physical_object_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     list[ScenarioPhysicalObject] | Список контекстных физических объектов.
@@ -807,7 +789,6 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     [{"physical_object_id": 25, "name": "Школа N 1", "is_scenario_object": false, "is_locked": false}]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип или функция физического объекта не найдены.
@@ -816,16 +797,15 @@ async def get_physical_objects_with_geometry_by_scenario_id(
     annotations={"title": "GetContextPhysicalObjects", "readOnlyHint": True},
 )
 async def get_context_physical_objects(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     physical_object_function_id: Annotated[Optional[int], "Фильтр по функции физического объекта"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioPhysicalObject]:
     """Get context physical objects for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
 
-    scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
 
     physical_objects = await user_project_service.get_context_physical_objects(
@@ -845,7 +825,7 @@ async def get_context_physical_objects(
     physical_object_function_id | Optional[int] | нет | Фильтр по функции физического объекта; нельзя сочетать с physical_object_type_id.
     include_scenario_objects | bool | нет | Если true, вместе с контекстом включаются объекты сценария.
     centers_only | bool | нет | Если true, возвращаются центры геометрий.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]] | GeoJSON FeatureCollection с контекстными объектами.
@@ -879,7 +859,6 @@ async def get_context_physical_objects(
     {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [56.25, 58.01]}, "properties": {"physical_object_id": 25, "object_geometry_id": 100, "is_scenario_physical_object": false, "is_locked": false}}]}
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы physical_object_type_id и physical_object_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип, функция или геометрия объекта не найдены.
@@ -888,18 +867,17 @@ async def get_context_physical_objects(
     annotations={"title": "GetContextPhysicalObjectsWithGeometry", "readOnlyHint": True},
 )
 async def get_context_physical_objects_with_geometry(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     physical_object_type_id: Annotated[Optional[int], "Фильтр по типу физического объекта"] = None,
     physical_object_function_id: Annotated[Optional[int], "Фильтр по функции физического объекта"] = None,
     include_scenario_objects: Annotated[bool, "Включать объекты сценария в контекст"] = False,
     centers_only: Annotated[bool, "Возвращать только центры геометрий"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioPhysicalObjectWithGeometryAttributes]]:
     """Get context physical objects with geometry for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
 
-    scenario_id = _get_scenario_id(context)
     _validate_type_or_function(physical_object_type_id, physical_object_function_id)
 
     physical_objects = await user_project_service.get_context_physical_objects_with_geometry(

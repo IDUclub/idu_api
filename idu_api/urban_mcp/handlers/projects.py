@@ -1,11 +1,10 @@
 """MCP tools for projects and scenarios are defined here."""
 
-from fastmcp import Context
+from typing import Annotated
+
 from fastmcp.dependencies import CurrentRequest, Depends
-from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from otteroad import KafkaProducerClient
 from starlette.requests import Request
 
@@ -26,37 +25,13 @@ from ...urban_api.minio.services import ProjectStorageManager
 from .routers import projects_mcp
 
 
-def _get_project_id(context: Context) -> int:
-    try:
-        return int(context.request_context.meta.project_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный project_id.",
-            )
-        ) from exc
-
-
-def _get_scenario_id(context: Context) -> int:
-    try:
-        return int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
-
-
 @projects_mcp.tool(
     name="GetProjectById",
     title="Получить проект по идентификатору",
     description="""Возвращает карточку проекта по его идентификатору с базовым сценарием, территорией и пользовательскими свойствами.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    metadata.project_id | int | да | Идентификатор проекта в metadata MCP-запроса.
+    project_id | int | да | Идентификатор проекта в arguments MCP-запроса.
     
     Выходные данные:
     Project | Карточка проекта.
@@ -100,7 +75,7 @@ def _get_scenario_id(context: Context) -> int:
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.project_id отсутствует или не является целым числом.
+    - -32602 Invalid params: project_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к проекту.
     - -32001 Not found: проект с указанным project_id не найден.
     """,
@@ -108,13 +83,12 @@ def _get_scenario_id(context: Context) -> int:
     annotations={"title": "GetProjectById", "readOnlyHint": True},
 )
 async def get_project_by_id(
+    project_id: Annotated[int, "Project ID"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> Project:
     """Get project by identifier."""
     user_project_service: UserProjectService = request.state.user_project_service
-    project_id = _get_project_id(context)
     project_dto = await user_project_service.get_project_by_id(project_id, user)
     return Project.from_dto(project_dto)
 
@@ -247,7 +221,7 @@ async def add_project(
     description="""Возвращает территорию указанного проекта с геометрией, центром и свойствами.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    metadata.project_id | int | да | Идентификатор проекта в metadata MCP-запроса.
+    project_id | int | да | Идентификатор проекта в arguments MCP-запроса.
     
     Выходные данные:
     ProjectTerritory | Проектная территория с геометрией.
@@ -277,7 +251,7 @@ async def add_project(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.project_id отсутствует или не является целым числом.
+    - -32602 Invalid params: project_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к проекту.
     - -32001 Not found: проект или проектная территория не найдены.
     """,
@@ -285,13 +259,12 @@ async def add_project(
     annotations={"title": "GetProjectTerritoryByProjectId", "readOnlyHint": True},
 )
 async def get_project_territory_by_project_id(
+    project_id: Annotated[int, "Project ID"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> ProjectTerritory:
     """Get territory of project."""
     user_project_service: UserProjectService = request.state.user_project_service
-    project_id = _get_project_id(context)
     project_territory_dto = await user_project_service.get_project_territory_by_id(project_id, user)
     return ProjectTerritory.from_dto(project_territory_dto)
 
@@ -302,7 +275,7 @@ async def get_project_territory_by_project_id(
     description="""Возвращает календарные даты и процент выполнения фаз указанного проекта.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    metadata.project_id | int | да | Идентификатор проекта в metadata MCP-запроса.
+    project_id | int | да | Идентификатор проекта в arguments MCP-запроса.
     
     Выходные данные:
     ProjectPhases | Даты и прогресс фаз проекта.
@@ -344,7 +317,7 @@ async def get_project_territory_by_project_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.project_id отсутствует или не является целым числом.
+    - -32602 Invalid params: project_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к проекту.
     - -32001 Not found: проект или данные фаз проекта не найдены.
     """,
@@ -352,13 +325,12 @@ async def get_project_territory_by_project_id(
     annotations={"title": "GetProjectPhasesByProjectId", "readOnlyHint": True},
 )
 async def get_phases_by_project_id(
+    project_id: Annotated[int, "Project ID"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> ProjectPhases:
     """Get phases of project."""
     user_project_service: UserProjectService = request.state.user_project_service
-    project_id = _get_project_id(context)
     project_phases_dto = await user_project_service.get_project_phases_by_id(project_id, user)
     return ProjectPhases.from_dto(project_phases_dto)
 
@@ -369,7 +341,7 @@ async def get_phases_by_project_id(
     description="""Возвращает кадастровые участки, пересекающиеся с проектной территорией, в формате GeoJSON.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    metadata.project_id | int | да | Идентификатор проекта в metadata MCP-запроса.
+    project_id | int | да | Идентификатор проекта в arguments MCP-запроса.
     
     Выходные данные:
     GeoJSONResponse[Feature[Geometry, ProjectCadastreAttributes]] | GeoJSON FeatureCollection с кадастровыми участками проекта.
@@ -426,7 +398,7 @@ async def get_phases_by_project_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.project_id отсутствует или не является целым числом.
+    - -32602 Invalid params: project_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к проекту.
     - -32001 Not found: проект или кадастровые участки проектной территории не найдены.
     """,
@@ -434,13 +406,12 @@ async def get_phases_by_project_id(
     annotations={"title": "GetProjectCadastresByProjectId", "readOnlyHint": True},
 )
 async def get_cadastres_by_project_id(
+    project_id: Annotated[int, "Project ID"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ProjectCadastreAttributes]]:
     """Get cadastres of project in GeoJSON format."""
     user_project_service: UserProjectService = request.state.user_project_service
-    project_id = _get_project_id(context)
     cadastres = await user_project_service.get_cadastres(project_id, user)
     return await GeoJSONResponse.from_list([cadastre.to_geojson_dict() for cadastre in cadastres])
 
@@ -451,7 +422,7 @@ async def get_cadastres_by_project_id(
     description="""Возвращает карточку сценария по его идентификатору с проектом, родительским сценарием и целевым профилем функционального зонирования.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     Scenario | Карточка сценария.
@@ -489,7 +460,6 @@ async def get_cadastres_by_project_id(
     }
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту, которому он принадлежит.
     - -32001 Not found: сценарий с указанным scenario_id не найден.
     """,
@@ -497,12 +467,11 @@ async def get_cadastres_by_project_id(
     annotations={"title": "GetScenarioById", "readOnlyHint": True},
 )
 async def get_scenario_by_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> Scenario:
     """Get scenario by identifier."""
     user_project_service: UserProjectService = request.state.user_project_service
-    scenario_id = _get_scenario_id(context)
     scenario = await user_project_service.get_scenario_by_id(scenario_id, user)
     return Scenario.from_dto(scenario)

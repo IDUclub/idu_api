@@ -2,9 +2,7 @@
 
 from typing import Annotated, Optional
 
-from fastmcp import Context
 from fastmcp.dependencies import CurrentRequest, Depends
-from fastmcp.server.dependencies import CurrentContext
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
@@ -33,18 +31,6 @@ from idu_api.urban_api.schemas.pages import MCPCursorPage, MCPCursorParams
 from idu_api.urban_mcp.dependencies import auth_dep
 
 from .routers import dictionaries_mcp, projects_mcp, soc_groups_mcp, territories_mcp
-
-
-def _get_scenario_id(context: Context) -> int:
-    try:
-        return int(context.request_context.meta.scenario_id)
-    except Exception as exc:
-        raise McpError(
-            ErrorData(
-                code=-32602,
-                message="В metadata MCP-запроса отсутствует корректный целочисленный scenario_id.",
-            )
-        ) from exc
 
 
 def _parse_ids(ids: str | None) -> set[int] | None:
@@ -523,7 +509,7 @@ async def get_total_services_capacity_by_territory_id(
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     for_context | bool | нет | Если true, возвращаются типы сервисов контекста сценария; иначе типы сервисов объектов сценария.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     list[ServiceType] | Список типов сервисов сценария или контекста.
@@ -546,7 +532,6 @@ async def get_total_services_capacity_by_territory_id(
     [{"service_type_id": 7, "urban_function": {"id": 2, "name": "Образование"}, "name": "Школьное образование", "capacity_modeled": 500, "code": "school", "infrastructure_type": "basic", "properties": {}}]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий не найден.
     """,
@@ -554,16 +539,14 @@ async def get_total_services_capacity_by_territory_id(
     annotations={"title": "GetScenarioServiceTypes", "readOnlyHint": True},
 )
 async def get_service_types_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     for_context: Annotated[bool, "Вернуть типы сервисов контекста"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[ServiceType]:
     """Get service types by current scenario identifier."""
     user_project_service: UserProjectService = request.state.user_project_service
-    types = await user_project_service.get_service_types_by_scenario_id_from_db(
-        _get_scenario_id(context), user, for_context
-    )
+    types = await user_project_service.get_service_types_by_scenario_id_from_db(scenario_id, user, for_context)
     return [ServiceType.from_dto(service_type) for service_type in types]
 
 
@@ -575,7 +558,7 @@ async def get_service_types_by_scenario_id(
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
     urban_function_id | Optional[int] | нет | Фильтр по городской функции; нельзя сочетать с service_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     list[ScenarioService] | Список сервисов сценария.
@@ -603,7 +586,6 @@ async def get_service_types_by_scenario_id(
     [{"service_id": 30, "name": "Школьное образование", "capacity": 500, "is_scenario_object": true, "is_locked": false}]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы service_type_id и urban_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
@@ -612,17 +594,17 @@ async def get_service_types_by_scenario_id(
     annotations={"title": "GetScenarioServices", "readOnlyHint": True},
 )
 async def get_services_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     service_type_id: Annotated[Optional[int], "Идентификатор типа сервиса"] = None,
     urban_function_id: Annotated[Optional[int], "Идентификатор городской функции"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioService]:
     """Get services by current scenario identifier."""
     user_project_service: UserProjectService = request.state.user_project_service
     _validate_service_type_or_function(service_type_id, urban_function_id)
     services = await user_project_service.get_services_by_scenario_id(
-        _get_scenario_id(context), user, service_type_id, urban_function_id
+        scenario_id, user, service_type_id, urban_function_id
     )
     return [ScenarioService.from_dto(service) for service in services]
 
@@ -635,7 +617,7 @@ async def get_services_by_scenario_id(
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
     urban_function_id | Optional[int] | нет | Фильтр по городской функции; нельзя сочетать с service_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     centers_only | bool | нет | Если true, возвращаются центры геометрий.
     
     Выходные данные:
@@ -672,7 +654,6 @@ async def get_services_by_scenario_id(
     {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [56.25, 58.01]}, "properties": {"service_id": 30, "object_geometry_id": 100, "is_scenario_service": true, "is_locked": false}}]}
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы service_type_id и urban_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
@@ -681,18 +662,18 @@ async def get_services_by_scenario_id(
     annotations={"title": "GetScenarioServicesWithGeometry", "readOnlyHint": True},
 )
 async def get_services_with_geometry_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     service_type_id: Annotated[Optional[int], "Идентификатор типа сервиса"] = None,
     urban_function_id: Annotated[Optional[int], "Идентификатор городской функции"] = None,
     centers_only: Annotated[bool, "Возвращать только центры геометрий"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
     """Get scenario services with geometry."""
     user_project_service: UserProjectService = request.state.user_project_service
     _validate_service_type_or_function(service_type_id, urban_function_id)
     services = await user_project_service.get_services_with_geometry_by_scenario_id(
-        _get_scenario_id(context), user, service_type_id, urban_function_id
+        scenario_id, user, service_type_id, urban_function_id
     )
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in services], centers_only)
 
@@ -705,7 +686,7 @@ async def get_services_with_geometry_by_scenario_id(
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
     urban_function_id | Optional[int] | нет | Фильтр по городской функции; нельзя сочетать с service_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     
     Выходные данные:
     list[ScenarioService] | Список сервисов контекста.
@@ -733,7 +714,6 @@ async def get_services_with_geometry_by_scenario_id(
     [{"service_id": 30, "name": "Школьное образование", "capacity": 500, "is_scenario_object": false, "is_locked": false}]
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы service_type_id и urban_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
@@ -742,18 +722,16 @@ async def get_services_with_geometry_by_scenario_id(
     annotations={"title": "GetContextServices", "readOnlyHint": True},
 )
 async def get_context_services(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     service_type_id: Annotated[Optional[int], "Идентификатор типа сервиса"] = None,
     urban_function_id: Annotated[Optional[int], "Идентификатор городской функции"] = None,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[ScenarioService]:
     """Get context services for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
     _validate_service_type_or_function(service_type_id, urban_function_id)
-    services = await user_project_service.get_context_services(
-        _get_scenario_id(context), user, service_type_id, urban_function_id
-    )
+    services = await user_project_service.get_context_services(scenario_id, user, service_type_id, urban_function_id)
     return [ScenarioService.from_dto(service) for service in services]
 
 
@@ -765,7 +743,7 @@ async def get_context_services(
     Параметр | Тип | Обязателен | Описание
     service_type_id | Optional[int] | нет | Фильтр по типу сервиса; нельзя сочетать с urban_function_id.
     urban_function_id | Optional[int] | нет | Фильтр по городской функции; нельзя сочетать с service_type_id.
-    metadata.scenario_id | int | да | Идентификатор сценария в metadata MCP-запроса.
+    scenario_id | int | да | Идентификатор сценария.
     include_scenario_objects | bool | нет | Если true, вместе с контекстом включаются сервисы сценария.
     centers_only | bool | нет | Если true, возвращаются центры геометрий.
     
@@ -803,7 +781,6 @@ async def get_context_services(
     {"type": "FeatureCollection", "features": [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [56.25, 58.01]}, "properties": {"service_id": 30, "object_geometry_id": 100, "is_scenario_service": false, "is_locked": false}}]}
     
     Ошибки:
-    - -32602 Invalid params: metadata.scenario_id отсутствует или не является целым числом.
     - -32602 Invalid params: одновременно переданы service_type_id и urban_function_id.
     - -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
     - -32001 Not found: сценарий, тип сервиса или городская функция не найдены.
@@ -812,19 +789,19 @@ async def get_context_services(
     annotations={"title": "GetContextServicesWithGeometry", "readOnlyHint": True},
 )
 async def get_context_services_with_geometry(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
     service_type_id: Annotated[Optional[int], "Идентификатор типа сервиса"] = None,
     urban_function_id: Annotated[Optional[int], "Идентификатор городской функции"] = None,
     include_scenario_objects: Annotated[bool, "Включать объекты сценария"] = False,
     centers_only: Annotated[bool, "Возвращать только центры геометрий"] = False,
     request: Request = CurrentRequest(),
-    context: Context = CurrentContext(),
     user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, ScenarioServiceWithGeometryAttributes]]:
     """Get context services with geometry for current scenario."""
     user_project_service: UserProjectService = request.state.user_project_service
     _validate_service_type_or_function(service_type_id, urban_function_id)
     services = await user_project_service.get_context_services_with_geometry(
-        _get_scenario_id(context), user, service_type_id, urban_function_id, include_scenario_objects
+        scenario_id, user, service_type_id, urban_function_id, include_scenario_objects
     )
     return await GeoJSONResponse.from_list([obj.to_geojson_dict() for obj in services], centers_only)
 
