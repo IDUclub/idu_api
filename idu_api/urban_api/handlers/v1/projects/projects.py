@@ -31,7 +31,7 @@ from idu_api.urban_api.schemas import (
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering, ProjectPhase, ProjectType
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.pagination import paginate
-from idu_api.urban_api.utils.project_access import can_use_project_user_id
+from idu_api.urban_api.utils.project_access import can_use_project_user_id, PROJECTS_WRITE_ROLE
 
 
 def _resolve_project_owner_user_id(user: UserDTO | None, user_id: str | None, to_edit: bool = False) -> str | None:
@@ -462,10 +462,10 @@ async def create_base_scenario(
     """
     user_project_service: UserProjectService = request.state.user_project_service
 
-    if not user.is_superuser:
+    if PROJECTS_WRITE_ROLE not in user.roles:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Вы должны быть суперпользователем, чтобы создать новый базовый сценарий.",
+            detail="Данный метод предназначен только для клиентов с повышенными правами записи.",
         )
 
     try:
