@@ -32,6 +32,12 @@ from idu_api.urban_api.schemas import (
     ScenarioPatch,
     ScenarioPost,
 )
+from idu_api.urban_api.utils.project_access import (
+    can_access_project,
+    can_read_any_project,
+    can_read_project,
+    can_write_project,
+)
 
 
 async def check_scenario(
@@ -52,10 +58,7 @@ async def check_scenario(
     scenario = (await conn.execute(statement)).mappings().one_or_none()
     if scenario is None:
         raise EntityNotFoundById(scenario_id, "scenario")
-    if user is None:
-        if not scenario.public:
-            raise AccessDeniedError(scenario.project_id, "project")
-    elif scenario.user_id != user.id and (not scenario.public or to_edit) and not user.is_superuser:
+    if not can_access_project(scenario, user, to_edit):
         raise AccessDeniedError(scenario.project_id, "project")
     if scenario.is_regional and not allow_regional:
         raise NotAllowedInRegionalScenario()
@@ -123,9 +126,8 @@ async def get_scenarios_from_db(
     elif only_own and parent_id is None:
         statement = statement.where((projects_data.c.user_id == user.id) | scenarios_data.c.is_based.is_(True))
     elif user is not None:
-        statement = statement.where(
-            (projects_data.c.user_id == user.id) | (projects_data.c.public.is_(True) if not user.is_superuser else True)
-        )
+        if not can_read_any_project(user):
+            statement = statement.where((projects_data.c.user_id == user.id) | projects_data.c.public.is_(True))
     else:
         statement = statement.where(projects_data.c.public.is_(True))
 
@@ -209,10 +211,7 @@ async def get_scenario_by_id_from_db(conn: AsyncConnection, scenario_id: int, us
 
     statement = select(projects_data).where(projects_data.c.project_id == result.project_id)
     project = (await conn.execute(statement)).mappings().one_or_none()
-    if user is None:
-        if not project.public:
-            raise AccessDeniedError(result.project_id, "project")
-    elif project.user_id != user.id and not project.public and not user.is_superuser:
+    if not can_read_project(project, user):
         raise AccessDeniedError(result.project_id, "project")
 
     return ScenarioDTO(**result)
@@ -323,7 +322,7 @@ async def _validate_input(conn: AsyncConnection, scenario: ScenarioPost, user: U
     )
     if project is None:
         raise EntityNotFoundById(scenario.project_id, "project")
-    if project.user_id != user.id and not user.is_superuser:
+    if not can_write_project(project, user):
         raise AccessDeniedError(scenario.project_id, "project")
 
 
@@ -337,7 +336,7 @@ async def _validate_source_scenario(conn: AsyncConnection, scenario_id: int, use
     scenario = (await conn.execute(statement)).mappings().one_or_none()
     if scenario is None:
         raise EntityNotFoundById(scenario_id, "scenario")
-    if scenario.user_id != user.id and not scenario.public and not user.is_superuser:
+    if not can_read_project(scenario, user):
         raise AccessDeniedError(scenario.project_id, "project")
 
     return scenario.parent_id, scenario.is_regional

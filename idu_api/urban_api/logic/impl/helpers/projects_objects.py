@@ -84,6 +84,7 @@ from idu_api.urban_api.schemas import (
     ProjectPost,
 )
 from idu_api.urban_api.utils.pagination import paginate_dto
+from idu_api.urban_api.utils.project_access import can_access_project, can_read_project
 from idu_api.urban_api.utils.query_filters import CustomFilter, EqFilter, ILikeFilter, apply_filters
 
 func: Callable
@@ -107,17 +108,14 @@ async def check_project(
     result = (await conn.execute(statement)).mappings().one_or_none()
     if result is None:
         raise EntityNotFoundById(project_id, "project")
-    if user is None:
-        if not result.public:
-            raise AccessDeniedError(project_id, "project")
-    elif result.user_id != user.id and (not result.public or to_edit) and not user.is_superuser:
+    if not can_access_project(result, user, to_edit):
         raise AccessDeniedError(project_id, "project")
     if result.is_regional and not allow_regional:
         raise NotAllowedInRegionalProject()
 
 
 async def get_project_by_id_from_db(conn: AsyncConnection, project_id: int, user: UserDTO | None) -> ProjectDTO:
-    """Get project object by identifier."""
+    """Get the project object by identifier."""
 
     regional_scenarios = scenarios_data.alias("regional_scenarios")
     statement = (
@@ -158,10 +156,7 @@ async def get_project_by_id_from_db(conn: AsyncConnection, project_id: int, user
 
     if result is None:
         raise EntityNotFoundById(project_id, "project")
-    if user is None:
-        if not result.public:
-            raise AccessDeniedError(project_id, "project")
-    elif result.user_id != user.id and not result.public and not user.is_superuser:
+    if not can_read_project(result, user):
         raise AccessDeniedError(project_id, "project")
 
     return ProjectDTO(**result)
@@ -306,9 +301,13 @@ async def get_projects_from_db(  # pylint: disable=too-many-arguments
     created_at: date | None,
     order_by: Literal["created_at", "updated_at"] | None,
     ordering: Literal["asc", "desc"] | None,
+    owner_user_id: str | None = None,
     paginate: bool = False,
 ) -> list[ProjectDTO] | PageDTO[ProjectDTO]:
     """Get all public and user's projects."""
+
+    requested_owner_user_id = owner_user_id
+    owner_user_id = owner_user_id if owner_user_id is not None else user.id if user is not None else None
 
     regional_scenarios = scenarios_data.alias("regional_scenarios")
     statement = (
@@ -345,22 +344,24 @@ async def get_projects_from_db(  # pylint: disable=too-many-arguments
         )
     )
 
-    filters = [
-        # Project ownership / visibility logic
-        (
-            EqFilter(projects_data, "user_id", user.id)
-            if only_own
+    visibility_filter = (
+        EqFilter(projects_data, "user_id", owner_user_id)
+        if only_own
+        else (
+            None
+            if user is not None and user.is_superuser and requested_owner_user_id is None
             else (
                 CustomFilter(
-                    lambda q: q.where(
-                        (projects_data.c.user_id == user.id)
-                        | (projects_data.c.public.is_(True) if not user.is_superuser else True)
-                    )
+                    lambda q: q.where((projects_data.c.user_id == owner_user_id) | projects_data.c.public.is_(True))
                 )
                 if user is not None
                 else EqFilter(projects_data, "public", True)
             )
-        ),
+        )
+    )
+    filters = [
+        # Project ownership / visibility logic
+        visibility_filter,
         # Project type logic
         (
             EqFilter(projects_data, "is_city", False)
@@ -399,8 +400,12 @@ async def get_projects_territories_from_db(
     only_own: bool,
     project_type: Literal["common", "city"] | None,
     territory_id: int | None,
+    owner_user_id: str | None = None,
 ) -> list[ProjectWithTerritoryDTO]:
     """Get all public and user's project territories."""
+
+    requested_owner_user_id = owner_user_id
+    owner_user_id = owner_user_id if owner_user_id is not None else user.id if user is not None else None
 
     regional_scenarios = scenarios_data.alias("regional_scenarios")
     statement = (
@@ -425,22 +430,24 @@ async def get_projects_territories_from_db(
         )
     )
 
-    filters = [
-        # Project ownership / visibility logic
-        (
-            EqFilter(projects_data, "user_id", user.id)
-            if only_own
+    visibility_filter = (
+        EqFilter(projects_data, "user_id", owner_user_id)
+        if only_own
+        else (
+            None
+            if user is not None and user.is_superuser and requested_owner_user_id is None
             else (
                 CustomFilter(
-                    lambda q: q.where(
-                        (projects_data.c.user_id == user.id)
-                        | (projects_data.c.public.is_(True) if not user.is_superuser else True)
-                    )
+                    lambda q: q.where((projects_data.c.user_id == owner_user_id) | projects_data.c.public.is_(True))
                 )
                 if user is not None
                 else EqFilter(projects_data, "public", True)
             )
-        ),
+        )
+    )
+    filters = [
+        # Project ownership / visibility logic
+        visibility_filter,
         # Project type logic
         (
             EqFilter(projects_data, "is_city", False)
@@ -465,11 +472,13 @@ async def add_project_to_db(
     kafka_producer: KafkaProducerClient,
     project_storage_manager: ProjectStorageManager,
     logger: structlog.stdlib.BoundLogger,
+    owner_user_id: str | None = None,
 ) -> ProjectDTO:
     """Create project object."""
 
+    owner_user_id = owner_user_id or user.id
     if project.is_regional:
-        project_id = await insert_project(conn, project, user)
+        project_id = await insert_project(conn, project, owner_user_id)
         await conn.commit()
         return await get_project_by_id_from_db(conn, project_id, user)
 
@@ -479,7 +488,7 @@ async def add_project_to_db(
 
     await add_context_territories(conn, project, given_geometry)
 
-    project_id = await insert_project(conn, project, user)
+    project_id = await insert_project(conn, project, owner_user_id)
 
     project_territory = extract_values_from_model(project.territory)
     await conn.execute(insert(projects_territory_data).values(**project_territory, project_id=project_id))
@@ -702,11 +711,11 @@ async def delete_project_from_db(
 ####################################################################################
 
 
-async def insert_project(conn: AsyncConnection, project: ProjectPost, user: UserDTO) -> int:
+async def insert_project(conn: AsyncConnection, project: ProjectPost, owner_user_id: str) -> int:
     """Insert a new project and return its generated ID."""
     statement = (
         insert(projects_data)
-        .values(**project.model_dump(exclude={"territory"}), user_id=user.id)
+        .values(**project.model_dump(exclude={"territory"}), user_id=owner_user_id)
         .returning(projects_data.c.project_id)
     )
     return (await conn.execute(statement)).scalar_one()

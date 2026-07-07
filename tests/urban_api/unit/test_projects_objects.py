@@ -33,8 +33,10 @@ from idu_api.urban_api.dto import (
     ScenarioDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
 from idu_api.urban_api.logic.impl.helpers.projects_objects import (
     add_project_to_db,
+    check_project,
     create_base_scenario_to_db,
     delete_project_from_db,
     get_project_by_id_from_db,
@@ -64,6 +66,59 @@ func: Callable
 ####################################################################################
 #                           Default use-case tests                                 #
 ####################################################################################
+
+
+@pytest.mark.asyncio
+async def test_check_project_allows_public_anonymous_read():
+    """Test that anonymous users can read public projects."""
+
+    # Arrange
+    project_id = 1
+    mock_conn = MockConnection(
+        preset_results=[MockResult([MockRow(project_id=project_id, user_id="owner", public=True, is_regional=False)])]
+    )
+
+    # Act / Assert
+    await check_project(mock_conn, project_id, None)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "roles,to_edit",
+    [
+        (["projects:read"], False),
+        (["projects:write"], False),
+        (["projects:write"], True),
+    ],
+)
+async def test_check_project_allows_project_roles(roles: list[str], to_edit: bool):
+    """Test that project roles grant access to private projects owned by another user."""
+
+    # Arrange
+    project_id = 1
+    user = UserDTO(id="service", username="service", roles=roles, is_superuser=False, azp="test-client")
+    mock_conn = MockConnection(
+        preset_results=[MockResult([MockRow(project_id=project_id, user_id="owner", public=False, is_regional=False)])]
+    )
+
+    # Act / Assert
+    await check_project(mock_conn, project_id, user, to_edit=to_edit)
+
+
+@pytest.mark.asyncio
+async def test_check_project_denies_read_role_write_access():
+    """Test that projects:read does not grant write access."""
+
+    # Arrange
+    project_id = 1
+    user = UserDTO(id="service", username="service", roles=["projects:read"], is_superuser=False, azp="test-client")
+    mock_conn = MockConnection(
+        preset_results=[MockResult([MockRow(project_id=project_id, user_id="owner", public=False, is_regional=False)])]
+    )
+
+    # Act / Assert
+    with pytest.raises(AccessDeniedError):
+        await check_project(mock_conn, project_id, user, to_edit=True)
 
 
 @pytest.mark.asyncio

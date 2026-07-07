@@ -14,6 +14,7 @@ from idu_api.urban_api.dto import UserDTO
 from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.exceptions.logic.projects import NotAllowedInRegionalScenario
 from idu_api.urban_api.exceptions.logic.users import AccessDeniedError
+from idu_api.urban_api.utils.project_access import can_read_project
 
 # The maximum number of records that can be returned in methods that accept a list of IDs as input.
 OBJECTS_NUMBER_LIMIT = 25_000
@@ -253,12 +254,9 @@ async def get_context_territories_geometry(
     scenario = (await conn.execute(statement)).mappings().one_or_none()
     if scenario is None:
         raise EntityNotFoundById(scenario_id, "scenario")
-    if user is None:
-        if not scenario.public:
-            raise AccessDeniedError(scenario.project_id, "project")
-    elif scenario.user_id != user.id and not scenario.public and not user.is_superuser:
+    if not can_read_project(scenario, user):
         raise AccessDeniedError(scenario.project_id, "project")
-    elif scenario.is_regional:
+    if scenario.is_regional:
         raise NotAllowedInRegionalScenario()
 
     # Get union geometry of all context territories

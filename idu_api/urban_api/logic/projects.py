@@ -84,6 +84,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         created_at: date | None,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"] | None,
+        owner_user_id: str | None = None,
         paginate: bool = False,
     ) -> PageDTO[ProjectDTO]:
         """Get all public and user's projects."""
@@ -98,6 +99,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         only_own: bool,
         project_type: Literal["common", "city"] | None,
         territory_id: int | None,
+        owner_user_id: str | None = None,
     ) -> list[ProjectWithTerritoryDTO]:
         """Get all public and user's projects territories."""
 
@@ -108,6 +110,7 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         user: UserDTO,
         kafka_producer: KafkaProducerClient,
         project_storage_manager: ProjectStorageManager,
+        owner_user_id: str | None = None,
     ) -> ProjectDTO:
         """Create project object."""
 

@@ -9,6 +9,7 @@ from otteroad import KafkaProducerClient
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
+from idu_api.urban_api.exceptions.logic.users import AuthorizationError
 from idu_api.urban_api.logic.projects import UserProjectService
 from idu_api.urban_api.schemas import (
     Project,
@@ -19,10 +20,21 @@ from idu_api.urban_api.schemas import (
     Scenario,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
+from idu_api.urban_api.utils.project_access import can_use_project_user_id
 from idu_api.urban_mcp.dependencies import auth_dep, kafka_producer_dep, project_storage_dep
 
 from ...urban_api.minio.services import ProjectStorageManager
 from .routers import projects_mcp
+
+
+def _resolve_project_owner_user_id(user: UserDTO, user_id: str | None) -> str:
+    """Resolve optional project owner user_id for MCP write tools."""
+
+    if user_id is None:
+        return user.id
+    if not can_use_project_user_id(user, user_id, to_edit=True):
+        raise AuthorizationError("Insufficient rights to use another project owner user_id.")
+    return user_id
 
 
 @projects_mcp.tool(
@@ -204,6 +216,7 @@ async def get_project_by_id(
 )
 async def add_project(
     project: ProjectPost,
+    user_id: Annotated[str | None, "Project owner identifier; defaults to current token user"] = None,
     request: Request = CurrentRequest(),
     user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
@@ -211,7 +224,14 @@ async def add_project(
 ) -> Project:
     """Create a new project."""
     user_project_service: UserProjectService = request.state.user_project_service
-    project_dto = await user_project_service.add_project(project, user, kafka_producer, project_storage_manager)
+    owner_user_id = _resolve_project_owner_user_id(user, user_id)
+    project_dto = await user_project_service.add_project(
+        project,
+        user,
+        kafka_producer,
+        project_storage_manager,
+        owner_user_id=owner_user_id,
+    )
     return Project.from_dto(project_dto)
 
 
