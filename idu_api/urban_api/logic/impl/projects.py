@@ -32,6 +32,7 @@ from idu_api.urban_api.dto import (
     ServiceTypeDTO,
     UserDTO,
 )
+from idu_api.urban_api.exceptions.logic.users import AuthorizationError
 from idu_api.urban_api.logic.impl.helpers.projects_buffers import (
     delete_buffer_from_db,
     get_buffers_by_scenario_id_from_db,
@@ -149,6 +150,7 @@ from idu_api.urban_api.schemas import (
     ServicePatch,
     ServicePut,
 )
+from idu_api.urban_api.utils.project_access import can_use_project_user_id
 
 
 class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-public-methods
@@ -184,8 +186,12 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         created_at: date | None,
         order_by: Literal["created_at", "updated_at"] | None,
         ordering: Literal["asc", "desc"] | None,
+        owner_user_id: str | None = None,
         paginate: bool = False,
     ) -> PageDTO[ProjectDTO]:
+        if owner_user_id is not None and not can_use_project_user_id(user, owner_user_id):
+            raise AuthorizationError("Insufficient rights to use another project owner user_id.")
+
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_projects_from_db(
                 conn,
@@ -198,6 +204,7 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 created_at,
                 order_by,
                 ordering,
+                owner_user_id,
                 paginate,
             )
 
@@ -207,9 +214,20 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         only_own: bool,
         project_type: Literal["common", "city"] | None,
         territory_id: int | None,
+        owner_user_id: str | None = None,
     ) -> list[ProjectWithTerritoryDTO]:
+        if owner_user_id is not None and not can_use_project_user_id(user, owner_user_id):
+            raise AuthorizationError("Insufficient rights to use another project owner user_id.")
+
         async with self._connection_manager.get_ro_connection() as conn:
-            return await get_projects_territories_from_db(conn, user, only_own, project_type, territory_id)
+            return await get_projects_territories_from_db(
+                conn,
+                user,
+                only_own,
+                project_type,
+                territory_id,
+                owner_user_id,
+            )
 
     async def add_project(
         self,
@@ -217,10 +235,20 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
         user: UserDTO,
         kafka_producer: KafkaProducerClient,
         project_storage_manager: ProjectStorageManager,
+        owner_user_id: str | None = None,
     ) -> ProjectDTO:
+        if owner_user_id is not None and not can_use_project_user_id(user, owner_user_id, to_edit=True):
+            raise AuthorizationError("Insufficient rights to use another project owner user_id.")
+
         async with self._connection_manager.get_connection() as conn:
             return await add_project_to_db(
-                conn, project, user, kafka_producer, project_storage_manager, logger=self._logger
+                conn,
+                project,
+                user,
+                kafka_producer,
+                project_storage_manager,
+                logger=self._logger,
+                owner_user_id=owner_user_id,
             )
 
     async def create_base_scenario(

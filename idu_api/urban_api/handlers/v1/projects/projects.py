@@ -31,6 +31,28 @@ from idu_api.urban_api.schemas import (
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering, ProjectPhase, ProjectType
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.pagination import paginate
+from idu_api.urban_api.utils.project_access import can_use_project_user_id
+
+
+def _resolve_project_owner_user_id(user: UserDTO | None, user_id: str | None, to_edit: bool = False) -> str | None:
+    """Resolve optional owner user_id and validate delegated access."""
+
+    if user_id is None:
+        return user.id if user is not None else None
+
+    if user is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication is required to use user_id.",
+        )
+
+    if not can_use_project_user_id(user, user_id, to_edit):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Insufficient rights to use another project owner user_id.",
+        )
+
+    return user_id
 
 
 @projects_router.get(
@@ -41,7 +63,7 @@ from idu_api.urban_api.utils.pagination import paginate
 async def get_project_by_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> Project:
     """
     ## Get the project by given identifier.
@@ -74,7 +96,7 @@ async def get_project_by_id(
 async def get_project_territory_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> ProjectTerritory:
     """
     ## Get the territory of a given project.
@@ -107,7 +129,7 @@ async def get_project_territory_by_project_id(
 async def get_scenarios_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project identifier", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> list[Scenario]:
     """
     ## Get a list of scenarios for a given project.
@@ -140,7 +162,7 @@ async def get_scenarios_by_project_id(
 async def get_phases_by_project_id(
     request: Request,
     project_id: int = Path(..., description="project_id which phases are needed", gt=0),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> ProjectPhases:
     """
     ## Get phases of project by its identifier .
@@ -216,13 +238,14 @@ async def get_projects(  # pylint: disable=too-many-arguments
     territory_id: int | None = Query(None, description="to filter by region"),
     name: str | None = Query(None, description="to filter projects by name substring (case-insensitive)"),
     created_at: date | None = Query(None, description="to get projects created after created_at date"),
+    user_id: str | None = Query(None, description="project owner identifier; defaults to current token user"),
     order_by: OrderByField = Query(  # should be Optional, but swagger is generated wrongly then
         None, description="attribute to set ordering (created_at or updated_at)"
     ),
     ordering: Ordering = Query(
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> Page[Project]:
     """
     ## Get a list of projects.
@@ -239,6 +262,7 @@ async def get_projects(  # pylint: disable=too-many-arguments
     - **territory_id** (int | None, Query): Filters projects by a specific territory.
     - **name** (str | None, Query): Filters projects by a case-insensitive substring match.
     - **created_at** (date | None, Query): Returns projects created after the specified date.
+    - **user_id** (str | None, Query): Project owner identifier. Defaults to the authenticated token user.
     - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default),
     created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
@@ -269,6 +293,8 @@ async def get_projects(  # pylint: disable=too-many-arguments
             detail="Для просмотра собственных проектов требуется аутентификация.",
         )
 
+    if user_id is not None:
+        _resolve_project_owner_user_id(user, user_id)
     project_type_value = project_type.value if project_type is not None else None
     order_by_value = order_by.value if order_by is not None else None
 
@@ -282,6 +308,7 @@ async def get_projects(  # pylint: disable=too-many-arguments
         created_at,
         order_by_value,
         ordering.value,
+        owner_user_id=user_id,
         paginate=True,
     )
 
@@ -306,7 +333,8 @@ async def get_projects_territories(
     ),
     territory_id: int | None = Query(None, description="to filter by region"),
     centers_only: bool = Query(False, description="display only centers"),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user_id: str | None = Query(None, description="project owner identifier; defaults to current token user"),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
 ) -> GeoJSONResponse[Feature[Geometry, Project]]:
     """
     ## Get project territories in GeoJSON format.
@@ -318,6 +346,7 @@ async def get_projects_territories(
         NOTE: Skip to get all projects (non-regional).
     - **territory_id** (int | None, Query): Filters results by a specific territory.
     - **centers_only** (bool, Query): If True, retrieves only center points of project territories (default: true).
+    - **user_id** (str | None, Query): Project owner identifier. Defaults to the authenticated token user.
 
     ### Returns:
     - **GeoJSONResponse[Feature[Geometry, Project]]**: A GeoJSON-formatted response containing project territories.
@@ -336,9 +365,17 @@ async def get_projects_territories(
             detail="Для просмотра собственных проектов требуется аутентификация.",
         )
 
+    if user_id is not None:
+        _resolve_project_owner_user_id(user, user_id)
     project_type_value = project_type.value if project_type is not None else None
 
-    projects = await user_project_service.get_projects_territories(user, only_own, project_type_value, territory_id)
+    projects = await user_project_service.get_projects_territories(
+        user,
+        only_own,
+        project_type_value,
+        territory_id,
+        owner_user_id=user_id,
+    )
 
     return await GeoJSONResponse.from_list([p.to_geojson_dict() for p in projects], centers_only=centers_only)
 
@@ -351,6 +388,7 @@ async def get_projects_territories(
 async def add_project(
     request: Request,
     project: ProjectPost,
+    user_id: str | None = Query(None, description="project owner identifier; defaults to current token user"),
     user: UserDTO = Depends(auth_dep.from_request),
     kafka_producer: KafkaProducerClient = Depends(kafka_producer_dep.from_request),
     project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
@@ -362,6 +400,7 @@ async def add_project(
 
     ### Parameters:
     - **project** (ProjectPost, Body): The project data including geometry.
+    - **user_id** (str | None, Query): Project owner identifier. Defaults to the authenticated token user.
 
     ### Returns:
     - **Project**: The created project with related base scenario and region short information.
@@ -375,7 +414,14 @@ async def add_project(
     """
     user_project_service: UserProjectService = request.state.user_project_service
 
-    project_dto = await user_project_service.add_project(project, user, kafka_producer, project_storage_manager)
+    owner_user_id = _resolve_project_owner_user_id(user, user_id, to_edit=True)
+    project_dto = await user_project_service.add_project(
+        project,
+        user,
+        kafka_producer,
+        project_storage_manager,
+        owner_user_id=owner_user_id,
+    )
 
     return Project.from_dto(project_dto)
 
@@ -514,6 +560,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     territory_id: int | None = Query(None, description="to filter by territory identifier", gt=0),
     name: str | None = Query(None, description="to filter projects by name substring (case-insensitive)"),
     created_at: date | None = Query(None, description="to get projects created after created_at date"),
+    user_id: str | None = Query(None, description="project owner identifier; defaults to current token user"),
     order_by: OrderByField = Query(  # should be Optional, but swagger is generated wrongly then
         None, description="attribute to set ordering (created_at or updated_at)"
     ),
@@ -521,7 +568,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
         Ordering.ASC, description="order type (ascending or descending) if ordering field is set"
     ),
     project_storage_manager: ProjectStorageManager = Depends(project_storage_dep.from_request),
-    user: UserDTO = Depends(auth_dep.from_request_optional),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
     logger: BoundLogger = Depends(logger_dep.from_request),
 ) -> Page[MinioImageURL]:
     """
@@ -538,6 +585,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
     - **territory_id** (int | None, Query): Filters projects by a specific territory.
     - **name** (str | None, Query): Filters projects by a case-insensitive substring match.
     - **created_at** (date | None, Query): Returns projects created after the specified date.
+    - **user_id** (str | None, Query): Project owner identifier. Defaults to the authenticated token user.
     - **order_by** (OrderByField, Query): Defines the sorting attribute - project_id (default),
     created_at or updated_at.
     - **ordering** (Ordering, Query): Specifies sorting order - ascending (default) or descending.
@@ -568,6 +616,8 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
             detail="Для просмотра собственных проектов требуется аутентификация.",
         )
 
+    if user_id is not None:
+        _resolve_project_owner_user_id(user, user_id)
     project_type_value = project_type.value if project_type is not None else None
     order_by_value = order_by.value if order_by is not None else None
 
@@ -581,6 +631,7 @@ async def get_projects_main_image_url(  # pylint: disable=too-many-arguments
         created_at,
         order_by_value,
         ordering.value,
+        owner_user_id=user_id,
         paginate=True,
     )
     ids = [p.project_id for p in projects.items]
