@@ -20,7 +20,12 @@ from .indicators import (
     ShortScenarioIndicatorValueDTO,
 )
 from .normatives import NormativeDTO
-from .object_geometries import ObjectGeometryDTO, ScenarioGeometryDTO, ScenarioGeometryWithAllObjectsDTO
+from .object_geometries import (
+    ObjectGeometryDTO,
+    ScenarioAllObjectsDTO,
+    ScenarioGeometryDTO,
+    ScenarioGeometryWithAllObjectsDTO,
+)
 from .pages import PageDTO
 from .physical_object_types import (
     PhysicalObjectFunctionDTO,
@@ -110,6 +115,7 @@ __all__ = [
     "ShortScenarioServiceDTO",
     "ScenarioServiceDTO",
     "ScenarioGeometryWithAllObjectsDTO",
+    "ScenarioAllObjectsDTO",
     "ScenarioGeometryDTO",
     "ShortServiceDTO",
     "ShortPhysicalObjectDTO",

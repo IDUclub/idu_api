@@ -19,6 +19,7 @@ from idu_api.urban_api.schemas import (
     PhysicalObjectFunction,
     PhysicalObjectsTypesHierarchy,
     PhysicalObjectType,
+    ScenarioAllObjects,
     ScenarioPhysicalObject,
     ScenarioPhysicalObjectWithGeometryAttributes,
     Service,
@@ -1082,3 +1083,101 @@ async def get_physical_objects_with_geometry_by_territory_id(
         total=physical_objects.total,
         **(physical_objects.cursor_data or {}),
     )
+
+
+def _validate_filters(
+    physical_object_type_id: int | None,
+    service_type_id: int | None,
+    physical_object_function_id: int | None,
+    urban_function_id: int | None,
+    exclude_physical_object_function_id: int | None,
+    exclude_urban_function_id: int | None,
+) -> None:
+    """Validate mutually exclusive type and function filters."""
+
+    if physical_object_type_id is not None and (
+        physical_object_function_id is not None or exclude_physical_object_function_id is not None
+    ):
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message=(
+                    "Укажите либо physical_object_type_id, либо "
+                    "physical_object_function_id/exclude_physical_object_function_id."
+                ),
+            )
+        )
+
+    if service_type_id is not None and (urban_function_id is not None or exclude_urban_function_id is not None):
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="Укажите либо service_type_id, либо urban_function_id/exclude_urban_function_id.",
+            )
+        )
+
+
+@projects_mcp.tool(
+    name="GetScenarioAllObjectsWithoutGeometry",
+    title="Получить все объекты сценария без геометрии",
+    description="""Возвращает обычный JSON-массив с метаданными геометрических объектов сценария,
+связанными физическими объектами и сервисами. Поля geometry и centre_point не возвращаются.
+
+Параметры:
+- scenario_id: идентификатор сценария.
+- physical_object_type_id: фильтр по типу физического объекта.
+- service_type_id: фильтр по типу сервиса.
+- physical_object_function_id: фильтр по функции физического объекта.
+- urban_function_id: фильтр по городской функции.
+- exclude_physical_object_function_id: исключаемая функция физического объекта.
+- exclude_urban_function_id: исключаемая городская функция.
+
+Результат: list[ScenarioAllObjects]. Каждый элемент содержит object_geometry_id, territory,
+address, osm_id, physical_objects, services, is_scenario_object и is_locked.
+
+Ошибки:
+- -32602 Invalid params: одновременно переданы взаимоисключающие фильтры типа и функции.
+- -32000 Permission denied: у пользователя нет доступа к сценарию или проекту.
+- -32001 Not found: сценарий не найден.
+""",
+    tags=["physical_objects", "services"],
+    annotations={
+        "title": "GetScenarioAllObjectsWithoutGeometry",
+        "readOnlyHint": True,
+    },
+)
+async def get_all_objects_without_geometry_by_scenario_id(
+    scenario_id: Annotated[int, "Идентификатор сценария"],
+    physical_object_type_id: Annotated[int | None, "Фильтр по типу физического объекта"] = None,
+    service_type_id: Annotated[int | None, "Фильтр по типу сервиса"] = None,
+    physical_object_function_id: Annotated[int | None, "Фильтр по функции физического объекта"] = None,
+    urban_function_id: Annotated[int | None, "Фильтр по городской функции"] = None,
+    exclude_physical_object_function_id: Annotated[int | None, "Исключаемая функция физического объекта"] = None,
+    exclude_urban_function_id: Annotated[int | None, "Исключаемая городская функция"] = None,
+    request: Request = CurrentRequest(),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
+) -> list[ScenarioAllObjects]:
+    """Get scenario geometry metadata with all related objects."""
+
+    _validate_filters(
+        physical_object_type_id,
+        service_type_id,
+        physical_object_function_id,
+        urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
+    )
+
+    user_project_service: UserProjectService = request.state.user_project_service
+    objects = await user_project_service.get_all_objects_without_geometry_by_scenario_id(
+        scenario_id,
+        user,
+        physical_object_type_id,
+        service_type_id,
+        physical_object_function_id,
+        urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
+    )
+
+    return [ScenarioAllObjects.from_dto(obj) for obj in objects]

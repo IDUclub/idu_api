@@ -31,7 +31,7 @@ from idu_api.urban_api.schemas import (
 from idu_api.urban_api.schemas.enums import OrderByField, Ordering, ProjectPhase, ProjectType
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
 from idu_api.urban_api.utils.pagination import paginate
-from idu_api.urban_api.utils.project_access import can_use_project_user_id, PROJECTS_WRITE_ROLE
+from idu_api.urban_api.utils.project_access import PROJECTS_WRITE_ROLE, can_use_project_user_id
 
 
 def _resolve_project_owner_user_id(user: UserDTO | None, user_id: str | None, to_edit: bool = False) -> str | None:

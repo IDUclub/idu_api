@@ -5,7 +5,7 @@ from typing import Any
 
 from fastmcp import Client
 
-MCP_URL = "http://localhost:8000"
+MCP_URL = "http://localhost:8002"
 TOKEN = "access token"
 GROUP_PATHS: dict[str, str] = {
     "projects": "/mcp/projects",
@@ -445,6 +445,13 @@ TEST_CASES: list[ToolCase] = [
         arguments={
             "scenario_id": 124,
             "centers_only": True,
+        },
+    ),
+    ToolCase(
+        "projects",
+        "GetScenarioGeometriesWithAllObjectsWithoutGeometry",
+        arguments={
+            "scenario_id": 124,
         },
     ),
     ToolCase(

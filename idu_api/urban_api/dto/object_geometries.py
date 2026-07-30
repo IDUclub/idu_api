@@ -49,6 +49,27 @@ class ScenarioGeometryDTO(ObjectGeometryDTO):
 
 
 @dataclass
+class AllObjectsDTO:
+    """DTO representing an object geometry's metadata and all related objects."""
+
+    object_geometry_id: int
+    territory_id: int
+    territory_name: str
+    address: str | None
+    osm_id: str | None
+    physical_objects: list[dict[str, Any]]
+    services: list[dict[str, Any]]
+
+
+@dataclass
+class ScenarioAllObjectsDTO(AllObjectsDTO):
+    """DTO representing scenario object metadata and all related objects."""
+
+    is_scenario_object: bool
+    is_locked: bool = False
+
+
+@dataclass
 class GeometryWithAllObjectsDTO:
     """DTO representing geometry enriched with related physical objects and services."""
 

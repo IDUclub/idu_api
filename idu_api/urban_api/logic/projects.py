@@ -17,6 +17,7 @@ from idu_api.urban_api.dto import (
     ProjectPhasesDTO,
     ProjectTerritoryDTO,
     ProjectWithTerritoryDTO,
+    ScenarioAllObjectsDTO,
     ScenarioBufferDTO,
     ScenarioDTO,
     ScenarioFunctionalZoneDTO,
@@ -426,6 +427,20 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         exclude_urban_function_id: int | None,
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         """Get geometries with lists of physical objects and services by scenario identifier."""
+
+    @abc.abstractmethod
+    async def get_all_objects_without_geometry_by_scenario_id(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        physical_object_type_id: int | None,
+        service_type_id: int | None,
+        physical_object_function_id: int | None,
+        urban_function_id: int | None,
+        exclude_physical_object_function_id: int | None,
+        exclude_urban_function_id: int | None,
+    ) -> list[ScenarioAllObjectsDTO]:
+        """Get geometry metadata with lists of physical objects and services by scenario identifier."""
 
     @abc.abstractmethod
     async def get_context_geometries(
