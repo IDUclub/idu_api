@@ -33,7 +33,12 @@ from idu_api.common.db.entities import (
     territory_types_dict,
     urban_objects_data,
 )
-from idu_api.urban_api.dto import ScenarioGeometryDTO, ScenarioGeometryWithAllObjectsDTO, UserDTO
+from idu_api.urban_api.dto import (
+    ScenarioAllObjectsDTO,
+    ScenarioGeometryDTO,
+    ScenarioGeometryWithAllObjectsDTO,
+    UserDTO,
+)
 from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
     delete_object_geometry_from_db,
@@ -41,6 +46,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
     get_context_geometries_with_all_objects_from_db,
     get_geometries_by_scenario_id_from_db,
     get_geometries_with_all_objects_by_scenario_id_from_db,
+    get_geometries_with_all_objects_without_geometry_by_scenario_id_from_db,
     get_scenario_object_geometry_by_id_from_db,
     patch_object_geometry_to_db,
     put_object_geometry_to_db,
@@ -49,6 +55,7 @@ from idu_api.urban_api.logic.impl.helpers.utils import SRID, include_child_terri
 from idu_api.urban_api.schemas import (
     ObjectGeometryPatch,
     ObjectGeometryPut,
+    ScenarioAllObjects,
     ScenarioGeometryAttributes,
     ScenarioObjectGeometry,
 )
@@ -406,6 +413,38 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
         isinstance(item, ScenarioGeometryWithAllObjectsDTO) for item in result
     ), "Each item should be a ScenarioGeometryWithAllObjectsDTO."
     mock_conn.execute_mock.assert_any_call(str(statement))
+
+
+@pytest.mark.asyncio
+async def test_get_geometries_with_all_objects_without_geometry_by_scenario_id_from_db(mock_conn: MockConnection):
+    """Test getting scenario objects as regular data without spatial attributes."""
+
+    # Arrange
+    scenario_id = 1
+    user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
+
+    # Act
+    result = await get_geometries_with_all_objects_without_geometry_by_scenario_id_from_db(
+        mock_conn,
+        scenario_id,
+        user,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
+    response_item = ScenarioAllObjects.from_dto(result[0])
+    response_data = response_item.model_dump()
+    objects_query = mock_conn.execute_mock.call_args_list[-1].args[0]
+
+    # Assert
+    assert all(isinstance(item, ScenarioAllObjectsDTO) for item in result)
+    assert "geometry" not in response_data
+    assert "centre_point" not in response_data
+    assert "ST_AsEWKB" not in objects_query
+    assert "centre_point" not in objects_query
 
 
 @pytest.mark.asyncio

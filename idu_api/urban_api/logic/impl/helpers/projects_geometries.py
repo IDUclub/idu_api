@@ -34,6 +34,7 @@ from idu_api.common.db.entities import (
     urban_objects_data,
 )
 from idu_api.urban_api.dto import (
+    ScenarioAllObjectsDTO,
     ScenarioGeometryDTO,
     ScenarioGeometryWithAllObjectsDTO,
     UserDTO,
@@ -263,7 +264,7 @@ async def get_geometries_by_scenario_id_from_db(  # pylint: disable=too-many-loc
     return [ScenarioGeometryDTO(**row) for row in list(grouped_objects.values())]
 
 
-async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: disable=too-many-locals
+async def _get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: disable=too-many-locals,too-many-arguments
     conn: AsyncConnection,
     scenario_id: int,
     user: UserDTO | None,
@@ -273,7 +274,8 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
     urban_function_id: int | None,
     exclude_physical_object_function_id: int | None,
     exclude_urban_function_id: int | None,
-) -> list[ScenarioGeometryWithAllObjectsDTO]:
+    include_geometry: bool,
+) -> list[ScenarioGeometryWithAllObjectsDTO] | list[ScenarioAllObjectsDTO]:
     """Get geometries with list of physical objects and services by scenario identifier."""
 
     project = await check_scenario(conn, scenario_id, user, return_value=True)
@@ -305,6 +307,14 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
         if project_geometry is not None
         else object_geometries_data.c.geometry
     )
+    public_geometry_columns = (
+        (
+            ST_AsEWKB(intersected_geom).label("geometry"),
+            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
+        )
+        if include_geometry
+        else ()
+    )
     building_columns = [col for col in buildings_data.c if col.name not in ("physical_object_id", "properties")]
     public_urban_objects_query = (
         select(
@@ -321,8 +331,7 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
             territories_data.c.name.label("territory_name"),
             object_geometries_data.c.address,
             object_geometries_data.c.osm_id,
-            ST_AsEWKB(intersected_geom).label("geometry"),
-            ST_AsEWKB(ST_Centroid(intersected_geom)).label("centre_point"),
+            *public_geometry_columns,
             services_data.c.service_id,
             services_data.c.name.label("service_name"),
             services_data.c.capacity,
@@ -398,6 +407,14 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
         if project_geometry is not None
         else coalesce(projects_object_geometries_data.c.geometry, object_geometries_data.c.geometry)
     )
+    scenario_geometry_columns = (
+        (
+            ST_AsEWKB(geom_expr).label("geometry"),
+            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
+        )
+        if include_geometry
+        else ()
+    )
     scenario_urban_objects_query = (
         select(
             coalesce(
@@ -419,8 +436,7 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
             territories_data.c.name.label("territory_name"),
             coalesce(projects_object_geometries_data.c.address, object_geometries_data.c.address).label("address"),
             coalesce(projects_object_geometries_data.c.osm_id, object_geometries_data.c.osm_id).label("osm_id"),
-            ST_AsEWKB(geom_expr).label("geometry"),
-            ST_AsEWKB(ST_Centroid(geom_expr)).label("centre_point"),
+            *scenario_geometry_columns,
             coalesce(projects_services_data.c.service_id, services_data.c.service_id).label("service_id"),
             coalesce(projects_services_data.c.name, services_data.c.name).label("service_name"),
             coalesce(projects_services_data.c.capacity, services_data.c.capacity).label("capacity"),
@@ -541,14 +557,14 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
                 "object_geometry_id": obj["object_geometry_id"],
                 "territory_id": obj["territory_id"],
                 "territory_name": obj["territory_name"],
-                "geometry": obj["geometry"],
-                "centre_point": obj["centre_point"],
                 "address": obj["address"],
                 "osm_id": obj["osm_id"],
                 "is_scenario_object": is_scenario_geometry,
                 "is_locked": obj["is_locked"],
             }
         )
+        if include_geometry:
+            group.update({"geometry": obj["geometry"], "centre_point": obj["centre_point"]})
 
     def add_physical_object(group, obj):
         phys_obj_id = obj["physical_object_id"]
@@ -627,7 +643,62 @@ async def get_geometries_with_all_objects_by_scenario_id_from_db(  # pylint: dis
         group["physical_objects"] = list(group["physical_objects"].values())
         group["services"] = list(group["services"].values())
 
-    return [ScenarioGeometryWithAllObjectsDTO(**group) for group in grouped_objects.values()]
+    dto_type = ScenarioGeometryWithAllObjectsDTO if include_geometry else ScenarioAllObjectsDTO
+    return [dto_type(**group) for group in grouped_objects.values()]
+
+
+async def get_geometries_with_all_objects_by_scenario_id_from_db(
+    conn: AsyncConnection,
+    scenario_id: int,
+    user: UserDTO | None,
+    physical_object_type_id: int | None,
+    service_type_id: int | None,
+    physical_object_function_id: int | None,
+    urban_function_id: int | None,
+    exclude_physical_object_function_id: int | None,
+    exclude_urban_function_id: int | None,
+) -> list[ScenarioGeometryWithAllObjectsDTO]:
+    """Get scenario geometries with all related objects and spatial attributes."""
+
+    return await _get_geometries_with_all_objects_by_scenario_id_from_db(
+        conn,
+        scenario_id,
+        user,
+        physical_object_type_id,
+        service_type_id,
+        physical_object_function_id,
+        urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
+        include_geometry=True,
+    )
+
+
+async def get_all_objects_without_geometry_by_scenario_id_from_db(
+    conn: AsyncConnection,
+    scenario_id: int,
+    user: UserDTO | None,
+    physical_object_type_id: int | None,
+    service_type_id: int | None,
+    physical_object_function_id: int | None,
+    urban_function_id: int | None,
+    exclude_physical_object_function_id: int | None,
+    exclude_urban_function_id: int | None,
+) -> list[ScenarioAllObjectsDTO]:
+    """Get scenario geometry metadata with all related objects, without spatial attributes."""
+
+    return await _get_geometries_with_all_objects_by_scenario_id_from_db(
+        conn,
+        scenario_id,
+        user,
+        physical_object_type_id,
+        service_type_id,
+        physical_object_function_id,
+        urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
+        include_geometry=False,
+    )
 
 
 async def get_context_geometries_from_db(

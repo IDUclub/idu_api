@@ -41,7 +41,7 @@ def superuser_token() -> str:
     """Valid superuser JWT token."""
     return create_token(
         sub="admin",
-        roles=["ADMIN", "USER"],
+        roles=["ADMIN", "USER", "projects:write"],
         is_superuser=True,
         expired=False,
     )

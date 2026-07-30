@@ -143,6 +143,63 @@ async def get_geometries_with_all_objects_by_scenario_id(  # pylint: disable=too
 
 
 @projects_router.get(
+    "/scenarios/{scenario_id}/all_objects_without_geometry",
+    response_model=list[ScenarioAllObjects],
+    status_code=status.HTTP_200_OK,
+)
+async def get_all_objects_without_geometry_by_scenario_id(
+    request: Request,
+    scenario_id: int = Path(..., description="scenario identifier", gt=0),
+    physical_object_type_id: int | None = Query(None, description="to filter by physical object type", gt=0),
+    service_type_id: int | None = Query(None, description="to filter by service type", gt=0),
+    physical_object_function_id: int | None = Query(None, description="to filter by physical object function", gt=0),
+    urban_function_id: int | None = Query(None, description="to filter by urban function", gt=0),
+    exclude_physical_object_function_id: int | None = Query(
+        None, description="exclude this physical object function", gt=0
+    ),
+    exclude_urban_function_id: int | None = Query(None, description="exclude this urban function", gt=0),
+    user: UserDTO = Depends(auth_dep.from_request_optional),
+) -> list[ScenarioAllObjects]:
+    """
+    ## Get geometry metadata with associated services and physical objects for a given scenario.
+
+    The response is a regular JSON array and does not include `geometry` or `centre_point`.
+    Filters and access restrictions are the same as for `geometries_with_all_objects`.
+    """
+    user_project_service: UserProjectService = request.state.user_project_service
+
+    if physical_object_type_id is not None and (
+        physical_object_function_id is not None or exclude_physical_object_function_id is not None
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(
+                "Please choose either physical_object_type_id or "
+                "physical_object_function_id/exclude_physical_object_function_id."
+            ),
+        )
+
+    if service_type_id is not None and (urban_function_id is not None or exclude_urban_function_id is not None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please choose either service_type_id or urban_function_id/exclude_urban_function_id.",
+        )
+
+    objects = await user_project_service.get_all_objects_without_geometry_by_scenario_id(
+        scenario_id,
+        user,
+        physical_object_type_id,
+        service_type_id,
+        physical_object_function_id,
+        urban_function_id,
+        exclude_physical_object_function_id,
+        exclude_urban_function_id,
+    )
+
+    return [ScenarioAllObjects.from_dto(obj) for obj in objects]
+
+
+@projects_router.get(
     "/scenarios/{scenario_id}/context/geometries",
     response_model=GeoJSONResponse[Feature[Geometry, ScenarioGeometryAttributes]],
     status_code=status.HTTP_200_OK,

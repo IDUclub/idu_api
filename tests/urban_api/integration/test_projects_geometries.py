@@ -117,6 +117,53 @@ async def test_get_geometries_with_all_objects_by_scenario_id(
     "expected_status, error_message, scenario_id_param, is_regional_param",
     [
         (200, None, None, False),
+        (200, None, None, True),
+        (403, "запрещён", None, False),
+        (404, "не найден", 1e9, False),
+    ],
+    ids=["success_common", "success_regional", "forbidden", "not_found"],
+)
+async def test_get_geometries_with_all_objects_without_geometry_by_scenario_id(
+    client: AsyncClient,
+    scenario: dict[str, Any],
+    regional_scenario: dict[str, Any],
+    valid_token: str,
+    superuser_token: str,
+    expected_status: int,
+    error_message: str | None,
+    scenario_id_param: int | None,
+    is_regional_param: bool,
+):
+    """Test the regular JSON scenario objects endpoint without geometry."""
+
+    # Arrange
+    scenario_id = scenario_id_param or (
+        regional_scenario["scenario_id"] if is_regional_param else scenario["scenario_id"]
+    )
+    headers = {"Authorization": f"Bearer {valid_token if expected_status == 403 else superuser_token}"}
+
+    # Act
+    response = await client.get(
+        f"/api/v1/scenarios/{scenario_id}/geometries_with_all_objects_without_geometry",
+        headers=headers,
+    )
+    result = response.json()
+
+    # Assert
+    if response.status_code == 200:
+        assert_response(response, expected_status, ScenarioAllObjects, error_message, result_type="list")
+        assert result, "Response should contain at least one object."
+        assert "geometry" not in result[0]
+        assert "centre_point" not in result[0]
+    else:
+        assert_response(response, expected_status, ScenarioAllObjects, error_message)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "expected_status, error_message, scenario_id_param, is_regional_param",
+    [
+        (200, None, None, False),
         (400, "этот метод недоступен в региональном сценарии", None, True),
         (403, "запрещён", None, False),
         (404, "не найден", 1e9, False),

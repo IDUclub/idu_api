@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 
 from pydantic import BaseModel, Field, model_validator
 
-from idu_api.urban_api.dto import ObjectGeometryDTO, ScenarioGeometryDTO
+from idu_api.urban_api.dto import ObjectGeometryDTO, ScenarioAllObjectsDTO, ScenarioGeometryDTO
 from idu_api.urban_api.schemas.geometries import Geometry, GeometryValidationModel, Point
 from idu_api.urban_api.schemas.short_models import (
     ShortPhysicalObject,
@@ -145,3 +145,17 @@ class ScenarioAllObjects(AllObjects):
     is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")
     physical_objects: list[ShortScenarioPhysicalObject]
     services: list[ShortScenarioService]
+
+    @classmethod
+    def from_dto(cls, dto: ScenarioAllObjectsDTO) -> "ScenarioAllObjects":
+        """Construct from DTO."""
+        return cls(
+            object_geometry_id=dto.object_geometry_id,
+            territory=ShortTerritory(id=dto.territory_id, name=dto.territory_name),
+            address=dto.address,
+            osm_id=dto.osm_id,
+            physical_objects=dto.physical_objects,
+            services=dto.services,
+            is_scenario_object=dto.is_scenario_object,
+            is_locked=dto.is_locked,
+        )

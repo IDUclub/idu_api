@@ -18,6 +18,7 @@ from idu_api.urban_api.dto import (
     ProjectPhasesDTO,
     ProjectTerritoryDTO,
     ProjectWithTerritoryDTO,
+    ScenarioAllObjectsDTO,
     ScenarioBufferDTO,
     ScenarioDTO,
     ScenarioFunctionalZoneDTO,
@@ -55,6 +56,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_functional_zones import (
 )
 from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
     delete_object_geometry_from_db,
+    get_all_objects_without_geometry_by_scenario_id_from_db,
     get_context_geometries_from_db,
     get_context_geometries_with_all_objects_from_db,
     get_geometries_by_scenario_id_from_db,
@@ -612,6 +614,30 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
     ) -> list[ScenarioGeometryWithAllObjectsDTO]:
         async with self._connection_manager.get_ro_connection() as conn:
             return await get_geometries_with_all_objects_by_scenario_id_from_db(
+                conn,
+                scenario_id,
+                user,
+                physical_object_type_id,
+                service_type_id,
+                physical_object_function_id,
+                urban_function_id,
+                exclude_physical_object_function_id,
+                exclude_urban_function_id,
+            )
+
+    async def get_all_objects_without_geometry_by_scenario_id(
+        self,
+        scenario_id: int,
+        user: UserDTO | None,
+        physical_object_type_id: int | None,
+        service_type_id: int | None,
+        physical_object_function_id: int | None,
+        urban_function_id: int | None,
+        exclude_physical_object_function_id: int | None,
+        exclude_urban_function_id: int | None,
+    ) -> list[ScenarioAllObjectsDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            return await get_all_objects_without_geometry_by_scenario_id_from_db(
                 conn,
                 scenario_id,
                 user,
