@@ -62,7 +62,7 @@ def run_migrations(dsn: str):
 
 
 @pytest_asyncio.fixture(scope="function", autouse=True)
-async def clean_db(request, config: UrbanAPIConfig):
+async def clean_db(request):
     """
     Clean all tables in the database before each test.
 
@@ -72,6 +72,7 @@ async def clean_db(request, config: UrbanAPIConfig):
     if "integration" not in request.node.nodeid:
         return
 
+    config: UrbanAPIConfig = request.getfixturevalue("config")
     db = config.db.master
 
     dsn = f"postgresql+asyncpg://{db.user}:{db.password.get_secret_value()}" f"@{db.host}:{db.port}/{db.database}"
