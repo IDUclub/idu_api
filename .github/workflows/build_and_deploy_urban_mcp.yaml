@@ -1,0 +1,105 @@
+name: build_and_deploy_urban_mcp
+on: workflow_dispatch
+
+env:
+  IMAGE_NAME: ${{ secrets.REGISTRY }}/urban_mcp
+  CONTAINER_NAME: urban_mcp
+
+jobs:
+  build:
+    runs-on: 47_runner
+    outputs:
+      tag: ${{ steps.date.outputs.NOW }}
+    steps:
+      - name: Get build tag
+        id: date
+        run: echo "NOW=$(date -u +'%Y-%m-%dT%H-%M-%S')-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build MCP image
+        env:
+          TAG: ${{ steps.date.outputs.NOW }}
+        run: docker build -f urban_mcp/Dockerfile -t "${IMAGE_NAME}:${TAG}" .
+
+      - name: Push MCP image
+        env:
+          TAG: ${{ steps.date.outputs.NOW }}
+        run: docker push "${IMAGE_NAME}:${TAG}"
+
+  deploy_47:
+    needs: build
+    runs-on: 47_runner
+    timeout-minutes: 15
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set MCP image version
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME}:${TAG}" >> "$GITHUB_ENV"
+
+      - name: Copy env file
+        env:
+          ENV_PATH: ${{ secrets.ENV_PATH }}
+        run: |
+          test -n "$ENV_PATH"
+          install -m 600 "${ENV_PATH}/urban_mcp/.env.mcp.47" urban_mcp/.env.47
+
+      - name: Validate configuration and pull MCP image
+        run: |
+          docker compose -f urban_mcp/docker-compose.deploy.yaml --env-file urban_mcp/.env.47 config --quiet
+          docker compose -f urban_mcp/docker-compose.deploy.yaml --env-file urban_mcp/.env.47 pull mcp
+
+      - name: Stop old MCP container
+        run: docker rm -f "$CONTAINER_NAME" || true
+
+      - name: Deploy
+        run: docker compose -f urban_mcp/docker-compose.deploy.yaml --env-file urban_mcp/.env.47 up -d --wait --wait-timeout 180 mcp
+
+      - name: Container diagnostics
+        if: always()
+        run: |
+          docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' "$CONTAINER_NAME" || true
+          docker logs --tail 100 "$CONTAINER_NAME" 2>&1 || true
+
+  deploy_65:
+    needs: build
+    runs-on: 65_runner
+    timeout-minutes: 15
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set MCP image version
+        run: |
+          echo "IMAGE_NAME=${IMAGE_NAME}:${TAG}" >> "$GITHUB_ENV"
+
+      - name: Copy env file
+        env:
+          ENV_PATH: ${{ secrets.ENV_PATH }}
+        run: |
+          test -n "$ENV_PATH"
+          install -m 600 "${ENV_PATH}/urban_mcp/.env.mcp.65" urban_mcp/.env.65
+
+      - name: Validate configuration and pull MCP image
+        run: |
+          docker compose -f urban_mcp/docker-compose.deploy.yaml --env-file urban_mcp/.env.65 config --quiet
+          docker compose -f urban_mcp/docker-compose.deploy.yaml --env-file urban_mcp/.env.65 pull mcp
+
+      - name: Stop old MCP container
+        run: docker rm -f "$CONTAINER_NAME" || true
+
+      - name: Deploy
+        run: docker compose -f urban_mcp/docker-compose.deploy.yaml --env-file urban_mcp/.env.65 up -d --wait --wait-timeout 180 mcp
+
+      - name: Container diagnostics
+        if: always()
+        run: |
+          docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' "$CONTAINER_NAME" || true
+          docker logs --tail 100 "$CONTAINER_NAME" 2>&1 || true

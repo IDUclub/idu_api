@@ -1,0 +1,39 @@
+name: urban-mcp
+
+services:
+  mcp:
+    container_name: urban_mcp
+    image: ${IMAGE_NAME}
+    restart: always
+    environment:
+      MCP_CONFIG_PATH: /app/config.yaml
+    ports:
+      - "${APP_PORT_MAPPING:-5301:8001}"
+      - "${PROMETHEUS_PORT_MAPPING:-9001:9090}"
+    volumes:
+      - ${LOG_VOLUME:-/var/log/urban_mcp}:/app/logs
+      - ${REAL_MCP_CONFIG_PATH}:/app/config.yaml:ro
+    deploy:
+      resources:
+        limits:
+          memory: ${MEM_LIMIT:-8G}
+    memswap_limit: ${MEMSWAP_LIMIT:-8G}
+    healthcheck:
+      # Match the TCP readiness probe used by the Kubernetes deployment.
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('127.0.0.1', 8001), timeout=3).close()"]
+      interval: 10s
+      timeout: 5s
+      start_period: 30s
+      retries: 12
+    logging:
+      driver: json-file
+      options:
+        max-size: "200k"
+        max-file: "10"
+    networks:
+      - ${CUSTOM_NETWORK:-default}
+
+networks:
+  default:
+  hosting_net:
+    external: true

@@ -286,6 +286,3 @@ async def lifespan(application: FastAPI):
     otel_agent.shutdown()
 
     await kafka_producer.close()
-
-
-app = get_app()

@@ -42,11 +42,11 @@ from idu_api.urban_api.dto import (
 from idu_api.urban_api.exceptions.logic.common import EntityNotFoundById
 from idu_api.urban_api.logic.impl.helpers.projects_geometries import (
     delete_object_geometry_from_db,
+    get_all_objects_without_geometry_by_scenario_id_from_db,
     get_context_geometries_from_db,
     get_context_geometries_with_all_objects_from_db,
     get_geometries_by_scenario_id_from_db,
     get_geometries_with_all_objects_by_scenario_id_from_db,
-    get_geometries_with_all_objects_without_geometry_by_scenario_id_from_db,
     get_scenario_object_geometry_by_id_from_db,
     patch_object_geometry_to_db,
     put_object_geometry_to_db,
@@ -416,7 +416,7 @@ async def test_get_geometries_with_all_objects_by_scenario_id_from_db(mock_conn:
 
 
 @pytest.mark.asyncio
-async def test_get_geometries_with_all_objects_without_geometry_by_scenario_id_from_db(mock_conn: MockConnection):
+async def test_get_all_objects_without_geometry_by_scenario_id_from_db(mock_conn: MockConnection):
     """Test getting scenario objects as regular data without spatial attributes."""
 
     # Arrange
@@ -424,7 +424,7 @@ async def test_get_geometries_with_all_objects_without_geometry_by_scenario_id_f
     user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
 
     # Act
-    result = await get_geometries_with_all_objects_without_geometry_by_scenario_id_from_db(
+    result = await get_all_objects_without_geometry_by_scenario_id_from_db(
         mock_conn,
         scenario_id,
         user,

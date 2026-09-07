@@ -53,7 +53,7 @@ def main(
     """
     print(
         "This is a simple method to run the API. You might want to use"
-        " 'uvicorn idu_api.urban_api.fastapi_init:app' instead to configure more uvicorn options."
+        " 'uvicorn --factory idu_api.urban_api.fastapi_init:get_app' instead to configure more uvicorn options."
     )
     config = UrbanAPIConfig.load(config_path)
     if host is not None and host != config.app.uvicorn.host:
@@ -100,11 +100,12 @@ def main(
 def _run_uvicorn(configuration: dict[str, tp.Any]) -> tp.NoReturn:
     """Start Uvicorn with the given configuration."""
     uvicorn.run(
-        "idu_api.urban_api.fastapi_init:app",
+        "idu_api.urban_api.fastapi_init:get_app",
+        factory=True,
         **configuration,
     )
 
 
-if __name__ in {"__main__", "idu_api.urban_api.__main__"}:
+if __name__ == "__main__":
     try_load_envfile(os.environ.get("ENVFILE", ".env"))
     main()  # pylint: disable=no-value-for-parameter
