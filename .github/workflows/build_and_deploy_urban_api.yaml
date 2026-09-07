@@ -46,7 +46,7 @@ jobs:
       - name: Copy env file
         env:
           ENV_PATH: ${{ secrets.ENV_PATH }}
-        run: cp $ENV_PATH/.env.47 ./urban_api/
+        run: cp $ENV_PATH/urban_api/.env.47 ./urban_api/
 
       - name: Stop old containers
         run: |
@@ -55,6 +55,14 @@ jobs:
 
       - name: Deploy
         run: docker compose -f urban_api/docker-compose.deploy.yaml --env-file urban_api/.env.47 up -d
+
+      - name: Container diagnostics
+        if: always()
+        run: |
+          docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' "$MIGRATOR_CONTAINER_NAME" || true
+          docker logs --tail 100 "$MIGRATOR_CONTAINER_NAME" 2>&1 || true
+          docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' "$API_CONTAINER_NAME" || true
+          docker logs --tail 100 "$API_CONTAINER_NAME" 2>&1 || true
 
   deploy_65:
     needs: build
@@ -73,7 +81,7 @@ jobs:
       - name: Copy env file
         env:
           ENV_PATH: ${{ secrets.ENV_PATH }}
-        run: cp $ENV_PATH/.env.65 ./urban_api/
+        run: cp $ENV_PATH/urban_api/.env.65 ./urban_api/
 
       - name: Stop old container
         run: |
@@ -83,29 +91,10 @@ jobs:
       - name: Deploy
         run: docker compose -f urban_api/docker-compose.deploy.yaml --env-file urban_api/.env.65 up -d
 
-  deploy_107:
-    needs: build
-    runs-on: 107_runner
-    env:
-      TAG: ${{ needs.build.outputs.tag }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set image versions
+      - name: Container diagnostics
+        if: always()
         run: |
-          echo "IMAGE_API=${{ env.IMAGE_API }}:$TAG" >> $GITHUB_ENV
-          echo "IMAGE_MIGRATOR=${{ env.IMAGE_MIGRATOR }}:$TAG" >> $GITHUB_ENV
-
-      - name: Copy env file
-        env:
-          ENV_PATH: ${{ secrets.ENV_PATH }}
-        run: cp $ENV_PATH/.env.107 ./urban_api/
-
-      - name: Stop old container
-        run: |
-          docker rm -f $API_CONTAINER_NAME || true
-          docker rm -f $MIGRATOR_CONTAINER_NAME || true
-
-      - name: Deploy
-        run: docker compose -f urban_api/docker-compose.deploy.yaml --env-file urban_api/.env.107 up -d
+          docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' "$MIGRATOR_CONTAINER_NAME" || true
+          docker logs --tail 100 "$MIGRATOR_CONTAINER_NAME" 2>&1 || true
+          docker inspect --format 'status={{.State.Status}} health={{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}} restarts={{.RestartCount}}' "$API_CONTAINER_NAME" || true
+          docker logs --tail 100 "$API_CONTAINER_NAME" 2>&1 || true
