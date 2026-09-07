@@ -9,10 +9,20 @@ permissions:
   contents: read
 
 jobs:
-  release:
+  release-api:
     uses: IDUclub/urban-assistant-deploy/.github/workflows/reusable-application-release.yaml@main
     with:
       service: urban-api
+      test-command: |
+        python -m pip install --disable-pip-version-check poetry==2.2.1
+        poetry install --with dev --no-interaction --no-ansi
+        poetry run pytest --verbose tests/urban_api/unit
+    secrets: inherit
+
+  release-mcp:
+    uses: IDUclub/urban-assistant-deploy/.github/workflows/reusable-application-release.yaml@main
+    with:
+      service: urban-mcp
       test-command: |
         python -m pip install --disable-pip-version-check poetry==2.2.1
         poetry install --with dev --no-interaction --no-ansi
