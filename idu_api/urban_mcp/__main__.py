@@ -1,6 +1,9 @@
+"""Console and module entrypoints for the Urban MCP server."""
+
 import os
 import tempfile
 import typing as tp
+from pathlib import Path
 
 import click
 import uvicorn
@@ -40,7 +43,7 @@ from .config import UrbanMCPConfig
     show_envvar=True,
     help="Path to YAML configuration file",
 )
-def main(
+def cli(
     port: int | None,
     host: str | None,
     debug: bool,
@@ -68,52 +71,51 @@ def main(
         print("Overwriting debug with 'True'")
         config.app.debug = True
 
-    # --- temp config (как и раньше) ---
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_yaml_config_path = temp_file.name
+    with tempfile.TemporaryDirectory(prefix="urban-mcp-") as temp_dir:
+        temp_yaml_config_path = Path(temp_dir) / "config.yaml"
+        temp_envfile_path = Path(temp_dir) / ".env"
+        config.dump(temp_yaml_config_path)
+        temp_envfile_path.write_text(f"MCP_CONFIG_PATH={temp_yaml_config_path.as_posix()}\n", encoding="utf-8")
 
-    config.dump(temp_yaml_config_path)
+        previous_config_path = os.environ.get("MCP_CONFIG_PATH")
+        os.environ["MCP_CONFIG_PATH"] = str(temp_yaml_config_path)
+        try:
+            uvicorn_config = {
+                "host": config.app.uvicorn.host,
+                "port": config.app.uvicorn.port,
+                "log_level": config.observability.logging.root_logger_level.lower(),
+                "env_file": str(temp_envfile_path),
+                "access_log": False,
+            }
 
-    with tempfile.NamedTemporaryFile(delete=False) as temp_file:
-        temp_envfile_path = temp_file.name
-
-    with open(temp_envfile_path, "w", encoding="utf-8") as env_file:
-        env_file.write(f"CONFIG_PATH={temp_yaml_config_path}\n")
-
-    os.environ["MCP_CONFIG_PATH"] = temp_yaml_config_path
-
-    try:
-        uvicorn_config = {
-            "host": config.app.uvicorn.host,
-            "port": config.app.uvicorn.port,
-            "log_level": config.observability.logging.root_logger_level.lower(),
-            "env_file": temp_envfile_path,
-            "access_log": False,
-        }
-
-        if config.app.uvicorn.reload:
-            try:
-                _run_uvicorn(uvicorn_config | {"reload": True})
-            except Exception:  # pylint: disable=broad-exception-caught
-                print("Retrying with reload disabled")
+            if config.app.uvicorn.reload:
+                try:
+                    _run_uvicorn(uvicorn_config | {"reload": True})
+                except Exception:  # pylint: disable=broad-exception-caught
+                    print("Retrying with reload disabled")
+                    _run_uvicorn(uvicorn_config)
+            else:
                 _run_uvicorn(uvicorn_config)
-        else:
-            _run_uvicorn(uvicorn_config)
-
-    finally:
-        if os.path.exists(temp_envfile_path):
-            os.remove(temp_envfile_path)
-        if os.path.exists(temp_yaml_config_path):
-            os.remove(temp_yaml_config_path)
+        finally:
+            if previous_config_path is None:
+                os.environ.pop("MCP_CONFIG_PATH", None)
+            else:
+                os.environ["MCP_CONFIG_PATH"] = previous_config_path
 
 
-def _run_uvicorn(configuration: dict[str, tp.Any]) -> tp.NoReturn:
+def _run_uvicorn(configuration: dict[str, tp.Any]) -> None:
+    """Run the ASGI application, returning when the server stops."""
     uvicorn.run(
         "idu_api.urban_mcp.fastmcp_init:app",
         **configuration,
     )
 
 
-if __name__ in ("__main__", "idu_api.urban_mcp.__main__"):
+def main() -> None:
+    """Load environment defaults before parsing CLI options for either entrypoint."""
     try_load_envfile(os.environ.get("ENVFILE", ".env"))
-    main()  # pylint: disable=no-value-for-parameter
+    cli()  # pylint: disable=no-value-for-parameter
+
+
+if __name__ == "__main__":
+    main()
