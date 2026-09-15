@@ -7,6 +7,7 @@ from fastmcp.dependencies import CurrentRequest
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from mcp import ErrorData, McpError
+from pydantic import Field
 from starlette.requests import Request
 
 from idu_api.urban_api.logic.territories import TerritoriesService
@@ -592,21 +593,28 @@ async def get_target_city_types(request: Request = CurrentRequest()) -> list[Tar
     - -32602 Invalid params: cities_only=true передан при include_child_territories=false.
     - -32001 Not found: territory_id не найден.
     """,
-    tags=["normatives"],
+    tags=["territories", "normatives"],
     annotations={"title": "GetTerritoryNormatives", "readOnlyHint": True},
 )
 async def get_territory_normatives(
-    territory_id: Annotated[int, "Идентификатор территории"],
-    year: Annotated[Optional[int], "Год действия нормативов"] = None,
-    last_only: Annotated[bool, "Возвращать только последние доступные нормативы"] = False,
-    include_child_territories: Annotated[bool, "Возвращать дочерние территории"] = False,
-    cities_only: Annotated[bool, "Возвращать только города"] = False,
+    territory_id: Annotated[int, Field(description="Идентификатор территории", gt=0)],
+    year: Annotated[Optional[int], Field(description="Год действия нормативов; несовместим с last_only=true")] = None,
+    last_only: Annotated[bool, Field(description="Возвращать только последние доступные нормативы")] = False,
+    include_child_territories: Annotated[bool, Field(description="Возвращать дочерние территории")] = False,
+    cities_only: Annotated[
+        bool, Field(description="Возвращать только города при include_child_territories=true")
+    ] = False,
     request: Request = CurrentRequest(),
 ) -> list[Normative]:
     """Get territory normatives."""
     territories_service: TerritoriesService = request.state.territories_service
     if not include_child_territories and cities_only:
-        raise McpError(ErrorData(code=-32602, message="Некорректные параметры запроса."))
+        raise McpError(
+            ErrorData(
+                code=-32602,
+                message="Параметр cities_only можно использовать только при include_child_territories=true.",
+            )
+        )
     _validate_normatives_year(year, last_only)
     normatives = await territories_service.get_normatives_by_territory_id(
         territory_id, year, last_only, include_child_territories, cities_only
@@ -617,7 +625,7 @@ async def get_territory_normatives(
 @territories_mcp.tool(
     name="GetNormativesValuesGeoJSON",
     title="Получить территории с нормативными значениями в формате GeoJSON",
-    description="""Возвращает территории с прикрепленными значениями нормативов в формате GeoJSON FeatureCollection.
+    description="""Возвращает непосредственные дочерние территории указанного parent_id с прикрепленными значениями нормативов в формате GeoJSON FeatureCollection.
     Входные параметры:
     Параметр | Тип | Обязателен | Описание
     parent_id | Optional[int] | нет | Идентификатор родительской территории. Если не указан, используются территории верхнего уровня.
@@ -636,7 +644,7 @@ async def get_territory_normatives(
     is_city | bool | Признак города.
     centre_point | Point | Географический центр территории.
     territory_type | TerritoryTypeBasic | Тип территории.
-    normatives | list[Normative] | Список нормативов территории.
+    normatives | list[ShortNormativeInfo] | Список нормативов территории с названием сервиса или городской функции, годом, типом и значениями норматива.
 
     Пример вызова:
     {
@@ -668,14 +676,16 @@ async def get_territory_normatives(
     - -32602 Invalid params: year и last_only=true переданы одновременно.
     - -32001 Not found: parent_id не найден.
     """,
-    tags=["normatives"],
+    tags=["territories", "normatives"],
     annotations={"title": "GetNormativesValuesGeoJSON", "readOnlyHint": True},
 )
 async def get_normatives_values_by_parent_id(
-    parent_id: Annotated[Optional[int], "Идентификатор родительской территории"] = None,
-    year: Annotated[Optional[int], "Год действия нормативов"] = None,
-    last_only: Annotated[bool, "Возвращать только последние доступные нормативы"] = False,
-    centers_only: Annotated[bool, "Возвращать только центры геометрий"] = False,
+    parent_id: Annotated[
+        Optional[int], Field(description="Идентификатор родительской территории; без него — верхний уровень", gt=0)
+    ] = None,
+    year: Annotated[Optional[int], Field(description="Год действия нормативов; несовместим с last_only=true")] = None,
+    last_only: Annotated[bool, Field(description="Возвращать только последние доступные нормативы")] = False,
+    centers_only: Annotated[bool, Field(description="Возвращать только центры геометрий")] = False,
     request: Request = CurrentRequest(),
 ) -> GeoJSONResponse[Feature[Geometry, TerritoryWithNormatives]]:
     """Get normatives values by parent territory."""

@@ -26,5 +26,5 @@ jobs:
       test-command: |
         python -m pip install --disable-pip-version-check poetry==2.2.1
         poetry install --with dev --no-interaction --no-ansi
-        poetry run pytest --verbose tests/urban_api/unit
+        poetry run pytest --verbose tests/urban_api/unit tests/urban_mcp
     secrets: inherit
