@@ -412,10 +412,13 @@ async def test_add_project_to_db(mock_conn: MockConnection, project_post_req: Pr
         "INSERT INTO user_projects.functional_zones_data" in str(args[0])
         for args in mock_conn.execute_mock.call_args_list
     ), "Expected insertion into user_projects.functional_zones_data table not found."
-    assert any(
-        "INSERT INTO user_projects.object_geometries_data" in str(args[0])
+    object_geometry_inserts = [
+        str(args[0])
         for args in mock_conn.execute_mock.call_args_list
-    ), "Expected insertion into user_projects.object_geometries_data table not found."
+        if "INSERT INTO user_projects.object_geometries_data" in str(args[0])
+    ]
+    assert object_geometry_inserts, "Expected insertion into user_projects.object_geometries_data table not found."
+    assert "ST_GeometryType(normalize_intersection" in object_geometry_inserts[0]
     assert any(
         "INSERT INTO user_projects.urban_objects_data" in str(args[0]) for args in mock_conn.execute_mock.call_args_list
     ), "Expected insertion into user_projects.urban_objects_data table not found."
