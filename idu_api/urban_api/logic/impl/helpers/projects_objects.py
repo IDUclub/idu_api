@@ -1159,6 +1159,15 @@ async def insert_intersecting_geometries(
         .cte("objects_intersecting")
     )
 
+    normalized_geometry = func.normalize_intersection(object_geometries_data.c.geometry, geometry)
+    supported_geometry_types = (
+        "ST_Point",
+        "ST_Polygon",
+        "ST_MultiPolygon",
+        "ST_LineString",
+        "ST_MultiLineString",
+    )
+
     # Step 2: Crop geometries using the given geometry and insert the cropped
     # versions into the `user_projects.object_geometries_data` table.
     insert_stmt = (
@@ -1176,16 +1185,15 @@ async def insert_intersecting_geometries(
             select(
                 object_geometries_data.c.object_geometry_id.label("public_object_geometry_id"),
                 object_geometries_data.c.territory_id,
-                func.normalize_intersection(object_geometries_data.c.geometry, geometry).label("geometry"),
-                ST_Centroid(func.normalize_intersection(object_geometries_data.c.geometry, geometry)).label(
-                    "centre_point"
-                ),
+                normalized_geometry.label("geometry"),
+                ST_Centroid(normalized_geometry).label("centre_point"),
                 object_geometries_data.c.address,
                 object_geometries_data.c.osm_id,
                 literal(True).label("is_cut"),
             ).where(
                 object_geometries_data.c.object_geometry_id.in_(select(objects_intersecting_cte)),
-                ~ST_IsEmpty(func.normalize_intersection(object_geometries_data.c.geometry, geometry)),
+                ~ST_IsEmpty(normalized_geometry),
+                ST_GeometryType(normalized_geometry).in_(supported_geometry_types),
             ),
         )
         .returning(
