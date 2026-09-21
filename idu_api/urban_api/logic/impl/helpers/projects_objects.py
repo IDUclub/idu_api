@@ -26,6 +26,7 @@ from sqlalchemy import (
     Integer,
     ScalarSelect,
     and_,
+    any_,
     case,
     cast,
     delete,
@@ -37,6 +38,7 @@ from sqlalchemy import (
     text,
     update,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -1057,52 +1059,36 @@ async def copy_urban_objects_from_regional_scenario(
         copy_services(conn, sorted(list(svc_ids))),
     )
 
-    def build_case(col, mapping, default=None):
-        return (
-            case(*[(col == k, literal(v)) for k, v in mapping.items()], else_=literal(default))
-            if mapping
-            else literal(default)
-        )
-
-    await conn.execute(
-        insert(projects_urban_objects_data).from_select(
-            ["scenario_id", "public_urban_object_id"],
-            select(
-                literal(new_scenario_id).label("scenario_id"), regional_urban_objects_cte.c.public_urban_object_id
-            ).where(regional_urban_objects_cte.c.public_urban_object_id.isnot(None)),
-        )
-    )
-
-    await conn.execute(
-        insert(projects_urban_objects_data).from_select(
-            [
-                "scenario_id",
-                "object_geometry_id",
-                "physical_object_id",
-                "service_id",
-                "public_object_geometry_id",
-                "public_physical_object_id",
-                "public_service_id",
-            ],
-            select(
-                literal(new_scenario_id).label("scenario_id"),
-                case(
-                    (
-                        regional_urban_objects_cte.c.public_object_geometry_id.isnot(None),
-                        cast(
-                            build_case(regional_urban_objects_cte.c.public_object_geometry_id, public_geom_map), Integer
+    # Resolve IDs in Python: a CASE per mapping entry can exceed asyncpg's
+    # 32767 bind-parameter limit. Bound each INSERT to at most 8000 parameters.
+    batch_size = 1000
+    for offset in range(0, len(results), batch_size):
+        public_objects = []
+        project_objects = []
+        for row in results[offset : offset + batch_size]:
+            if row.public_urban_object_id is not None:
+                public_objects.append(
+                    {"scenario_id": new_scenario_id, "public_urban_object_id": row.public_urban_object_id}
+                )
+            else:
+                project_objects.append(
+                    {
+                        "scenario_id": new_scenario_id,
+                        "object_geometry_id": (
+                            public_geom_map.get(row.public_object_geometry_id)
+                            if row.public_object_geometry_id is not None
+                            else geom_map.get(row.object_geometry_id)
                         ),
-                    ),
-                    else_=cast(build_case(regional_urban_objects_cte.c.object_geometry_id, geom_map), Integer),
-                ),
-                build_case(regional_urban_objects_cte.c.physical_object_id, phys_map),
-                build_case(regional_urban_objects_cte.c.service_id, svc_map),
-                literal(None),
-                regional_urban_objects_cte.c.public_physical_object_id,
-                regional_urban_objects_cte.c.public_service_id,
-            ).where(regional_urban_objects_cte.c.public_urban_object_id.is_(None)),
-        )
-    )
+                        "physical_object_id": phys_map.get(row.physical_object_id),
+                        "service_id": svc_map.get(row.service_id),
+                        "public_object_geometry_id": None,
+                        "public_physical_object_id": row.public_physical_object_id,
+                        "public_service_id": row.public_service_id,
+                    }
+                )
+        for objects in (public_objects, project_objects):
+            if objects:
+                await conn.execute(insert(projects_urban_objects_data).values(objects))
 
 
 async def insert_intersecting_geometries(
@@ -1405,7 +1391,7 @@ async def copy_geometries(
             ST_Intersection(table.c.geometry, geometry).label("geometry") if geometry else table.c.geometry,
             literal(True).label("is_cut") if geometry is not None else table.c.is_cut,
         )
-        .where(id_column.in_(geometry_ids))
+        .where(id_column == any_(literal(geometry_ids, type_=ARRAY(Integer))))
         .order_by(id_column)
     )
 
@@ -1443,7 +1429,7 @@ async def copy_physical_objects(conn, physical_ids: list[int]) -> dict[int, int]
             projects_physical_objects_data.c.name,
             projects_physical_objects_data.c.properties,
         )
-        .where(projects_physical_objects_data.c.physical_object_id.in_(physical_ids))
+        .where(projects_physical_objects_data.c.physical_object_id == any_(literal(physical_ids, type_=ARRAY(Integer))))
         .order_by(projects_physical_objects_data.c.physical_object_id)
     )
 
@@ -1487,7 +1473,7 @@ async def copy_services(conn, service_ids: list[int]) -> dict[int, int]:
             projects_services_data.c.is_capacity_real,
             projects_services_data.c.properties,
         )
-        .where(projects_services_data.c.service_id.in_(service_ids))
+        .where(projects_services_data.c.service_id == any_(literal(service_ids, type_=ARRAY(Integer))))
         .order_by(projects_services_data.c.service_id)
     )
 
