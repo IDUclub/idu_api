@@ -1,9 +1,12 @@
 """Services projects-related endpoints are defined here."""
 
+from typing import Literal
+
 from fastapi import Depends, HTTPException, Path, Query, Request
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
 from starlette import status
+from starlette.responses import Response
 
 from idu_api.urban_api.dependencies import auth_dep
 from idu_api.urban_api.dto.users import UserDTO
@@ -20,6 +23,63 @@ from idu_api.urban_api.schemas import (
     ServiceType,
 )
 from idu_api.urban_api.schemas.geojson import GeoJSONResponse
+from idu_api.urban_api.schemas.services import ScenarioServiceGeometry, ServiceSearchGeometry
+
+
+@projects_router.post(
+    "/scenarios/{scenario_id}/services/by_geometry",
+    response_model=list[ScenarioServiceGeometry],
+    status_code=status.HTTP_200_OK,
+)
+async def get_services_by_geometry(
+    request: Request,
+    geometry: ServiceSearchGeometry,
+    scenario_id: int = Path(..., description="scenario identifier", gt=0),
+    service_type_id: int | None = Query(None, description="optional service type filter", gt=0),
+    intersection_type: Literal["intersects", "within"] = Query("intersects"),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
+) -> list[ScenarioServiceGeometry]:
+    """Get compact services by a GeoJSON search geometry in EPSG:4326.
+
+    Local scenario geometries are clipped to the project boundary before filtering.
+    ``intersects`` includes boundary contact; ``within`` requires the service geometry
+    to lie within the search geometry, with their interiors intersecting.
+    Access follows the scenario's project read permissions (403); missing scenarios return 404.
+    """
+    service: UserProjectService = request.state.user_project_service
+    services = await service.get_services_by_geometry(
+        scenario_id, geometry.as_shapely_geometry(), user, service_type_id, intersection_type
+    )
+    return [ScenarioServiceGeometry.from_dto(item) for item in services]
+
+
+@projects_router.post(
+    "/scenarios/{scenario_id}/services/by_geometry/geojson",
+    response_class=Response,
+    responses={status.HTTP_200_OK: {"content": {"application/geo+json": {}}}},
+    status_code=status.HTTP_200_OK,
+)
+async def get_services_by_geometry_geojson(
+    request: Request,
+    geometry: ServiceSearchGeometry,
+    scenario_id: int = Path(..., description="scenario identifier", gt=0),
+    service_type_id: int | None = Query(None, description="optional service type filter", gt=0),
+    intersection_type: Literal["intersects", "within"] = Query("intersects"),
+    user: UserDTO | None = Depends(auth_dep.from_request_optional),
+) -> Response:
+    """Get the same compact spatial service selection as a GeoJSON FeatureCollection.
+
+    Input geometry is GeoJSON in EPSG:4326. ``intersects`` includes boundary contact;
+    ``within`` requires intersecting interiors and full containment. Local scenario
+    geometries are clipped to the project boundary. Returns 403 on denied access,
+    404 for a missing scenario, and 422 for invalid geometry or filters.
+    """
+    service: UserProjectService = request.state.user_project_service
+    services = await service.get_services_by_geometry(
+        scenario_id, geometry.as_shapely_geometry(), user, service_type_id, intersection_type
+    )
+    feature_collection = await GeoJSONResponse.from_list(item.to_geojson_dict() for item in services)
+    return Response(feature_collection.model_dump_json(), media_type="application/geo+json")
 
 
 @projects_router.get(

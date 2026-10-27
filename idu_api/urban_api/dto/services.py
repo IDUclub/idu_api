@@ -1,7 +1,7 @@
 """Services DTOs are defined here."""
 
 from collections.abc import Iterable
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from datetime import datetime
 from typing import Any, Literal
 
@@ -156,3 +156,28 @@ class ScenarioServiceWithGeometryDTO(ServiceWithGeometryDTO):
     is_scenario_service: bool
     is_scenario_geometry: bool
     is_locked: bool = False
+
+
+@dataclass
+class ScenarioServiceGeometryDTO:
+    """Compact scenario service and its visible geometry."""
+
+    service_id: int
+    service_type_id: int
+    service_type_name: str
+    name: str | None
+    capacity: int | None
+    is_capacity_real: bool | None
+    object_geometry_id: int
+    geometry: geom.base.BaseGeometry
+    is_scenario_service: bool
+    is_scenario_geometry: bool
+    is_locked: bool
+
+    def __post_init__(self) -> None:
+        if isinstance(self.geometry, (bytes, memoryview)):
+            self.geometry = wkb_loads(bytes(self.geometry))
+
+    def to_geojson_dict(self) -> dict[str, Any]:
+        """Return the compact attributes and geometry for GeoJSON serialization."""
+        return {field.name: getattr(self, field.name) for field in fields(self)}

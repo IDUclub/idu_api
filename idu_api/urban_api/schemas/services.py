@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from pydantic import BaseModel, Field, model_validator
+from shapely.errors import ShapelyError
 
 from idu_api.urban_api.dto import (
     ScenarioServiceDTO,
@@ -11,7 +12,8 @@ from idu_api.urban_api.dto import (
     ServicesCountCapacityDTO,
     ServiceWithGeometryDTO,
 )
-from idu_api.urban_api.schemas.geometries import Geometry, Point
+from idu_api.urban_api.dto.services import ScenarioServiceGeometryDTO
+from idu_api.urban_api.schemas.geometries import AllPossibleGeometry, Geometry, Point
 from idu_api.urban_api.schemas.service_types import ServiceType, UrbanFunctionBasic
 from idu_api.urban_api.schemas.territories import ShortTerritory, TerritoryType
 
@@ -269,3 +271,41 @@ class ScenarioServiceWithGeometryAttributes(Service):
     is_scenario_service: bool = Field(..., description="boolean parameter to determine scenario service")
     is_scenario_geometry: bool = Field(..., description="boolean parameter to determine scenario geometry")
     is_locked: bool = Field(False, description="boolean parameter to determine locked (to edit) object")
+
+
+class ServiceSearchGeometry(AllPossibleGeometry):
+    """Nonempty, valid search geometry in EPSG:4326."""
+
+    @model_validator(mode="after")
+    def validate_search_geometry(self) -> "ServiceSearchGeometry":
+        """Reject malformed, empty, and topologically invalid geometries."""
+        try:
+            geometry = self.as_shapely_geometry()
+        except (ShapelyError, ValueError, TypeError, IndexError) as exc:
+            raise ValueError("Invalid search geometry") from exc
+        if geometry.is_empty or not geometry.is_valid:
+            raise ValueError("Search geometry must be nonempty and valid")
+        return self
+
+
+class ScenarioServiceGeometry(BaseModel):
+    """Compact service attributes and geometry, without timestamps or arbitrary properties."""
+
+    service_id: int
+    service_type_id: int
+    service_type_name: str
+    name: str | None
+    capacity: int | None
+    is_capacity_real: bool | None
+    object_geometry_id: int
+    geometry: AllPossibleGeometry
+    is_scenario_service: bool
+    is_scenario_geometry: bool
+    is_locked: bool
+
+    @classmethod
+    def from_dto(cls, dto: ScenarioServiceGeometryDTO) -> "ScenarioServiceGeometry":
+        """Construct a compact response from a spatial selection result."""
+        values = dto.to_geojson_dict()
+        values["geometry"] = AllPossibleGeometry.from_shapely_geometry(dto.geometry)
+        return cls(**values)

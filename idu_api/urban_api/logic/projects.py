@@ -5,6 +5,7 @@ from datetime import date
 from typing import Literal, Protocol
 
 from otteroad import KafkaProducerClient
+from shapely.geometry.base import BaseGeometry
 
 from idu_api.urban_api.dto import (
     FunctionalZoneDTO,
@@ -32,6 +33,7 @@ from idu_api.urban_api.dto import (
     ServiceTypeDTO,
     UserDTO,
 )
+from idu_api.urban_api.dto.services import ScenarioServiceGeometryDTO
 from idu_api.urban_api.logic.physical_objects import Geom
 from idu_api.urban_api.minio.services import ProjectStorageManager
 from idu_api.urban_api.schemas import (
@@ -344,6 +346,17 @@ class UserProjectService(Protocol):  # pylint: disable=too-many-public-methods
         urban_function_id: int | None,
     ) -> list[ScenarioServiceWithGeometryDTO]:
         """Get list of services with geometry by scenario identifier."""
+
+    @abc.abstractmethod
+    async def get_services_by_geometry(
+        self,
+        scenario_id: int,
+        geometry: BaseGeometry,
+        user: UserDTO | None,
+        service_type_id: int | None = None,
+        intersection_type: Literal["intersects", "within"] = "intersects",
+    ) -> list[ScenarioServiceGeometryDTO]:
+        """Get compact services whose visible geometry intersects or lies within the input."""
 
     @abc.abstractmethod
     async def get_context_services(
