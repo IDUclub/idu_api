@@ -5,6 +5,7 @@ from typing import Literal
 
 import structlog
 from otteroad import KafkaProducerClient
+from shapely.geometry.base import BaseGeometry
 
 from idu_api.common.db.connection.manager import PostgresConnectionManager
 from idu_api.urban_api.dto import (
@@ -33,6 +34,7 @@ from idu_api.urban_api.dto import (
     ServiceTypeDTO,
     UserDTO,
 )
+from idu_api.urban_api.dto.services import ScenarioServiceGeometryDTO
 from idu_api.urban_api.exceptions.logic.users import AuthorizationError
 from idu_api.urban_api.logic.impl.helpers.projects_buffers import (
     delete_buffer_from_db,
@@ -123,6 +125,7 @@ from idu_api.urban_api.logic.impl.helpers.projects_services import (
     patch_service_to_db,
     put_service_to_db,
 )
+from idu_api.urban_api.logic.impl.helpers.projects_services_geometry import get_services_by_geometry_from_db
 from idu_api.urban_api.logic.impl.physical_objects import Geom
 from idu_api.urban_api.logic.projects import UserProjectService
 from idu_api.urban_api.minio.services import ProjectStorageManager
@@ -522,6 +525,19 @@ class UserProjectServiceImpl(UserProjectService):  # pylint: disable=too-many-pu
                 user,
                 service_type_id,
                 urban_function_id,
+            )
+
+    async def get_services_by_geometry(
+        self,
+        scenario_id: int,
+        geometry: BaseGeometry,
+        user: UserDTO | None,
+        service_type_id: int | None = None,
+        intersection_type: Literal["intersects", "within"] = "intersects",
+    ) -> list[ScenarioServiceGeometryDTO]:
+        async with self._connection_manager.get_ro_connection() as conn:
+            return await get_services_by_geometry_from_db(
+                conn, scenario_id, geometry, user, service_type_id, intersection_type
             )
 
     async def get_context_services(
