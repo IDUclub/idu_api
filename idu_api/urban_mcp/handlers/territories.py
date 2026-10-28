@@ -4,9 +4,9 @@ from datetime import date
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest
+from fastmcp.exceptions import McpError
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from pydantic import Field
 from starlette.requests import Request
 
@@ -32,23 +32,19 @@ def _parse_ids(ids: str) -> list[int]:
         return list({int(tid.strip()) for tid in ids.split(",")})
     except ValueError as exc:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр territories_ids должен быть строкой с целочисленными идентификаторами территорий, перечисленными через запятую.",
-            )
+            code=-32602,
+            message="Параметр territories_ids должен быть строкой с целочисленными идентификаторами территорий, перечисленными через запятую.",
         ) from exc
 
 
 def _validate_levels(get_all_levels: bool, cities_only: bool) -> None:
     if not get_all_levels and cities_only:
-        raise McpError(
-            ErrorData(code=-32602, message="Параметр cities_only можно использовать только при get_all_levels=true.")
-        )
+        raise McpError(code=-32602, message="Параметр cities_only можно использовать только при get_all_levels=true.")
 
 
 def _validate_normatives_year(year: int | None, last_only: bool) -> None:
     if year is not None and last_only:
-        raise McpError(ErrorData(code=-32602, message="Параметры year и last_only нельзя использовать одновременно."))
+        raise McpError(code=-32602, message="Параметры year и last_only нельзя использовать одновременно.")
 
 
 @territories_mcp.tool(
@@ -610,10 +606,8 @@ async def get_territory_normatives(
     territories_service: TerritoriesService = request.state.territories_service
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
     _validate_normatives_year(year, last_only)
     normatives = await territories_service.get_normatives_by_territory_id(

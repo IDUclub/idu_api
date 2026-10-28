@@ -3,9 +3,9 @@
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest, Depends
+from fastmcp.exceptions import McpError
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
@@ -42,30 +42,24 @@ def _parse_ids(ids: str | None) -> set[int] | None:
         return {int(type_id.strip()) for type_id in ids.split(",")}
     except ValueError as exc:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
-            )
+            code=-32602,
+            message="Параметр ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
         ) from exc
 
 
 def _validate_child_territories(include_child_territories: bool, cities_only: bool) -> None:
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
 
 
 def _validate_type_or_function(physical_object_type_id: int | None, physical_object_function_id: int | None) -> None:
     if physical_object_type_id is not None and physical_object_function_id is not None:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Укажите только один фильтр: physical_object_type_id или physical_object_function_id.",
-            )
+            code=-32602,
+            message="Укажите только один фильтр: physical_object_type_id или physical_object_function_id.",
         )
 
 
@@ -1099,21 +1093,17 @@ def _validate_filters(
         physical_object_function_id is not None or exclude_physical_object_function_id is not None
     ):
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message=(
-                    "Укажите либо physical_object_type_id, либо "
-                    "physical_object_function_id/exclude_physical_object_function_id."
-                ),
-            )
+            code=-32602,
+            message=(
+                "Укажите либо physical_object_type_id, либо "
+                "physical_object_function_id/exclude_physical_object_function_id."
+            ),
         )
 
     if service_type_id is not None and (urban_function_id is not None or exclude_urban_function_id is not None):
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Укажите либо service_type_id, либо urban_function_id/exclude_urban_function_id.",
-            )
+            code=-32602,
+            message="Укажите либо service_type_id, либо urban_function_id/exclude_urban_function_id.",
         )
 
 
