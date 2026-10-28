@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-COPY pyproject.toml README.md /app/
+COPY pyproject.toml poetry.lock README.md /app/
 
 RUN poetry config virtualenvs.create false && \
     poetry install --with dev --no-root

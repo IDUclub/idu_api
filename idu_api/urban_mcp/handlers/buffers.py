@@ -3,9 +3,9 @@
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest, Depends
+from fastmcp.exceptions import McpError
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
@@ -181,18 +181,14 @@ async def get_buffers_geojson_by_territory_id(
 
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
 
     if physical_object_type_id is not None and service_type_id is not None:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
-            )
+            code=-32602,
+            message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
         )
 
     buffers = await territories_service.get_buffers_by_territory_id(
@@ -282,10 +278,8 @@ async def get_buffers_by_scenario_id(
 
     if physical_object_type_id is not None and service_type_id is not None:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
-            )
+            code=-32602,
+            message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
         )
 
     buffers = await user_project_service.get_buffers_by_scenario_id(
@@ -375,10 +369,8 @@ async def get_context_buffers(
 
     if physical_object_type_id is not None and service_type_id is not None:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
-            )
+            code=-32602,
+            message="Укажите только один фильтр: physical_object_type_id или service_type_id.",
         )
 
     buffers = await user_project_service.get_context_buffers(

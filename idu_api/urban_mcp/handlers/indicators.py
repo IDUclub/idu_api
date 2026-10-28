@@ -4,9 +4,9 @@ from datetime import date
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest, Depends
+from fastmcp.exceptions import McpError
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
@@ -39,10 +39,8 @@ def _parse_indicator_ids(indicator_ids: str | None) -> set[int] | None:
         return {int(ind_id.strip()) for ind_id in indicator_ids.split(",")}
     except ValueError as exc:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр indicator_ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
-            )
+            code=-32602,
+            message="Параметр indicator_ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
         ) from exc
 
 
@@ -274,9 +272,7 @@ async def get_indicators_by_parent(
     indicators_service: IndicatorsService = request.state.indicators_service
 
     if parent_id is not None and parent_name is not None:
-        raise McpError(
-            ErrorData(code=-32602, message="Укажите только один способ поиска родителя: parent_id или parent_name.")
-        )
+        raise McpError(code=-32602, message="Укажите только один способ поиска родителя: parent_id или parent_name.")
 
     indicators = await indicators_service.get_indicators_by_parent(
         parent_id, parent_name, name, territory_id, service_type_id, physical_object_type_id, get_all_subtree
@@ -552,10 +548,8 @@ async def get_indicator_values_by_territory_id(
 
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
 
     parsed_indicator_ids = _parse_indicator_ids(indicator_ids)

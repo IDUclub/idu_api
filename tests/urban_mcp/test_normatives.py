@@ -72,15 +72,15 @@ async def test_normative_tools_are_exposed_only_in_territories():
         assert TOOL_NAMES <= tools.keys()
         for name in TOOL_NAMES:
             tool = tools[name]
-            assert tool.annotations.readOnlyHint is True
+            assert tool.annotations.read_only_hint is True
             assert "territories" in tool.meta["fastmcp"]["tags"]
-            assert tool.outputSchema
-            properties = tool.inputSchema["properties"]
+            assert tool.output_schema
+            properties = tool.input_schema["properties"]
             assert "request" not in properties
             assert "meta" not in properties
             assert all(prop.get("description") for prop in properties.values())
-        assert tools["GetTerritoryNormatives"].inputSchema["required"] == ["territory_id"]
-        assert not tools["GetNormativesValuesGeoJSON"].inputSchema.get("required")
+        assert tools["GetTerritoryNormatives"].input_schema["required"] == ["territory_id"]
+        assert not tools["GetNormativesValuesGeoJSON"].input_schema.get("required")
 
 
 @pytest.mark.asyncio

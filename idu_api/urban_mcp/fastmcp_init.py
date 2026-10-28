@@ -8,8 +8,8 @@ from typing import Any
 
 import structlog
 from fastmcp import FastMCP
+from fastmcp.exceptions import McpError
 from fastmcp.server.http import StarletteWithLifespan
-from mcp import McpError
 from otteroad import KafkaProducerClient, KafkaProducerSettings
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from starlette.applications import Starlette

@@ -3,7 +3,7 @@
 from collections.abc import Callable
 from typing import Any
 
-from mcp import ErrorData, McpError
+from fastmcp.exceptions import McpError
 
 
 class ExceptionMapper:
@@ -18,11 +18,9 @@ class ExceptionMapper:
 
         def _handler(exc: Exception) -> McpError:
             return McpError(
-                ErrorData(
-                    code=code,
-                    message=message,
-                    data=self._build_data(exc),
-                )
+                code=code,
+                message=message,
+                data=self._build_data(exc),
             )
 
         self._known_exceptions[exception_type] = _handler
@@ -48,11 +46,9 @@ class ExceptionMapper:
 
         # fallback → internal error
         return McpError(
-            ErrorData(
-                code=-32603,  # Internal error
-                message="Internal error",
-                data=self._build_data(exc) if self._debug else None,
-            )
+            code=-32603,  # Internal error
+            message="Internal error",
+            data=self._build_data(exc) if self._debug else None,
         )
 
     def apply_if_known(self, exc: Exception) -> McpError | None:

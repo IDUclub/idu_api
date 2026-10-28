@@ -1,6 +1,6 @@
 """Mapper from logic exceptions to MCP error is defined here."""
 
-from mcp import ErrorData, McpError
+from fastmcp.exceptions import McpError
 
 from idu_api.urban_api.exceptions.logic import common, db, projects, users
 from idu_api.urban_mcp.exceptions.mapper import ExceptionMapper
@@ -8,7 +8,7 @@ from idu_api.urban_mcp.exceptions.mapper import ExceptionMapper
 
 def _get_mcp_error(code: int, message: str) -> McpError:
     """Create MCP error with a standard structure."""
-    return McpError(ErrorData(code=code, message=message))
+    return McpError(code=code, message=message)
 
 
 def register_exceptions(mapper: ExceptionMapper) -> None:
