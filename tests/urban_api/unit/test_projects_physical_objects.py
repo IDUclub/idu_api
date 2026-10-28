@@ -1620,7 +1620,8 @@ async def test_delete_public_physical_object_from_db(mock_conn: MockConnection):
     is_scenario_object = False
     user = UserDTO(id="mock_string", username="mocked_string", roles=[], is_superuser=False, azp="test-client")
     delete_statement = delete(projects_urban_objects_data).where(
-        projects_urban_objects_data.c.public_physical_object_id == physical_object_id
+        projects_urban_objects_data.c.public_physical_object_id == physical_object_id,
+        projects_urban_objects_data.c.scenario_id == scenario_id,
     )
     territories_cte = include_child_territories_cte(1)
     public_urban_object_ids = (
