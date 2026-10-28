@@ -5,7 +5,12 @@ import subprocess
 import sys
 from unittest.mock import patch
 
+import structlog
+from starlette.testclient import TestClient
+
 from idu_api.urban_api.__main__ import _run_uvicorn
+from idu_api.urban_api.config import UrbanAPIConfig
+from idu_api.urban_api.fastapi_init import get_app
 
 
 def test_fastapi_init_import_does_not_require_runtime_config() -> None:
@@ -22,6 +27,25 @@ def test_fastapi_init_import_does_not_require_runtime_config() -> None:
     )
 
     assert result.returncode == 0, result.stderr
+
+
+def test_custom_swagger_page_renders_with_current_starlette(monkeypatch):
+    config = UrbanAPIConfig.example()
+    config.observability.logging.files = []
+    config.observability.jaeger = None
+    # Rendering must not install global log exporters or require a collector.
+    monkeypatch.setattr(
+        "idu_api.urban_api.fastapi_init.configure_logging", lambda *_args, **_kwargs: structlog.get_logger("test")
+    )
+    application = get_app(config=config)
+
+    # No lifespan: rendering the documentation needs no database or broker.
+    response = TestClient(application).get("/api/docs")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "<title>Urban API</title>" in response.text
+    assert "/api/openapi" in response.text
 
 
 @patch("idu_api.urban_api.__main__.uvicorn.run")

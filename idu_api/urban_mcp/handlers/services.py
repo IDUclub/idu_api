@@ -3,9 +3,9 @@
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest, Depends
+from fastmcp.exceptions import McpError
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
@@ -40,28 +40,22 @@ def _parse_ids(ids: str | None) -> set[int] | None:
         return {int(type_id.strip()) for type_id in ids.split(",")}
     except ValueError as exc:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
-            )
+            code=-32602,
+            message="Параметр ids должен быть строкой с целочисленными идентификаторами, разделенными запятыми.",
         ) from exc
 
 
 def _validate_child_territories(include_child_territories: bool, cities_only: bool) -> None:
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
 
 
 def _validate_service_type_or_function(service_type_id: int | None, urban_function_id: int | None) -> None:
     if service_type_id is not None and urban_function_id is not None:
-        raise McpError(
-            ErrorData(code=-32602, message="Укажите только один фильтр: service_type_id или urban_function_id.")
-        )
+        raise McpError(code=-32602, message="Укажите только один фильтр: service_type_id или urban_function_id.")
 
 
 @dictionaries_mcp.tool(

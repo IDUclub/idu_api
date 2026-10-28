@@ -3,10 +3,9 @@
 import asyncio
 from typing import Any
 
-from fastmcp.exceptions import NotFoundError
+from fastmcp.exceptions import McpError, NotFoundError
 from fastmcp.server.dependencies import get_http_request
 from fastmcp.server.middleware import CallNext, Middleware, MiddlewareContext
-from mcp import ErrorData, McpError
 from opentelemetry import trace
 from opentelemetry.sdk.metrics import Counter
 
@@ -121,10 +120,8 @@ class ExceptionHandlerMiddleware(Middleware):
                 message = f"{type(cause).__name__}: {cause}"
 
         return McpError(
-            ErrorData(
-                code=code,
-                message=message,
-            )
+            code=code,
+            message=message,
         )
 
 

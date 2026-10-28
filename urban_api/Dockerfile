@@ -9,7 +9,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     logrotate \
     supervisor \
     curl && \
-    pip install --no-cache-dir poetry && \
+    pip install --no-cache-dir poetry==2.4.1 && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

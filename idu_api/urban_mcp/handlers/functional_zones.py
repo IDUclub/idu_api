@@ -3,9 +3,9 @@
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest, Depends
+from fastmcp.exceptions import McpError
 from geojson_pydantic import Feature
 from geojson_pydantic.geometries import Geometry
-from mcp import ErrorData, McpError
 from starlette.requests import Request
 
 from idu_api.urban_api.dto import UserDTO
@@ -74,10 +74,8 @@ async def get_functional_zone_sources(
 
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
 
     sources = await territories_service.get_functional_zones_sources_by_territory_id(
@@ -174,10 +172,8 @@ async def get_functional_zones_geojson(
 
     if not include_child_territories and cities_only:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр cities_only можно использовать только при include_child_territories=true.",
-            )
+            code=-32602,
+            message="Параметр cities_only можно использовать только при include_child_territories=true.",
         )
 
     zones = await territories_service.get_functional_zones_by_territory_id(

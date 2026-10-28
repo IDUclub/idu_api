@@ -146,9 +146,9 @@ def get_app(prefix: str = "/api", config: UrbanAPIConfig | None = None) -> FastA
         description_html = description.replace("\n\n", "</p><p>").replace("\n", "<br>")
         description_html = f"<p>{description_html}</p>"
         return templates.TemplateResponse(
-            "swagger_custom.html",
-            {
-                "request": request,
+            request=request,
+            name="swagger_custom.html",
+            context={
                 "API_TITLE": application.title,
                 "API_VERSION": application.version,
                 "PREFIX": prefix,

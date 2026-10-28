@@ -3,7 +3,7 @@
 from typing import Annotated, Optional
 
 from fastmcp.dependencies import CurrentRequest
-from mcp import ErrorData, McpError
+from fastmcp.exceptions import McpError
 from starlette.requests import Request
 
 from idu_api.urban_api.logic.soc_groups import SocGroupsService
@@ -350,10 +350,8 @@ async def get_social_value_indicator_values(
 
     if last_only and year is not None:
         raise McpError(
-            ErrorData(
-                code=-32602,
-                message="Параметр year нельзя передавать одновременно с last_only=true.",
-            )
+            code=-32602,
+            message="Параметр year нельзя передавать одновременно с last_only=true.",
         )
 
     soc_group_indicators = await soc_groups_service.get_social_value_indicator_values(
