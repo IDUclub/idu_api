@@ -2221,7 +2221,8 @@ async def delete_physical_object_from_db(
         await conn.execute(statement)
     else:
         statement = delete(projects_urban_objects_data).where(
-            projects_urban_objects_data.c.public_physical_object_id == physical_object_id
+            projects_urban_objects_data.c.public_physical_object_id == physical_object_id,
+            projects_urban_objects_data.c.scenario_id == scenario_id,
         )
         await conn.execute(statement)
 

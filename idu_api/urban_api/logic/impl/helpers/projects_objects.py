@@ -577,7 +577,7 @@ async def create_base_scenario_to_db(
 
     og_id_mapping = await insert_intersecting_geometries(conn, project_geometry)
 
-    uo_id_mapping = await insert_urban_objects(conn, scenario_id, og_id_mapping)
+    uo_id_mapping = await insert_urban_objects(conn, base_scenario_id, og_id_mapping)
 
     await copy_buffers(conn, uo_id_mapping)
 
@@ -1216,55 +1216,67 @@ project-specific geometry_id.
     if not id_mapping:
         return {}
 
-    # Step 1: Common base query for selecting matched urban objects and joining mapping
-    base_query_cte = (
-        select(
-            urban_objects_data.c.urban_object_id.label("public_urban_object_id"),
-            urban_objects_data.c.physical_object_id.label("public_physical_object_id"),
-            urban_objects_data.c.service_id.label("public_service_id"),
-            projects_object_geometries_data.c.object_geometry_id.label("object_geometry_id"),
-        )
-        .select_from(
-            urban_objects_data.join(
-                projects_object_geometries_data,
-                urban_objects_data.c.object_geometry_id == projects_object_geometries_data.c.public_object_geometry_id,
+    # Only geometries inserted for this project may participate in the join.
+    # Otherwise each new project reuses all previous copies of a public geometry.
+    result = {}
+    geometry_ids = list(id_mapping)
+    batch_size = 1000
+    for offset in range(0, len(geometry_ids), batch_size):
+        batch = {key: id_mapping[key] for key in geometry_ids[offset : offset + batch_size]}
+        # Step 1: Common base query for selecting matched urban objects and joining mapping
+        base_query_cte = (
+            select(
+                urban_objects_data.c.urban_object_id.label("public_urban_object_id"),
+                urban_objects_data.c.physical_object_id.label("public_physical_object_id"),
+                urban_objects_data.c.service_id.label("public_service_id"),
+                projects_object_geometries_data.c.object_geometry_id.label("object_geometry_id"),
             )
+            .select_from(
+                urban_objects_data.join(
+                    projects_object_geometries_data,
+                    urban_objects_data.c.object_geometry_id
+                    == projects_object_geometries_data.c.public_object_geometry_id,
+                )
+            )
+            .where(
+                urban_objects_data.c.object_geometry_id.in_(batch),
+                projects_object_geometries_data.c.object_geometry_id.in_(batch.values()),
+            )
+        ).cte(name="base_query")
+
+        # Step 2: Insert basic public urban object references
+        insert_public = (
+            insert(projects_urban_objects_data)
+            .from_select(
+                ["public_urban_object_id", "scenario_id"],
+                select(
+                    base_query_cte.c.public_urban_object_id,
+                    literal(scenario_id).label("scenario_id"),
+                ).order_by(base_query_cte.c.public_urban_object_id),
+            )
+            .returning(projects_urban_objects_data.c.public_urban_object_id)
         )
-        .where(urban_objects_data.c.object_geometry_id.in_(id_mapping.keys()))
-    ).cte(name="base_query")
 
-    # Step 2: Insert basic public urban object references
-    insert_public = (
-        insert(projects_urban_objects_data)
-        .from_select(
-            ["public_urban_object_id", "scenario_id"],
-            select(
-                base_query_cte.c.public_urban_object_id,
-                literal(scenario_id).label("scenario_id"),
-            ).order_by(base_query_cte.c.public_urban_object_id),
+        # Step 3: Insert detailed urban object data with mapped geometries
+        insert_detailed = (
+            insert(projects_urban_objects_data)
+            .from_select(
+                ["public_physical_object_id", "public_service_id", "object_geometry_id", "scenario_id"],
+                select(
+                    base_query_cte.c.public_physical_object_id,
+                    base_query_cte.c.public_service_id,
+                    base_query_cte.c.object_geometry_id,
+                    literal(scenario_id).label("scenario_id"),
+                ).order_by(base_query_cte.c.public_urban_object_id),
+            )
+            .returning(projects_urban_objects_data.c.urban_object_id)
         )
-        .returning(projects_urban_objects_data.c.public_urban_object_id)
-    )
 
-    # Step 3: Insert detailed urban object data with mapped geometries
-    insert_detailed = (
-        insert(projects_urban_objects_data)
-        .from_select(
-            ["public_physical_object_id", "public_service_id", "object_geometry_id", "scenario_id"],
-            select(
-                base_query_cte.c.public_physical_object_id,
-                base_query_cte.c.public_service_id,
-                base_query_cte.c.object_geometry_id,
-                literal(scenario_id).label("scenario_id"),
-            ).order_by(base_query_cte.c.public_urban_object_id),
-        )
-        .returning(projects_urban_objects_data.c.urban_object_id)
-    )
+        public_ids = (await conn.execute(insert_public)).scalars().all()
+        scenario_ids = (await conn.execute(insert_detailed)).scalars().all()
 
-    public_ids = (await conn.execute(insert_public)).scalars().all()
-    scenario_ids = (await conn.execute(insert_detailed)).scalars().all()
-
-    return dict(zip(public_ids, scenario_ids))
+        result.update(zip(public_ids, scenario_ids))
+    return result
 
 
 async def copy_buffers(conn: AsyncConnection, id_mapping: dict[int, int]) -> None:

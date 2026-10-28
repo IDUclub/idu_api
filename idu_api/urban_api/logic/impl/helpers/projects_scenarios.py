@@ -2,7 +2,7 @@
 
 import asyncio
 
-from sqlalchemy import RowMapping, case, delete, insert, literal, select, update
+from sqlalchemy import RowMapping, delete, insert, literal, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection
 
 from idu_api.common.db.entities import (
@@ -389,36 +389,24 @@ async def _copy_urban_objects(conn: AsyncConnection, old_id: int, new_id: int):
         )
     )
 
-    # Copy internal urban objects with mapping
-    def build_case(col, mapping, default=None):
-        return (
-            case(*[(col == k, literal(v)) for k, v in mapping.items()], else_=literal(default))
-            if mapping
-            else literal(default)
-        )
-
-    await conn.execute(
-        insert(projects_urban_objects_data).from_select(
-            [
-                "scenario_id",
-                "object_geometry_id",
-                "physical_object_id",
-                "service_id",
-                "public_object_geometry_id",
-                "public_physical_object_id",
-                "public_service_id",
-            ],
-            select(
-                literal(new_id).label("scenario_id"),
-                build_case(old_objs_cte.c.object_geometry_id, geom_map),
-                build_case(old_objs_cte.c.physical_object_id, phys_map),
-                build_case(old_objs_cte.c.service_id, svc_map),
-                old_objs_cte.c.public_object_geometry_id,
-                old_objs_cte.c.public_physical_object_id,
-                old_objs_cte.c.public_service_id,
-            ).where(old_objs_cte.c.public_urban_object_id.is_(None)),
-        )
-    )
+    # Seven parameters per row; bound every INSERT well below asyncpg's 32767 limit.
+    batch_size = 1000
+    for offset in range(0, len(results), batch_size):
+        objects = [
+            {
+                "scenario_id": new_id,
+                "object_geometry_id": geom_map.get(row.object_geometry_id),
+                "physical_object_id": phys_map.get(row.physical_object_id),
+                "service_id": svc_map.get(row.service_id),
+                "public_object_geometry_id": row.public_object_geometry_id,
+                "public_physical_object_id": row.public_physical_object_id,
+                "public_service_id": row.public_service_id,
+            }
+            for row in results[offset : offset + batch_size]
+            if row.public_urban_object_id is None
+        ]
+        if objects:
+            await conn.execute(insert(projects_urban_objects_data).values(objects))
 
 
 async def _copy_functional_zones_and_indicators(conn: AsyncConnection, old_id: int, new_id: int):
